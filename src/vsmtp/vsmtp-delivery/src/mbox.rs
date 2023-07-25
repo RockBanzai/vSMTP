@@ -296,8 +296,8 @@ mod test {
                             format!("Delivered-To: {mailbox}@domain.com\nHello World!\r\n")
                         );
                     }
-                    Err(error) => match result[0].1 {
-                        Status::HeldBack { ref errors } => {
+                    Err(error) => match &result[0].1 {
+                        Status::HeldBack { errors } => {
                             assert_eq!(*errors[0].variant(), error);
                         }
                         _ => unreachable!(),

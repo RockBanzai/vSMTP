@@ -32,10 +32,10 @@ pre-release-commit-message = "chore: Release {{crate_name}} version {{version}}"
 rhai-autodocs = "0.1.7"
 vsmtp-rule-engine = { version = "=2.2.1", path = "../../vsmtp/vsmtp-rule-engine" }
 
-rhai = { version = "=1.14.0", features = ["unchecked", "sync", "internals", "no_closure", "metadata"] }
+rhai = { version = "=1.15.1", features = ["unchecked", "sync", "internals", "no_closure", "metadata"] }
 mysql = { version = "24.0.0", default-features = false, features = ["rustls-tls", "buffer-pool"] }
 flate2 = { version = "1.0.26", default-features = false, features = ["zlib"] }
-mysql_common = { version = "0.30.5", default-features = false, features = [
+mysql_common = { version = "0.30.6", default-features = false, features = [
     "bigdecimal",
     "rust_decimal",
     "time",
@@ -44,19 +44,19 @@ mysql_common = { version = "0.30.5", default-features = false, features = [
 ] }
 
 r2d2 = { version = "0.8.10", default-features = false }
-anyhow = { version = "1.0.71", default-features = false, features = ["std"] }
-serde = { version = "1.0.164", default-features = false, features = ["std", "derive"] }
+anyhow = { version = "1.0.72", default-features = false, features = ["std"] }
+serde = { version = "1.0.175", default-features = false, features = ["std", "derive"] }
 humantime-serde = { version = "1.1.1", default-features = false }
 
 [dependencies]
 # FIXME: necessary for vsl base types. Should those be split from the crate ?
 vsmtp-rule-engine = { version = "=2.2.1", path = "../../vsmtp/vsmtp-rule-engine" }
 
-rhai = { version = "=1.14.0", features = ["unchecked", "sync", "internals", "no_closure", "metadata"] }
+rhai = { version = "=1.15.1", features = ["unchecked", "sync", "internals", "no_closure", "metadata"] }
 
 mysql = { version = "24.0.0", default-features = false, features = ["rustls-tls", "buffer-pool"] }
 flate2 = { version = "1.0.26", default-features = false, features = ["zlib"] }
-mysql_common = { version = "0.30.5", default-features = false, features = [
+mysql_common = { version = "0.30.6", default-features = false, features = [
     "bigdecimal",
     "rust_decimal",
     "time",
@@ -65,6 +65,6 @@ mysql_common = { version = "0.30.5", default-features = false, features = [
 ] }
 
 r2d2 = { version = "0.8.10", default-features = false }
-anyhow = { version = "1.0.71", default-features = false, features = ["std"] }
-serde = { version = "1.0.164", default-features = false, features = ["std", "derive"] }
+anyhow = { version = "1.0.72", default-features = false, features = ["std"] }
+serde = { version = "1.0.175", default-features = false, features = ["std", "derive"] }
 humantime-serde = { version = "1.1.1", default-features = false }

@@ -22,14 +22,13 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-rhai = { version = "1.12.0", default-features = false, features = [
+rhai = { version = "=1.15.1", default-features = false, features = [
     "unchecked",
     "sync",
     "internals",
     "no_closure",
     "metadata",
 ] }
-serde = { version = "1.0.164", default-features = false, features = ["std", "derive"] }
+serde = { version = "1.0.175", default-features = false, features = ["std", "derive"] }
 trust-dns-resolver = { version = "0.22.0", default-features = false, features = ["system-config", "tokio-runtime"] }
-strum = "0.24.1"
-strum_macros = "0.24.3"
+strum = { version = "0.25.0", features = ["std", "derive"] }

@@ -21,11 +21,10 @@ use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult,
     TypeId,
 };
-use strum_macros::EnumString;
 use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
 use trust_dns_resolver::Resolver;
 
-#[derive(Debug, EnumString)]
+#[derive(Debug, strum::EnumString)]
 enum BlockListKind {
     #[strum(ascii_case_insensitive)]
     Spamhaus,

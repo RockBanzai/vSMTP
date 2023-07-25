@@ -57,22 +57,22 @@ version = "=2.2.1"
 path = "../vsmtp-plugin-vsl"
 
 [dependencies]
-rhai-dylib = { version = "0.1.8", features = ["sync"] }
-rhai = { version = "=1.14.0", features = ["unchecked", "sync", "internals", "no_closure", "metadata"] }
+rhai-dylib = { version = "0.1.9", features = ["sync"] }
+rhai = { version = "=1.15.1", features = ["unchecked", "sync", "internals", "no_closure", "metadata"] }
 tracing = { version = "0.1.37", default-features = false, features = ["std", "attributes", "release_max_level_info"] }
 
-anyhow = { version = "1.0.71", default-features = false, features = ["std"] }
+anyhow = { version = "1.0.72", default-features = false, features = ["std"] }
 
-thiserror = { version = "1.0.40", default-features = false }
+thiserror = { version = "1.0.44", default-features = false }
 
-either = { version = "1.8.1", default-features = false, features = ["use_std"] }
+either = { version = "1.9.0", default-features = false, features = ["use_std"] }
 
-strum = { version = "0.24.1", default-features = false, features = ["std", "derive"] }
-serde_with = { version = "3.0.0", default-features = false, features = ["std", "macros"] }
+strum = { version = "0.25.0", default-features = false, features = ["std", "derive"] }
+serde_with = { version = "3.1.0", default-features = false, features = ["std", "macros"] }
 
 
-serde_json = { version = "1.0.97", default-features = false, features = ["std"] }
-serde = { version = "1.0.164", default-features = false, features = ["std", "derive"] }
+serde_json = { version = "1.0.103", default-features = false, features = ["std"] }
+serde = { version = "1.0.175", default-features = false, features = ["std", "derive"] }
 lettre = { version = "0.10.4", default-features = false, features = [
   "smtp-transport",
   "builder",
@@ -83,11 +83,11 @@ lettre = { version = "0.10.4", default-features = false, features = [
 wait-timeout = { version = "0.2.0", default-features = false }
 users = { version = "0.11.0", default-features = false }
 
-time = { version = "0.3.22", default-features = false, features = ["std", "formatting", "macros"] }
+time = { version = "0.3.23", default-features = false, features = ["std", "formatting", "macros"] }
 
 trust-dns-resolver = { version = "0.22.0", default-features = false, features = ["system-config", "tokio-runtime"] }
 
-tokio = { version = "1.28.2", default-features = false, features = [
+tokio = { version = "1.29.1", default-features = false, features = [
   "macros",
   "sync",
   "fs",
@@ -97,7 +97,7 @@ tokio = { version = "1.28.2", default-features = false, features = [
 ] }
 humantime-serde = { version = "1.1.1", default-features = false }
 
-uuid = { version = "1.4.0", default-features = false, features = ["std", "v4", "fast-rng"] }
+uuid = { version = "1.4.1", default-features = false, features = ["std", "v4", "fast-rng"] }
 
 [features]
 default = ["delegation"]
@@ -107,8 +107,8 @@ builder = []
 
 [dev-dependencies]
 vsmtp-test = { path = "../vsmtp-test" }
-pretty_assertions = "1.3.0"
-rstest = "0.17.0"
+pretty_assertions = "1.4.0"
+rstest = "0.18.1"
 rand = "0.8.5"
 rand_chacha = "0.3.1"
 rsa = { version = "0.8.2", default-features = false, features = [
@@ -116,4 +116,4 @@ rsa = { version = "0.8.2", default-features = false, features = [
   "pem",
   # "serde" # TODO
 ] }
-tempfile = { version = "3.6.0", optional = false, default-features = false }
+tempfile = { version = "3.7.0", optional = false, default-features = false }

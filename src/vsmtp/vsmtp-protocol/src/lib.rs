@@ -37,7 +37,6 @@
     clippy::shadow_reuse,
     clippy::implicit_return,
     clippy::arithmetic_side_effects,
-    clippy::integer_arithmetic,
     clippy::shadow_same,
     clippy::shadow_unrelated
 )]

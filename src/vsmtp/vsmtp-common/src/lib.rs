@@ -49,7 +49,6 @@
     clippy::std_instead_of_core, // thiserror
     clippy::pattern_type_mismatch,
     clippy::mod_module_files,
-    clippy::integer_arithmetic,
     clippy::arithmetic_side_effects
 )]
 #![cfg_attr(test, allow(clippy::unwrap_used, clippy::std_instead_of_core))]
@@ -128,11 +127,6 @@ pub mod auth {
     pub use mechanism::Mechanism;
 }
 
-#[cfg(test)]
-mod tests {
-    mod libc_abstraction;
-}
-
 #[doc(hidden)]
 #[macro_export]
 macro_rules! collection {
@@ -146,4 +140,9 @@ macro_rules! collection {
         use std::iter::{Iterator, IntoIterator};
         Iterator::collect(IntoIterator::into_iter([$($v,)*]))
     }};
+}
+
+#[cfg(test)]
+mod tests {
+    mod libc_abstraction;
 }

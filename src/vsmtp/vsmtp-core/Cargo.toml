@@ -97,15 +97,15 @@ version = "=2.2.1"
 path = "../vsmtp-rule-engine"
 
 [dependencies]
-clap = { version = "4.3.4", default-features = false, features = ["std", "derive", "cargo", "usage", "help", "color"] }
+clap = { version = "4.3.19", default-features = false, features = ["std", "derive", "cargo", "usage", "help", "color"] }
 dotenv = { version = "0.15.0", default-features = false }
 diff = { version = "0.1.13", default-features = false }
-serde_json = { version = "1.0.97", default-features = false, features = ["std"] }
+serde_json = { version = "1.0.103", default-features = false, features = ["std"] }
 
 cfg-if = { version = "1.0.0" }
 
-anyhow = { version = "1.0.71", default-features = false, features = ["std"] }
-either = { version = "1.8.1", default-features = false, features = ["use_std"] }
+anyhow = { version = "1.0.72", default-features = false, features = ["std"] }
+either = { version = "1.9.0", default-features = false, features = ["use_std"] }
 humantime = { version = "2.1.0", default-features = false }
 
 tracing = { version = "0.1.37", default-features = false, features = ["std", "attributes", "release_max_level_info"] }
@@ -114,7 +114,7 @@ tracing-appender = { version = "0.2.2", default-features = false }
 
 tracing-journald = { version = "0.3.0", optional = true, default-features = false }
 tracing-rfc-5424 = { version = "0.1.1", optional = true, default-features = false }
-console-subscriber = { version = "0.1.9", optional = true, default-features = false }
+console-subscriber = { version = "0.1.10", optional = true, default-features = false }
 
 tracing-opentelemetry = { version = "0.19.0", optional = true, default-features = false, features = [
     "tracing-log",

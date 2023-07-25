@@ -38,7 +38,10 @@ macro_rules! def {
             fn from(value: std::io::ErrorKind) -> Self {
                 match value {
                     $(std::io::ErrorKind::$variant => Self::$variant,)*
-                    _ => unimplemented!()
+                    otherwise => {
+                        tracing::debug!("unknown error kind: '{:?}', using 'Other'", otherwise);
+                        Self::Other
+                    }
                 }
             }
         }
@@ -162,7 +165,8 @@ impl std::fmt::Display for Error {
         if let Some(raw) = self.raw_os_error {
             write!(f, " ({raw})")?;
         }
-        if let Some(ref inner) = self.inner {
+        #[allow(clippy::pattern_type_mismatch)]
+        if let Some(inner) = &self.inner {
             write!(f, ": {inner}")?;
         }
         Ok(())
