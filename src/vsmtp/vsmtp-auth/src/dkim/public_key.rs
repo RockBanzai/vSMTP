@@ -69,14 +69,14 @@ impl InnerPublicKey {
     ) -> Result<(), InnerError> {
         match (self, signing_algorithm) {
             #[cfg(feature = "historic")]
-            (Self::Rsa(rsa), SigningAlgorithm::RsaSha1) => rsa::PublicKey::verify(
+            (Self::Rsa(rsa), SigningAlgorithm::RsaSha1) => rsa::RsaPublicKey::verify(
                 rsa,
                 rsa::Pkcs1v15Sign::new::<sha1::Sha1>(),
                 hashed,
                 signature,
             )
             .map_err(BackendError::Rsa),
-            (Self::Rsa(rsa), SigningAlgorithm::RsaSha256) => rsa::PublicKey::verify(
+            (Self::Rsa(rsa), SigningAlgorithm::RsaSha256) => rsa::RsaPublicKey::verify(
                 rsa,
                 rsa::Pkcs1v15Sign::new::<sha2::Sha256>(),
                 hashed,

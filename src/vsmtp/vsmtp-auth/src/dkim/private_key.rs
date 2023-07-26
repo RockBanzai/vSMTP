@@ -40,7 +40,7 @@ impl PrivateKey {
     ) -> Result<Vec<u8>, InnerError> {
         match self {
             Self::Rsa(rsa) => {
-                let size = rsa::PublicKeyParts::size(rsa.as_ref()) * 8;
+                let size = rsa::traits::PublicKeyParts::size(rsa.as_ref()) * 8;
                 if size < RSA_MINIMUM_ACCEPTABLE_KEY_SIZE {
                     return Err(InnerError::InvalidSize(size));
                 }
