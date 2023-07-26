@@ -71,7 +71,7 @@ lettre = { version = "0.10.4", default-features = false, features = [
   "tracing",
 ] }
 rustls = { version = "0.21.5", default-features = false, features = ["tls12", "logging"] }
-pem = { version = "2.0.1", default-features = false }
+pem = { version = "3.0.0", default-features = false }
 
 tokio = { version = "1.29.1", default-features = false, features = [
   "macros",
