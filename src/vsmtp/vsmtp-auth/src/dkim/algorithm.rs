@@ -18,7 +18,17 @@
 /// Hash & sign algorithm exposed in a `DKIM-Signature` header. Used by the
 /// expose the algorithm used to verify the message.
 #[allow(clippy::module_name_repetitions)]
-#[derive(Debug, PartialEq, Eq, Copy, Clone, strum::EnumString, strum::Display)]
+#[derive(
+    Debug,
+    PartialEq,
+    Eq,
+    Copy,
+    Clone,
+    strum::EnumString,
+    strum::Display,
+    serde_with::SerializeDisplay,
+    serde_with::DeserializeFromStr,
+)]
 pub enum SigningAlgorithm {
     /// The SHA-1 hash function should be considered cryptographically broken and unsuitable
     /// for further use in any security critical capacity.

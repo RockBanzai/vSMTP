@@ -20,7 +20,17 @@ use crate::ParseError;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use vsmtp_mail_parser::RawBody;
 
-#[derive(Debug, PartialEq, Eq, Clone, strum::EnumString, strum::Display, Default)]
+#[derive(
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Clone,
+    strum::EnumString,
+    strum::Display,
+    serde::Deserialize,
+    serde::Serialize,
+)]
 pub enum QueryMethod {
     #[default]
     #[strum(serialize = "dns/txt")]
@@ -28,17 +38,17 @@ pub enum QueryMethod {
 }
 
 /// Representation of the "DKIM-Signature" header
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize, serde::Serialize)]
 pub struct Signature {
     /// tag "v="
     pub(super) version: usize,
     /// tag "a="
-    pub(super) signing_algorithm: SigningAlgorithm,
+    pub signing_algorithm: SigningAlgorithm,
     /// Signing Domain Identifier (SDID)
     /// tag "d="
     pub sdid: String,
     /// tag "s="
-    pub(super) selector: String,
+    pub selector: String,
     /// tag "c="
     pub(super) canonicalization: Canonicalization,
     /// tag "q="
@@ -59,7 +69,7 @@ pub struct Signature {
     /// tag "bh="
     pub(super) body_hash: String,
     /// tag "b="
-    pub(super) signature: String,
+    pub signature: String,
     pub(super) raw: String,
 }
 

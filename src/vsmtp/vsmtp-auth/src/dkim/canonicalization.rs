@@ -122,7 +122,16 @@ impl CanonicalizationAlgorithm {
 }
 
 /// The algorithm used to canonicalize the message.
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone)]
+#[derive(
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    Copy,
+    Clone,
+    serde_with::SerializeDisplay,
+    serde_with::DeserializeFromStr,
+)]
 pub struct Canonicalization {
     /// The algorithm used to canonicalize the header.
     header: CanonicalizationAlgorithm,

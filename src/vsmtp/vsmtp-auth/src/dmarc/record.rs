@@ -17,13 +17,30 @@
 
 use crate::{get_root_domain, ParseError};
 
-#[derive(Debug, Clone, PartialEq, Eq, strum::EnumString, strum::Display)]
+#[derive(
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    strum::EnumString,
+    strum::Display,
+    serde_with::SerializeDisplay,
+    serde_with::DeserializeFromStr,
+)]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Version {
     Dmarc1,
 }
 
-#[derive(Debug, Default, Clone, strum::EnumString, strum::Display)]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    strum::EnumString,
+    strum::Display,
+    serde_with::SerializeDisplay,
+    serde_with::DeserializeFromStr,
+)]
 enum AlignmentMode {
     #[default]
     #[strum(serialize = "r")]
@@ -32,7 +49,14 @@ enum AlignmentMode {
     Strict,
 }
 
-#[derive(Debug, Clone, strum::EnumString, strum::Display)]
+#[derive(
+    Debug,
+    Clone,
+    strum::EnumString,
+    strum::Display,
+    serde_with::SerializeDisplay,
+    serde_with::DeserializeFromStr,
+)]
 enum FailureReportOption {
     #[strum(serialize = "0")]
     All,
@@ -45,7 +69,14 @@ enum FailureReportOption {
 }
 
 ///
-#[derive(Debug, Clone, strum::EnumString, strum::Display)]
+#[derive(
+    Debug,
+    Clone,
+    strum::EnumString,
+    strum::Display,
+    serde_with::SerializeDisplay,
+    serde_with::DeserializeFromStr,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum ReceiverPolicy {
     ///
@@ -56,7 +87,15 @@ pub enum ReceiverPolicy {
     Reject,
 }
 
-#[derive(Debug, Default, Clone, strum::EnumString, strum::Display)]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    strum::EnumString,
+    strum::Display,
+    serde_with::SerializeDisplay,
+    serde_with::DeserializeFromStr,
+)]
 enum ReportFailure {
     #[default]
     #[strum(serialize = "afrf")]
@@ -64,7 +103,7 @@ enum ReportFailure {
 }
 
 /// DNS record `_dmarc.{domain}`
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[allow(dead_code)]
 pub struct Record {
     version: Version,

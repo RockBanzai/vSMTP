@@ -32,6 +32,7 @@ serde = { version = "1.0.180", default-features = false, features = ["std", "der
 tracing = { version = "0.1.37", default-features = false, features = ["std", "attributes", "release_max_level_info"] }
 thiserror = { version = "1.0.44", default-features = false }
 anyhow = { version = "1.0.72", default-features = false, features = ["std"] }
+serde_with = { version = "3.1.0", default-features = false, features = ["std", "macros"] }
 
 base64 = { version = "0.21.2", default-features = false, features = ["std"] }
 strum = { version = "0.25.0", default-features = false, features = ["std", "derive"] }
