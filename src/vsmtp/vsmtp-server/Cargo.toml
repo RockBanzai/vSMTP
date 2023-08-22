@@ -64,7 +64,7 @@ log = { version = "0.4.19", default-features = false, features = ["std", "releas
 async-trait = { version = "0.1.73", default-features = false }
 thiserror = { version = "1.0.47", default-features = false }
 strum = { version = "0.25.0", default-features = false, features = ["std", "derive"] }
-anyhow = { version = "1.0.72", default-features = false, features = ["std"] }
+anyhow = { version = "1.0.75", default-features = false, features = ["std"] }
 
 either = { version = "1.9.0", default-features = false, features = ["use_std", "serde"] }
 
