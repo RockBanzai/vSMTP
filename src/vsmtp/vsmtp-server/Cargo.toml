@@ -62,7 +62,7 @@ tracing = { version = "0.1.37", default-features = false, features = ["std", "at
 log = { version = "0.4.19", default-features = false, features = ["std", "release_max_level_info"] }
 
 async-trait = { version = "0.1.73", default-features = false }
-thiserror = { version = "1.0.44", default-features = false }
+thiserror = { version = "1.0.47", default-features = false }
 strum = { version = "0.25.0", default-features = false, features = ["std", "derive"] }
 anyhow = { version = "1.0.72", default-features = false, features = ["std"] }
 

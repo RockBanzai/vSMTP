@@ -64,7 +64,7 @@ strum = { version = "0.25.0", features = ["std", "derive"] }
 serde_with = { version = "3.3.0", default-features = false, features = ["std", "macros"] }
 
 humantime = { version = "2.1.0" }
-thiserror = { version = "1.0.44", default-features = false }
+thiserror = { version = "1.0.47", default-features = false }
 
 time = { version = "0.3.23", default-features = false, features = ["std", "formatting", "macros", "serde-well-known"] }
 
