@@ -116,4 +116,4 @@ rsa = { version = "0.9.2", default-features = false, features = [
   "pem",
   # "serde" # TODO
 ] }
-tempfile = { version = "3.7.0", optional = false, default-features = false }
+tempfile = { version = "3.8.0", optional = false, default-features = false }
