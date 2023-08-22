@@ -34,7 +34,7 @@ vsmtp-rule-engine = { version = "=2.2.1", path = "../../vsmtp/vsmtp-rule-engine"
 
 rhai = { version = "=1.15.1", features = ["unchecked", "sync", "internals", "no_closure", "metadata"] }
 mysql = { version = "24.0.0", default-features = false, features = ["rustls-tls", "buffer-pool"] }
-flate2 = { version = "1.0.26", default-features = false, features = ["zlib"] }
+flate2 = { version = "1.0.27", default-features = false, features = ["zlib"] }
 mysql_common = { version = "0.30.6", default-features = false, features = [
     "bigdecimal",
     "rust_decimal",
@@ -55,7 +55,7 @@ vsmtp-rule-engine = { version = "=2.2.1", path = "../../vsmtp/vsmtp-rule-engine"
 rhai = { version = "=1.15.1", features = ["unchecked", "sync", "internals", "no_closure", "metadata"] }
 
 mysql = { version = "24.0.0", default-features = false, features = ["rustls-tls", "buffer-pool"] }
-flate2 = { version = "1.0.26", default-features = false, features = ["zlib"] }
+flate2 = { version = "1.0.27", default-features = false, features = ["zlib"] }
 mysql_common = { version = "0.30.6", default-features = false, features = [
     "bigdecimal",
     "rust_decimal",
