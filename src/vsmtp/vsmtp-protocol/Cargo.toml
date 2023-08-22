@@ -28,7 +28,7 @@ version = "=2.2.1"
 path = "../vsmtp-common"
 
 [dependencies]
-tokio = { version = "1.29.1", default-features = false, features = [
+tokio = { version = "1.32.0", default-features = false, features = [
     "macros",
     "sync",
     "fs",
