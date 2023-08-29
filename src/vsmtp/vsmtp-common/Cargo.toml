@@ -55,7 +55,7 @@ lettre = { version = "0.10.4", default-features = false, features = [
     "serde",
 ] }
 tokio = { version = "1.32.0", default-features = false, features = ["macros", "sync", "fs", "libc", "mio"] }
-rustls = { version = "0.21.6", default-features = false, features = ["tls12", "logging"] }
+rustls = { version = "0.21.7", default-features = false, features = ["tls12", "logging"] }
 rustls-pemfile = { version = "1.0.3", default-features = false }
 
 trust-dns-resolver = { version = "0.22.0", default-features = false, features = [

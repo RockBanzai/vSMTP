@@ -70,7 +70,7 @@ lettre = { version = "0.10.4", default-features = false, features = [
   "tokio1-rustls-tls",
   "tracing",
 ] }
-rustls = { version = "0.21.6", default-features = false, features = ["tls12", "logging"] }
+rustls = { version = "0.21.7", default-features = false, features = ["tls12", "logging"] }
 pem = { version = "3.0.1", default-features = false }
 
 tokio = { version = "1.32.0", default-features = false, features = [

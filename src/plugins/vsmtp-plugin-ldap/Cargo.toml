@@ -31,7 +31,7 @@ serde = { version = "1.0.188", default-features = false, features = ["std", "der
 humantime-serde = { version = "1.1.1", default-features = false }
 ldap3 = { version = "0.11.3", default-features = false, features = ["sync", "tls-rustls"] }
 r2d2 = { version = "0.8.10", default-features = false }
-rustls = { version = "0.21.6", default-features = false, features = ["tls12", "logging"] }
+rustls = { version = "0.21.7", default-features = false, features = ["tls12", "logging"] }
 rustls-pemfile = { version = "1.0.3", default-features = false }
 
 [dependencies]
@@ -40,5 +40,5 @@ serde = { version = "1.0.188", default-features = false, features = ["std", "der
 humantime-serde = { version = "1.1.1", default-features = false }
 ldap3 = { version = "0.11.3", default-features = false, features = ["sync", "tls-rustls"] }
 r2d2 = { version = "0.8.10", default-features = false }
-rustls = { version = "0.21.6", default-features = false, features = ["tls12", "logging"] }
+rustls = { version = "0.21.7", default-features = false, features = ["tls12", "logging"] }
 rustls-pemfile = { version = "1.0.3", default-features = false }
