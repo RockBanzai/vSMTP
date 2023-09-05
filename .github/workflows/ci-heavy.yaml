@@ -17,13 +17,13 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-spellcheck@0.13.0
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: cargo spellcheck --code 1
 
   cargo-udeps:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-udeps@0.1.41
@@ -35,7 +35,7 @@ jobs:
   cargo-deny:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-deny@0.13.9
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: sudo apt update && sudo apt install protobuf-compiler -y
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
