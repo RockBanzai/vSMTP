@@ -74,8 +74,11 @@ vSMTP is licensed under an ELv2 license. Please refer to the [license](LICENSE) 
 ## Commercial
 
 Anyone can use vSMTP Open edition (this repository), free of charge. You can run the software at scale on your infrastructure as long as you adhere and comply with the conditions and terms of use described in ELv2.
-In addition to vSMTP Open Edition, we also develop and maintain two specific editions dedicated to [mass mailing](http://vsmtp.org/e-commerce-edition/) and to [providers](http://vsmtp.org/providers-edition/).
+
+In addition to vSMTP Open Edition, we also develop and maintain two specific editions dedicated to [mass mailing](http://viridit.com/e-commerce-edition/) and to [providers](http://viridit.com/providers-edition/).
+
 We can offer a wide range of services, from design to physical implementation, provide maintenance and develop specific features and dedicated APIs to meet your business needs.
+
 For any questions related to sales, licenses, etc. you can [contact us] on our website or send a message to <contact@viridit.com>.
 
 [vBook]: https://vsmtp.rs
