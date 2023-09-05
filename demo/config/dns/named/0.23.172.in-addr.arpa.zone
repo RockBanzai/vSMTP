@@ -1,0 +1,12 @@
+$TTL 2d
+$ORIGIN                     0.23.172.IN-ADDR.ARPA.
+@                           IN  SOA     mydomain.tld. root.mydomain.tld. (
+                                            199609203 ; Serial
+                                            8h        ; Refresh
+                                            120m      ; Retry
+                                            7d        ; Expire
+                                            24h)      ; Minimum TTL
+                            IN  NS      mydomain.tld.
+                            IN  A       127.0.0.1
+
+2                           IN PTR      out-v1.mydomain.tld.

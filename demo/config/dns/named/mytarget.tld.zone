@@ -1,0 +1,16 @@
+$TTL 2d
+@               IN  SOA mytarget.tld. root (
+                    199609203 ; Serial
+                    8h        ; Refresh
+                    120m      ; Retry
+                    7d        ; Expire
+                    24h)      ; Minimum TTL
+                IN  NS  mytarget.tld.
+                IN  A   127.0.0.1
+                IN  MX  1   smtp-in.mytarget.tld.
+                IN  TXT "v=spf1 ip4:172.23.0.6 -all"
+
+smtp-in         IN  A   172.23.0.5
+
+smtp-out        IN  A   172.23.0.6
+                IN  TXT "v=spf1 ip4:172.23.0.6 -all"

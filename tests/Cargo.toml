@@ -1,0 +1,8 @@
+[package]
+name = "tests"
+authors = ["Team viridIT <https://viridit.com/>"]
+edition = "2021"
+version = "0.1.0"
+publish = false
+
+[dependencies]

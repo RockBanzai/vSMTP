@@ -1,0 +1,44 @@
+[package]
+name = "vsmtp-plugin-mysql"
+version.workspace = true
+authors.workspace = true
+build = "build.rs"
+categories = ["email", "database", "plugin"]
+documentation = "https://docs.rs/crate/vsmtp-plugin-mysql/"
+edition.workspace = true
+homepage = "https://github.com/viridIT/vSMTP"
+keywords = ["vsmtp", "mysql"]
+license = "GPL-3.0-only"
+publish.workspace = true
+readme = "../../../README.md"
+repository = "https://github.com/viridIT/vSMTP"
+rust-version.workspace = true
+description = "A plugin for vSMTP that enable support for mysql databases"
+
+[package.metadata.release]
+pre-release-commit-message = "chore: Release {{crate_name}} version {{version}}"
+
+[lib]
+crate-type = ["cdylib"]
+
+[build-dependencies]
+flate2 = { workspace = true }
+humantime-serde = { workspace = true }
+mysql = { workspace = true }
+mysql_common = { workspace = true }
+r2d2 = { workspace = true }
+rhai = { workspace = true }
+rhai-autodocs = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[dependencies]
+flate2 = { workspace = true }
+humantime-serde = { workspace = true }
+mysql = { workspace = true }
+mysql_common = { workspace = true }
+r2d2 = { workspace = true }
+rhai = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

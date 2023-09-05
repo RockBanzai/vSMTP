@@ -1,0 +1,56 @@
+[package]
+name = "vsmtp-delivery"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+trust-dns-resolver = ["dep:trust-dns-resolver"]
+
+[dependencies]
+async-trait = { workspace = true }
+clap = { workspace = true }
+futures-util = { workspace = true }
+hostname = { workspace = true }
+humantime = { workspace = true }
+lapin = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_with = { workspace = true }
+strum = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+tokio-stream = { workspace = true, features = ["time"] }
+tracing = { workspace = true }
+tracing-amqp = { workspace = true }
+tracing-subscriber = { workspace = true }
+trust-dns-resolver = { workspace = true, optional = true }
+url = { workspace = true }
+users = { workspace = true }
+vsmtp-common = { workspace = true }
+vsmtp-config = { workspace = true }
+vsmtp-mail-parser = { workspace = true }
+vsmtp-protocol = { workspace = true }
+
+[[bin]]
+name = "vsmtp-maildir"
+path = "src/bin/maildir.rs"
+
+[[bin]]
+name = "vsmtp-mbox"
+path = "src/bin/mbox.rs"
+
+[[bin]]
+name = "vsmtp-forward"
+required-features = ["trust-dns-resolver"]
+path = "src/bin/forward.rs"
+
+[[bin]]
+name = "vsmtp-basic"
+required-features = ["trust-dns-resolver"]
+path = "src/bin/basic.rs"

@@ -1,0 +1,88 @@
+{
+    "rabbit_version": "3.12.1",
+    "rabbitmq_version": "3.12.1",
+    "product_name": "RabbitMQ",
+    "product_version": "3.12.1",
+    "users": [
+        {
+            "name": "admin",
+            "password_hash": "FGA5ZeTOLHnIp4ZjxIj0PsShW/DpLgdYAlHsbli7KMMa8Z0O",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": [
+                "administrator"
+            ],
+            "limits": {}
+        },
+        {
+            "name": "guest",
+            "password_hash": "R184F4Fs6JLdo8tFqRjWnkJL2DlAZJupxEqkO/8kfV/G63+z",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": [],
+            "limits": {}
+        },
+        {
+            "name": "sink-mytarget",
+            "password_hash": "O8C4U0OZe5zpEn0+sFPo0+Fj/RrAOzRet4IuX8gk2esUFdWl",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": [],
+            "limits": {}
+        },
+        {
+            "name": "vsmtp-dev",
+            "password_hash": "J089ks3oGf41u7fWqx+aVHk0Xbd7y2u6c/IGnQKB6U2+IP5l",
+            "hashing_algorithm": "rabbit_password_hashing_sha256",
+            "tags": [],
+            "limits": {}
+        }
+    ],
+    "vhosts": [
+        {
+            "name": "vsmtp-dev"
+        },
+        {
+            "name": "sink-mytarget"
+        }
+    ],
+    "permissions": [
+        {
+            "user": "admin",
+            "vhost": "vsmtp-dev",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        },
+        {
+            "user": "vsmtp-dev",
+            "vhost": "vsmtp-dev",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        },
+        {
+            "user": "sink-mytarget",
+            "vhost": "sink-mytarget",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        },
+        {
+            "user": "admin",
+            "vhost": "sink-mytarget",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        }
+    ],
+    "topic_permissions": [],
+    "parameters": [],
+    "global_parameters": [
+        {
+            "name": "internal_cluster_id",
+            "value": "rabbitmq-cluster-id-2JMayVA0KnE0v-gEM8aOGA"
+        }
+    ],
+    "policies": [],
+    "queues": [],
+    "exchanges": [],
+    "bindings": []
+}

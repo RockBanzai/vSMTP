@@ -1,0 +1,134 @@
+version: '3.9'
+
+networks:
+  demo_net:
+    external: true
+  mysql:
+
+
+volumes:
+  mytarget-maildir:
+
+
+services:
+  mytarget-receiver:
+    image: vsmtp-receiver:dev
+    hostname: smtp-in.mytarget.tld
+    volumes:
+      - ./config/prelude.rhai:/prelude.rhai:ro
+      - ./config/mytarget.tld/receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
+      - ./config/mytarget.tld/receiver/rules.rhai:/rules.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    env_file:
+      - ./config/mytarget.tld/services.env
+    networks:
+      demo_net:
+        ipv4_address: 172.23.0.5
+      mysql:
+    ports:
+      - 127.0.0.1:11025:25 # Relay
+      - 127.0.0.1:11587:587 # Submission
+    depends_on:
+      broker:
+        condition: service_healthy
+      log-dispatcher:
+        condition: service_started
+      mytarget-users-db:
+        condition: service_healthy
+
+  mytarget-users-db:
+    image: mysql:8.0.34-debian
+    volumes:
+      - ./config/mytarget.tld/users.sql:/docker-entrypoint-initdb.d/users.sql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: vsmtp-dev
+      MYSQL_PASSWORD: vsmtp-dev
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+    networks:
+      - mysql
+
+  mytarget-working:
+    image: vsmtp-working:dev
+    command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
+    volumes:
+      - ./config/mytarget.tld/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/no-rules.rhai:/rules.rhai:ro
+    env_file:
+      - ./config/mytarget.tld/services.env
+    networks: [ demo_net ]
+    depends_on:
+      broker:
+        condition: service_healthy
+      log-dispatcher:
+        condition: service_started
+
+  mytarget-basic:
+    image: vsmtp-basic:dev
+    hostname: smtp-out.mytarget.tld
+    volumes:
+      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/no-rules.rhai:/rules.rhai:ro
+    env_file:
+      - ./config/mytarget.tld/services.env
+    environment:
+      - SYSTEM={"dns":{ "config":{ "name_servers":[ {"socket_addr":"172.23.0.1:53"} ] } }}
+    networks:
+      demo_net:
+        ipv4_address: 172.23.0.6
+    depends_on:
+      broker:
+        condition: service_healthy
+      dns-server:
+        condition: service_healthy
+      log-dispatcher:
+        condition: service_started
+
+  mytarget-delivery-maildir:
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM vsmtp-maildir:dev
+        RUN apt-get update && apt-get install -y openssl
+        RUN useradd -p $(openssl passwd -1 jenny.doe) --create-home jenny.doe@mytarget.tld
+    volumes:
+      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/no-rules.rhai:/rules.rhai:ro
+      - mytarget-maildir:/home:rw
+    env_file:
+      - ./config/mytarget.tld/services.env
+    environment:
+      - SYSTEM={"user_lookup":"full_address"}
+    networks: [ demo_net ]
+    depends_on:
+      broker:
+        condition: service_healthy
+      log-dispatcher:
+        condition: service_started
+
+  mytarget-imap:
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM dovecot/dovecot
+        RUN apt-get update && apt-get install -y openssl
+        RUN useradd -p $(openssl passwd -1 jenny.doe) jenny.doe@mytarget.tld
+    ports:
+      # - 127.0.0.1:11110:110 # POP3
+      # - 127.0.0.1:11995:995 # POP3S
+      - 127.0.0.1:11143:143 # IMAP
+      # - 127.0.0.1:11993:993 # IMAPS
+    volumes:
+      - mytarget-maildir:/home:rw
+      - ./config/mytarget.tld/dovecot.conf:/etc/dovecot/dovecot.conf:ro
+    depends_on:
+      mytarget-delivery-maildir:
+        condition: service_started

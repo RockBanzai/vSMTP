@@ -1,3 +1,0 @@
-green@example.com
-jones@foo.com
-user@domain.com

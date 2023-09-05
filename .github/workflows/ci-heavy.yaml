@@ -1,0 +1,58 @@
+name: CI heavy
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  cargo-spellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-spellcheck@0.13.0
+      - uses: actions/checkout@v3
+      - run: cargo spellcheck --code 1
+
+  cargo-udeps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-udeps@0.1.41
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: nightly
+      - run: cargo +nightly udeps --workspace
+
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.13.9
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          command: check
+          arguments: ""
+
+  cargo-hack-check:
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt update && sudo apt install protobuf-compiler -y
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-hack@0.5.28
+      - run: cargo hack check --each-feature --no-dev-deps

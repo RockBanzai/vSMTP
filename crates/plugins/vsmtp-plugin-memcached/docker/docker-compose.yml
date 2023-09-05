@@ -1,0 +1,28 @@
+version: "3"
+
+services:
+  vsmtp:
+    depends_on:
+      greylist:
+        condition: service_healthy
+    build:
+      dockerfile: debian.Dockerfile
+      context: ../../../../
+    volumes:
+      - ./vsmtp-config/conf.d:/etc/vsmtp/conf.d
+      - ./vsmtp-config/services:/etc/vsmtp/services
+      - ./vsmtp-config/vsmtp.rhai:/etc/vsmtp/vsmtp.rhai
+      - ./vsmtp-config/filter.rhai:/etc/vsmtp/filter.rhai
+    ports:
+      - 127.0.0.1:10025:25
+    links:
+      - greylist
+
+  greylist:
+    build:
+      context: ./memcached
+    expose:
+      - "11211"
+
+volumes:
+  vsmtp:

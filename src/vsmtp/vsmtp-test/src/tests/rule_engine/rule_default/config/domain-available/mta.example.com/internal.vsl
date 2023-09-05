@@ -1,5 +1,0 @@
-#{
-    rcpt: [
-        rule "accept with code" || state::accept(code(100, "internal mta.example.com")),
-    ],
-}

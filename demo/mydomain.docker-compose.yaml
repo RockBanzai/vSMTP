@@ -1,0 +1,124 @@
+version: '3.9'
+
+networks:
+  demo_net:
+    external: true
+
+volumes:
+  mydomain-maildir:
+
+
+services:
+  receiver-smtp-msa:
+    hostname: smtp-msa.mydomain.tld
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM vsmtp-receiver:dev
+        ## saslauthd is used internally by vsmtp
+        RUN apt-get update && apt-get install -y sasl2-bin openssl
+
+        RUN sed -i 's/START=no/START=yes/g' /etc/default/saslauthd
+        RUN sed -i 's/MECHANISMS="pam"/MECHANISMS="shadow"/g' /etc/default/saslauthd
+
+        RUN useradd -p $(openssl passwd -1 john.doe) john.doe@mydomain.tld
+
+        # RUN usermod -a -G sasl vsmtp
+        # USER vsmtp
+    command: sh -c "saslauthd -a shadow && vsmtp-receiver"
+    volumes:
+      # TODO: create separate rules for every service and only mount one volume per configuration.
+      - ./config/prelude.rhai:/prelude.rhai:ro
+      - ./config/mydomain.tld/receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
+      - ./config/mydomain.tld/receiver/rules-pre-av.rhai:/rules.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    env_file:
+      - ./config/mydomain.tld/services.env
+    networks:
+      demo_net:
+        ipv4_address: 172.23.0.3
+    ports:
+      - 127.0.0.1:10587:587
+    depends_on:
+      broker:
+        condition: service_healthy
+      log-dispatcher:
+        condition: service_started
+
+  mydomain-working:
+    image: vsmtp-working:dev
+    command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
+    volumes:
+      - ./config/mydomain.tld/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/no-rules.rhai:/rules.rhai:ro
+    env_file:
+      - ./config/mydomain.tld/services.env
+    networks: [ demo_net ]
+    depends_on:
+      broker:
+        condition: service_healthy
+      log-dispatcher:
+        condition: service_started
+
+  mydomain-delivery-maildir:
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM vsmtp-maildir:dev
+        RUN apt-get update && apt-get install -y openssl
+        RUN useradd -p $(openssl passwd -1 john.doe) --create-home john.doe@mydomain.tld
+    volumes:
+      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/no-rules.rhai:/rules.rhai:ro
+      - mydomain-maildir:/home:rw
+    env_file:
+      - ./config/mydomain.tld/services.env
+    environment:
+      - SYSTEM={"user_lookup":"full_address"}
+    networks: [ demo_net ]
+    depends_on:
+      broker:
+        condition: service_healthy
+      log-dispatcher:
+        condition: service_started
+
+  mydomain-imap:
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM dovecot/dovecot
+        RUN apt-get update && apt-get install -y openssl
+        RUN useradd -p $(openssl passwd -1 john.doe) john.doe@mydomain.tld
+    ports:
+      # - 127.0.0.1:10110:110 # POP3
+      # - 127.0.0.1:10995:995 # POP3S
+      - 127.0.0.1:10143:143 # IMAP
+      # - 127.0.0.1:10993:993 # IMAPS
+    volumes:
+      - mydomain-maildir:/home:rw
+      - ./config/mydomain.tld/dovecot.conf:/etc/dovecot/dovecot.conf:ro
+
+  mydomain-basic:
+    image: vsmtp-basic:dev
+    hostname: out-v0.mydomain.tld
+    volumes:
+      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/no-rules.rhai:/rules.rhai:ro
+    env_file:
+      - ./config/mydomain.tld/services.env
+    environment:
+      - SYSTEM={"dns":{ "config":{ "name_servers":[ {"socket_addr":"172.23.0.1:53"} ] } }}
+    networks:
+      demo_net:
+        ipv4_address: 172.23.0.10
+    depends_on:
+      broker:
+        condition: service_healthy
+      dns-server:
+        condition: service_healthy

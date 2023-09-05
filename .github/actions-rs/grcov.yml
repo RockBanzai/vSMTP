@@ -1,5 +1,0 @@
-output-type: lcov
-output-path: ./lcov.info
-ignore:
-  - "*/main.rs"
-  - "*ignored_test.rs"

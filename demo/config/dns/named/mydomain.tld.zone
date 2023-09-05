@@ -1,0 +1,35 @@
+$TTL 2d
+@                           IN  SOA     mydomain.tld. root (
+                                            199609204 ; Serial
+                                            8h        ; Refresh
+                                            120m      ; Retry
+                                            7d        ; Expire
+                                            24h)      ; Minimum TTL
+                            IN  NS      mydomain.tld.
+                            IN  A       127.0.0.1
+                            IN  MX      1   smtp-msa.mydomain.tld.
+                            IN  TXT     "v=spf1 +include:ip4._spf.%{d} -all"
+
+_submission._tcp            IN  SRV     0 1 587 smtp-msa.mydomain.tld.
+ip4._spf                    IN  TXT     "v=spf1 +ip4:172.23.0.2 +ip4:172.23.0.10 -all"
+_dmarc                      IN  TXT     "v=DMARC1; p=quarantine;"
+
+smtp-msa                     IN  A      172.23.0.3
+
+out-v0                      IN  A       172.23.0.10
+                            IN  TXT     "v=spf1 +include:ip4._spf.%{d2} -all"
+
+out-v1                      IN  A       172.23.0.2
+                            IN  TXT     "v=spf1 +include:ip4._spf.%{d2} -all"
+
+rsa-dkim._domainkey         IN  TXT     ("v=DKIM1;k=rsa;p="
+    MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoa/8hpxMl3XwC7HphB9G
+    XNv5YDMUpRYJCQavY/meAodcOZT2V26ITYjDBnO7lr4MCagZJosSaY3ipzetpWJZ
+    THE+SY7qlEsYHGScye81pXtXvsW/gLj1lUAB/x22G1Ju24xsBblx/oQEfcKJbSaF
+    HqOYOAtS8jgFgAUixGD6v/qiPjEs48zNz8Og4XVBlGqFDFPLW6pylaisaByJJI5n
+    Q/hs39jQinEyulb7kPsaINSO2XpAG8uLzw8O/3jFNyOkVt5S5hAxDI9FQLaVunc5
+    JNc3gxHNh5mAR6Y1YDbZjybUFfHk9AYFyzmkC1YYY8jg210egcB0xQDaH0RNw+sb
+    QwIDAQAB)
+
+ed-dkim._domainkey          IN  TXT     ("v=DKIM1;k=ed25519;p="
+    L/mco9Uy4WYOyIdMRg0MiChdMRKEfak9+7uDyLUMpUQ=)

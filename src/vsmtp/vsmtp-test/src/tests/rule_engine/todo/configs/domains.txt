@@ -1,4 +1,0 @@
-foo.bar
-example.com
-satan.com
-jones.green

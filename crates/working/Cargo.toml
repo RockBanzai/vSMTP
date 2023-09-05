@@ -1,0 +1,23 @@
+[package]
+name = "vsmtp-working"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+clap = { workspace = true }
+futures-lite = { workspace = true }
+lapin = { workspace = true }
+serde = { workspace = true }
+strum = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-amqp = { workspace = true }
+tracing-subscriber = { workspace = true }
+vsmtp-common = { workspace = true }
+vsmtp-config = { workspace = true }
+vsmtp-rule-engine = { workspace = true }

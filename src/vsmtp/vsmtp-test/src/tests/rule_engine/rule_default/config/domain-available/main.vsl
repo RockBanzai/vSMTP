@@ -1,5 +1,0 @@
-#{
-    mail: [
-        rule "accept with code" || state::accept(code(100, "incoming main"))
-    ]
-}

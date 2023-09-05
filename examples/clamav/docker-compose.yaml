@@ -1,0 +1,165 @@
+version: '3.9'
+
+volumes:
+  out-maildir:
+  in-maildir:
+  clamav-cache:
+    driver: local
+    driver_opts:
+      type: "tmpfs"
+      device: "tmpfs"
+
+services:
+  broker:
+    image: vsmtp-broker:dev
+    hostname: rabbitmq.mydomain.tld
+    ports:
+      - 127.0.0.1:15672:15672
+      - 127.0.0.1:15671:15671
+    volumes:
+      - ./config/broker/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./config/broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/broker/generated/rabbitmq.mydomain.tld.crt:/etc/ssl/server_certificate.pem:ro
+      - ./config/broker/generated/rabbitmq.mydomain.tld.key:/etc/ssl/server_key.pem:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/ca_certificate.pem:ro
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  clamav:
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM clamav/clamav:1.1
+        ## Remove the User line of the clamd.conf file
+        ## This is needed to run the clamav as root (do not drop privileges)
+        RUN sed -i '/User clamav/d' /etc/clamav/clamd.conf
+    volumes:
+      - clamav-cache:/var/spool/clamd/:rw
+    ports:
+      - 13310:3310
+    environment:
+      # Do not refresh clamav's virus database.
+      # This should be removed when using clamav in production.
+      - CLAMAV_NO_FRESHCLAMD=true
+    healthcheck:
+      test: sh -c "[[ \"$(echo PING | nc localhost 3310)\" = \"PONG\" ]] || exit 1"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 0s
+
+  ## vSMTP
+
+  receiver-smtp-msa:
+    hostname: smtp-msa.mydomain.tld
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM vsmtp-receiver:dev
+        ## saslauthd is used internally by vsmtp
+        RUN apt-get update && apt-get install -y sasl2-bin openssl
+
+        RUN sed -i 's/START=no/START=yes/g' /etc/default/saslauthd
+        RUN sed -i 's/MECHANISMS="pam"/MECHANISMS="shadow"/g' /etc/default/saslauthd
+
+        RUN useradd -p $(openssl passwd -1 john.doe) john.doe@mydomain.tld
+
+        # RUN usermod -a -G sasl vsmtp
+        # USER vsmtp
+    command: sh -c "saslauthd -a shadow && vsmtp-receiver --config /etc/vsmtp/receiver-smtp/conf.d/config.rhai"
+    volumes:
+      - ./config/receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
+      - ./config/receiver/rules.rhai:/etc/vsmtp/receiver-smtp/filter.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    ports:
+      - 127.0.0.1:10025:25
+    env_file:
+      - ./config/services.env
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  working:
+    image: vsmtp-working:dev
+    command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
+    volumes:
+      - ./config/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
+      - ./config/working/clamav-service.rhai:/clamav-service.rhai
+      - ./config/working/rules.rhai:/rules.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    env_file:
+      - ./config/services.env
+    depends_on:
+      broker:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
+
+  maildir:
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM vsmtp-maildir:dev
+        RUN apt-get update && apt-get install -y openssl
+        RUN useradd -p $(openssl passwd -1 jenny.doe) --create-home jenny.doe@mytarget.tld
+    env_file:
+      - ./config/services.env
+    volumes:
+      # - ./config/maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/no-rules.rhai:/empty.rhai:ro
+      - out-maildir:/home/jenny.doe@mytarget.tld:rw
+    environment:
+      - SYSTEM={"user_lookup":"full_address"}
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  log-dispatcher:
+    image: vsmtp-log-dispatcher:dev
+    env_file:
+      - ./config/services.env
+    volumes:
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    depends_on:
+      broker:
+        condition: service_healthy
+  ## Dovecot instances to test the example manually.
+
+  # imap-in:
+  #   build:
+  #     context: .
+  #     dockerfile_inline: |
+  #       # syntax=docker/dockerfile:1
+  #       FROM dovecot/dovecot
+  #       RUN apt-get update && apt-get install -y openssl
+  #       RUN useradd -p $(openssl passwd -1 john.doe) --create-home john.doe@mydomain.tld
+  #   ports:
+  #     - 127.0.0.1:10143:143
+  #   volumes:
+  #     - ./config/dovecot/in-dovecot.conf:/etc/dovecot/dovecot.conf:ro
+  #     - in-maildir:/home/john.doe@mydomain.tld:rw
+
+  # imap-out:
+  #   build:
+  #     context: .
+  #     dockerfile_inline: |
+  #       # syntax=docker/dockerfile:1
+  #       FROM dovecot/dovecot
+  #       RUN apt-get update && apt-get install -y openssl
+  #       RUN useradd -p $(openssl passwd -1 jenny.doe) jenny.doe@mytarget.tld
+  #   ports:
+  #     - 127.0.0.1:11143:143
+  #   volumes:
+  #     - ./config/dovecot/out-dovecot.conf:/etc/dovecot/dovecot.conf:ro
+  #     - out-maildir:/home/jenny.doe@mytarget.tld:rw
+  #   depends_on:
+  #     maildir:
+  #       condition: service_started

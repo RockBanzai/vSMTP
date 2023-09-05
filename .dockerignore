@@ -1,3 +1,5 @@
-.dockerignore
-.git
-target
+*
+!Cargo.lock
+!Cargo.toml
+!crates
+!plugins

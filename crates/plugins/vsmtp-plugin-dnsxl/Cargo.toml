@@ -1,0 +1,32 @@
+[package]
+name = "vsmtp-plugin-dnsxl"
+version.workspace = true
+authors.workspace = true
+categories = ["email", "dns", "plugin"]
+documentation = "https://docs.rs/crate/vsmtp-plugin-dnsxl/"
+edition.workspace = true
+homepage = "https://github.com/viridIT/vsmtp-plugin-dnsxl"
+keywords = ["vsmtp", "dns"]
+license = "GPL-3.0-only"
+publish.workspace = true
+readme = "README.md"
+repository = "https://github.com/viridIT/vsmtp-plugin-dnsxl"
+rust-version.workspace = true
+description = "A plugin for vSMTP that is able to check if a domain is contained in a whitelist or a blacklist."
+
+[lib]
+crate-type = ["cdylib"]
+
+[build-dependencies]
+rhai = { workspace = true }
+rhai-autodocs = { workspace = true }
+serde = { workspace = true }
+strum = { workspace = true }
+trust-dns-resolver = { workspace = true }
+
+[dependencies]
+rhai = { workspace = true }
+serde = { workspace = true }
+strum = { workspace = true }
+tracing = { workspace = true }
+trust-dns-resolver = { workspace = true }

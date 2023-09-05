@@ -1,5 +1,0 @@
-import "objects/family" as obj;
-
-fn bcc_jenny() {
-    if ctx::rcpt() == obj::jenny { envelop::bcc(obj::jane) }
-}

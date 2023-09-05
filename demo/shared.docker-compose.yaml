@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  dns-server:
+    hostname: dns.mydomain.tld
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM ubuntu/bind9:9.18-22.04_beta
+        RUN apt update && apt install -y net-tools
+    networks:
+      demo_net:
+        ipv4_address: 172.23.0.1
+    volumes:
+      - ./config/dns/named.conf:/named.conf:ro
+      - ./config/dns/named:/etc/bind:ro
+    entrypoint:
+      - /usr/sbin/named
+      - -c
+      - /named.conf
+      - -g
+    healthcheck:
+      test: sh -c "netstat -an | grep 53 > /dev/null; if [ 0 != $? ]; then exit 1; fi;"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  broker:
+    image: vsmtp-broker:dev
+    hostname: rabbitmq.mydomain.tld
+    networks: [ demo_net ]
+    ports:
+      - 127.0.0.1:15672:15672
+      - 127.0.0.1:15671:15671
+    volumes:
+      - ./config/broker/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./config/broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/broker/generated/rabbitmq.mydomain.tld.crt:/etc/ssl/server_certificate.pem:ro
+      - ./config/broker/generated/rabbitmq.mydomain.tld.key:/etc/ssl/server_key.pem:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/ca_certificate.pem:ro
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s

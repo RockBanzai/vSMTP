@@ -1,149 +1,89 @@
 name: CI
-"on":
-  pull_request:
-    branches:
-      - "**"
-      - "!doc/**"
 
-permissions:
-  contents: read
+on:
+  # push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 
 env:
-  RUST_MSRV: 1.66.1
-  CARGO_TERM_COLOR: always
+    RUSTFLAGS: -Dwarnings
+    RUST_BACKTRACE: 1
+    # Change to specific Rust release to pin
+    rust_stable: stable
+    rust_nightly: nightly-2023-08-03
+    rust_clippy: 1.71.1
+    rust_min: 1.71.1
 
 jobs:
-  check:
-    strategy:
-      matrix:
-        include:
-          # Workspace stable
-          - toolchain: stable
-            path: ./Cargo.toml
-          # Workspace MSRV
-          - toolchain: 1.66.1
-            path: ./Cargo.toml
-          # Fuzz crate
-          - toolchain: nightly
-            path: ./fuzz/Cargo.toml
+  # Basic actions that must pass before we kick off more expensive tests.
+  basics:
+    name: basic checks
+    runs-on: ubuntu-latest
+    needs:
+      - clippy
+      - fmt
+      - docs
+      - minrust
+    steps:
+      - run: exit 0
+
+  clippy:
+    name: clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - run: sudo apt update && sudo apt install protobuf-compiler -y
+      - name: Install Rust ${{ env.rust_clippy }}
+        uses: dtolnay/rust-toolchain@1.80
+        with:
+          toolchain: ${{ env.rust_clippy }}
+          components: clippy
       - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.toolchain }}-${{ matrix.path }}
-      - uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: ${{ matrix.toolchain }}
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --manifest-path ${{ matrix.path }}
+      # Run clippy
+      - run: cargo clippy --all --tests --all-features --no-deps
 
-  cargo-udeps:
-    runs-on: ubuntu-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v3
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-udeps@0.1.41
-      - uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: nightly
-      - uses: actions-rs/cargo@v1
-        with:
-          command: udeps
-
-  cargo-deny:
-    runs-on: ubuntu-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v3
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-deny@0.13.9
-      - uses: EmbarkStudios/cargo-deny-action@v1
-        with:
-          rust-version: ${{ env.RUST_MSRV }}
-          command: check
-          arguments: ""
-
-  cargo-hack-check:
+  fmt:
+    name: fmt
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: taiki-e/install-action@v2
+      - run: sudo apt update && sudo apt install protobuf-compiler -y
+      - name: Install Rust ${{ env.rust_stable }}
+        uses: dtolnay/rust-toolchain@1.80
         with:
-          tool: cargo-hack@0.5.28
-      - run: cargo hack check --each-feature --no-dev-deps
-
-  nextest:
-    runs-on: ubuntu-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v3
+          toolchain: ${{ env.rust_stable }}
+          components: rustfmt
       - uses: Swatinem/rust-cache@v2
-      - uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-      - uses: taiki-e/install-action@v2
-        with:
-          tool: cargo-nextest@0.9.54
-      - uses: actions-rs/cargo@v1
-        with:
-          command: nextest
-          args: run --workspace --all-features
+      - run: cargo fmt --check
 
-  coverage:
+  docs:
+      name: docs
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - run: sudo apt update && sudo apt install protobuf-compiler -y
+        - name: Install Rust ${{ env.rust_nightly }}
+          uses: dtolnay/rust-toolchain@1.80
+          with:
+            toolchain: ${{ env.rust_nightly }}
+        - uses: Swatinem/rust-cache@v2
+        - run: cargo doc --workspace --no-deps --all-features --document-private-items
+          env:
+            RUSTFLAGS: --cfg docsrs
+            RUSTDOCFLAGS: --cfg docsrs -Dwarnings
+
+  minrust:
+    name: minrust
     runs-on: ubuntu-latest
-    needs: check
     steps:
       - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@v1
+      - run: sudo apt update && sudo apt install protobuf-compiler -y
+      - name: Install Rust ${{ env.rust_min }}
+        uses: dtolnay/rust-toolchain@1.80
         with:
-          toolchain: nightly
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --workspace --all-features --no-fail-fast
-        env:
-          CARGO_INCREMENTAL: "0"
-          RUSTFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests"
-          RUSTDOCFLAGS: "-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests"
-      - uses: actions-rs/grcov@v0.1
-      - uses: codecov/codecov-action@v3
-
-  lints:
-    runs-on: ubuntu-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-          components: "rustfmt, clippy"
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: "--all -- --check"
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: "--all-targets --all-features -- -D warnings"
-
-  check-doc:
-    runs-on: ubuntu-latest
-    needs: check
-    steps:
-      - uses: actions/checkout@v3
-      - uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: nightly
-      - uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: "--workspace --no-deps --all-features"
-        env:
-          RUSTDOCFLAGS: -D warnings --cfg docsrs
+          toolchain: ${{ env.rust_min }}
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --workspace --all-features

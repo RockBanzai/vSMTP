@@ -1,0 +1,5 @@
+# version = "Two"
+# error_on_line_overflow = true
+# error_on_unformatted = true
+max_width = 100
+# format_cargo_toml = true

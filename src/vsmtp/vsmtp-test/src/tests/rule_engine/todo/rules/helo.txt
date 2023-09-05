@@ -1,4 +1,0 @@
-foo.com
-green.bar
-example.com
-jones.eu

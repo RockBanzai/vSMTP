@@ -1,0 +1,77 @@
+version: '3.9'
+
+networks:
+  receiver_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.23.0.0/16"
+
+services:
+  broker:
+    image: vsmtp3-broker:dev
+    hostname: rabbitmq.mydomain.tld
+    networks:
+      - receiver_net
+    ports:
+      - 127.0.0.1:15672:15672
+      - 127.0.0.1:15671:15671
+    volumes:
+      - ./config/broker/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./config/broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/broker/generated/rabbitmq.mydomain.tld.crt:/etc/ssl/server_certificate.pem:ro
+      - ./config/broker/generated/rabbitmq.mydomain.tld.key:/etc/ssl/server_key.pem:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/ca_certificate.pem:ro
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  ## vSMTP
+
+  receiver:
+    hostname: smtp-msa.mydomain.tld
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM vsmtp3-receiver:dev
+        ## saslauthd is used internally by vsmtp
+        RUN apt-get update && apt-get install -y sasl2-bin openssl
+
+        RUN sed -i 's/START=no/START=yes/g' /etc/default/saslauthd
+        RUN sed -i 's/MECHANISMS="pam"/MECHANISMS="shadow"/g' /etc/default/saslauthd
+
+        RUN useradd -p $(openssl passwd -1 john.doe) john.doe@mydomain.tld
+
+        # RUN usermod -a -G sasl vsmtp
+        # USER vsmtp
+    command: sh -c "saslauthd -a shadow && receiver --config /etc/vsmtp/receiver/conf.d/config.rhai"
+    env_file:
+      - ./config/services.env
+    volumes:
+      - ./config/receiver/config.rhai:/etc/vsmtp/receiver/conf.d/config.rhai:ro
+      - ./config/receiver/rules.rhai:/etc/vsmtp/receiver/rules.rhai:ro
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    networks:
+      - receiver_net
+    ports:
+      - 127.0.0.1:10025:25
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  # TODO: setup logs, this does not work currently.
+  log-dispatcher:
+    image: vsmtp3-log-dispatcher:dev
+    env_file:
+      - ./config/services.env
+    volumes:
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    networks:
+      - receiver_net
+    depends_on:
+      broker:
+        condition: service_healthy

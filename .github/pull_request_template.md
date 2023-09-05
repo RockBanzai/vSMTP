@@ -15,6 +15,15 @@ Be sure to tick everything before submitting your PR !
 
 - [ ] I have read the `CODE_OF_CONDUCT.md`.
 - [ ] I have updated `CHANGELOG.md` & `tools/install/deb/changelog` to reflect my changes.
+- [ ] I have written/updated documentation (if applicable) for the changes I propose.
+
+## Documentation
+
+<!--
+Provide, if necessary, a link to the PR that updates the documentation of vSMTP.
+You can write "N/A" if you don't need to update the documentation.
+Check out https://github.com/viridIT/vBook to submit documentation changes.
+-->
 
 ## Motivation
 
@@ -32,17 +41,22 @@ the code change.
 
 You can class you changes with the following sub-titles (using ###):
 - Fixed   (You fixed a bug)
-- Changed (You changed something existing, possibly making breaking changes)
+- Changed (You changed something existing)
 - Added   (You added something new)
 - Other   (You did something else)
+- BREAKING (You made changes that are not backwards compatible)
 
 Example:
+
 ```markdown
 ### Changed
-- Changed the way the server handles connections.
+
+- Replace the server connections handler using an external crate by a hand written one.
 
 ### Added
+
 - Added a new command to the server.
 - Added stuff to the documentation.
 ```
+
 -->

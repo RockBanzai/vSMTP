@@ -1,0 +1,42 @@
+[package]
+name = "vsmtp-rule-engine"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+rust-version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+async-trait = { workspace = true }
+futures-util = { workspace = true }
+humantime-serde = { workspace = true }
+ipnet = { workspace = true }
+iprange = { workspace = true }
+pem-rfc7468 = { workspace = true }
+rhai = { workspace = true }
+rhai-dylib = { workspace = true }
+ring-compat = { workspace = true }
+rsa = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_with = { workspace = true }
+strum = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+users = { workspace = true }
+uuid = { workspace = true, features = ["serde"] }
+viaspf = { workspace = true }
+vsmtp-auth = { workspace = true }
+vsmtp-common = { workspace = true }
+vsmtp-config = { workspace = true }
+vsmtp-mail-parser = { workspace = true }
+vsmtp-protocol = { workspace = true }
+wait-timeout = { workspace = true }
+walkdir = { workspace = true }
+
+[dev-dependencies]
+vsmtp-protocol = { workspace = true }
