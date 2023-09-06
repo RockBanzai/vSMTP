@@ -22,21 +22,52 @@ pub type DnsResolver = std::sync::Arc<vsmtp_common::dns_resolver::DnsResolver>;
 /// Functions used to query the DNS.
 #[rhai::plugin::export_module]
 mod dns {
-    /// Build a DNS resolver.
+    /// Create an instance of a DNS resolver.
     ///
     /// # Args
     ///
-    /// TODO
+    /// * `config` - The configuration for the connection to the DNS server, see [`ResolverConfig`].
+    /// * `option` - The resolver options, see [`ResolverOpts`].
     ///
     /// # Example
     ///
-    /// TODO
+    /// ```
+    ///  // using a build-in dns server config among:
+    ///  // * `google`      / `google_tls`
+    ///  // * `cloudflare`  / `cloudflare_tls`
+    ///  // * `quad9`       / `quad9_tls`
+    /// const google_dns = dns::resolver(#{
+    ///    config: "google_tls",
+    ///    option: #{
+    ///      validate: true,                // use DNSSEC to validate the request,
+    ///      ip_strategy: "Ipv6thenIpv4",   // The ip_strategy for the Resolver to use when lookup Ipv4 or Ipv6 addresses
+    ///      edns0: true,                   // Enable edns, for larger records
+    ///      // and more...
+    ///    }
+    /// });
+    /// ```
     ///
+    /// or, with a custom config:
+    ///
+    /// ```
+    /// const custom_dns = dns::resolver(#{
+    ///   config: #{
+    ///     nameservers: [
+    ///       "socket_addr": "127.0.0.1:853",
+    ///       "protocol": "quic",
+    ///       // and more...
+    ///     ]
+    ///   },
+    /// });
+    /// ```
+    ///
+    /// [`ResolverConfig`]: https://docs.rs/trust-dns-resolver/latest/trust_dns_resolver/config/struct.ResolverConfig.html
+    /// [`ResolverOpts`]: https://docs.rs/trust-dns-resolver/latest/trust_dns_resolver/config/struct.ResolverOpts.html
     /// # rhai-autodocs:index:1
     #[rhai_fn(return_raw)]
     pub fn resolver(params: &mut rhai::Dynamic) -> Result<DnsResolver> {
         match rhai::serde::from_dynamic(params) {
-            Ok(private_key) => Ok(std::sync::Arc::new(private_key)),
+            Ok(resolver) => Ok(std::sync::Arc::new(resolver)),
             Err(e) => Err(serde::de::Error::custom(format!(
                 "failed to parse dns resolver: {e}"
             ))),

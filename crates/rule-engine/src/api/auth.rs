@@ -15,7 +15,9 @@ use rhai::plugin::{
     TypeId,
 };
 use std::sync::Arc;
+use vsmtp_common::stateful_ctx_received::StateError;
 use vsmtp_common::{dkim, dmarc, iprev, spf, stateful_ctx_received::StatefulCtxReceived};
+use vsmtp_mail_parser::mail::headers::Header;
 
 struct AuthMechanism {
     iprev: Option<iprev::IpRevResult>,
@@ -25,66 +27,47 @@ struct AuthMechanism {
     dmarc: Option<Arc<dmarc::Dmarc>>,
 }
 
-#[derive(Debug, serde::Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Params {
-    auth_serv_id: String,
-}
+impl From<&StatefulCtxReceived> for AuthMechanism {
+    fn from(value: &StatefulCtxReceived) -> Self {
+        let iprev = value.get_connect().iprev.clone();
+        let spf_helo = value
+            .get_helo()
+            .ok()
+            .and_then(|helo| helo.spf_helo_identity.clone());
+        let spf_mail_from = value
+            .get_mail_from()
+            .ok()
+            .and_then(|mail_from| mail_from.spf_mail_from_identity.clone());
+        let dkim = value
+            .get_complete()
+            .ok()
+            .and_then(|complete| complete.dkim.clone());
+        let dmarc = value
+            .get_complete()
+            .ok()
+            .and_then(|complete| complete.dmarc.clone());
 
-pub use auth::*;
-
-/// <https://datatracker.ietf.org/doc/html/rfc8601>
-#[rhai::plugin::export_module]
-mod auth {
-    use vsmtp_common::stateful_ctx_received::StateError;
-    use vsmtp_mail_parser::mail::headers::Header;
-
-    // TODO: docs
-    /// # rhai-autodocs:index:1
-    #[doc(hidden)]
-    #[rhai_fn(pure, return_raw)]
-    pub fn create_header(
-        ctx: &mut State<StatefulCtxReceived>,
-        params: rhai::Dynamic,
-    ) -> Result<String, Box<rhai::EvalAltResult>> {
-        const AUTH_RES_VERSION: i32 = 1;
-        let Params { auth_serv_id } = rhai::serde::from_dynamic(&params)?;
-
-        let AuthMechanism {
+        Self {
             iprev,
             spf_helo,
             spf_mail_from,
             dkim,
             dmarc,
-        } = ctx.read(|ctx| {
-            let iprev = ctx.get_connect().iprev.clone();
-            let spf_helo = ctx
-                .get_helo()
-                .ok()
-                .and_then(|helo| helo.spf_helo_identity.clone());
-            let spf_mail_from = ctx
-                .get_mail_from()
-                .ok()
-                .and_then(|mail_from| mail_from.spf_mail_from_identity.clone());
-            let dkim = ctx
-                .get_complete()
-                .ok()
-                .and_then(|complete| complete.dkim.clone());
-            let dmarc = ctx
-                .get_complete()
-                .ok()
-                .and_then(|complete| complete.dmarc.clone());
+        }
+    }
+}
 
-            AuthMechanism {
-                iprev,
-                spf_helo,
-                spf_mail_from,
-                dkim,
-                dmarc,
-            }
-        });
-
-        let out = format!("{auth_serv_id} {AUTH_RES_VERSION};");
+impl AuthMechanism {
+    fn make_header(
+        Self {
+            iprev,
+            spf_helo,
+            spf_mail_from,
+            dkim,
+            dmarc,
+        }: Self,
+        prefix: String,
+    ) -> String {
         if iprev.is_some()
             || spf_helo.is_some()
             || spf_mail_from.is_some()
@@ -119,48 +102,112 @@ mod auth {
             });
 
             let dkim = dkim.map(|dkim| {
-                dkim.iter()
-                    .map(|dkim| {
-                        #[allow(clippy::option_if_let_else)]
-                        match &dkim.signature {
-                            Some(signature) => format!(
-                                "\tdkim={v} header.d={d} header.i={i} header.a={a} header.s={s} header.b={b};",
-                                    v = dkim.value,
-                                    d = signature.sdid,
-                                    i = signature.auid,
-                                    a = signature.signing_algorithm,
-                                    s = signature.selector,
-                                    b = &signature.signature[..=8]
-                            ),
-                            None => format!(
-                                "\tdkim={v}",
+                dkim.iter().map(|dkim| {
+                    #[allow(clippy::option_if_let_else)]
+                    match &dkim.signature {
+                        Some(signature) => format!(
+                            "\tdkim={v} header.d={d} header.i={i} header.a={a} header.s={s} header.b={b};",
                                 v = dkim.value,
-                            )
-                        }
-
-                    })
-                    .collect::<Vec<_>>()
+                                d = signature.sdid,
+                                i = signature.auid,
+                                a = signature.signing_algorithm,
+                                s = signature.selector,
+                                b = &signature.signature[..=8]
+                        ),
+                        None => format!(
+                            "\tdkim={v}",
+                            v = dkim.value,
+                        )
+                    }
+                })
+                .collect::<Vec<_>>()
             });
 
             let dmarc =
                 dmarc.map(|dmarc| format!("\tdmarc={} header.from={};", dmarc.value, dmarc.domain));
 
-            Ok(std::iter::once(out)
+            std::iter::once(prefix)
                 .chain(iprev)
                 .chain(spf_helo)
                 .chain(spf_mail_from)
                 .chain(dkim.map(Vec::into_iter).unwrap_or_default())
                 .chain(dmarc)
                 .collect::<Vec<_>>()
-                .join("\r\n"))
+                .join("\r\n")
         } else {
-            Ok(format!("{out} none"))
+            format!("{prefix} none")
         }
     }
+}
 
-    // TODO: docs
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Params {
+    auth_serv_id: String,
+}
+
+pub use auth::*;
+
+/// Implementation of the [`RFC "Message Header Field for Indicating Message Authentication Status"`](https://datatracker.ietf.org/doc/html/rfc8601)
+#[rhai::plugin::export_module]
+mod auth {
+
+    /// Return a new `Authentication-Results` header.
+    ///
+    /// If you want to add the header to the message, use [add_header](http://dev.vsmtp.rs/docs/global/auth#fn-add_header).
+    ///
+    ///
+    /// [iprev]:    http://dev.vsmtp.rs/docs/global/iprev
+    /// [spf]:      http://dev.vsmtp.rs/docs/global/spf
+    /// [dkim]:     http://dev.vsmtp.rs/docs/global/dkim
+    /// [dmarc]:    http://dev.vsmtp.rs/docs/global/dmarc
+    ///
+    /// # Example
+    ///
+    ///```
+    /// rule "add authentication results header" |ctx| {
+    ///   let header = auth::create_header(ctx, #{
+    ///     auth_serv_id: "mydomain.tld" // The domain name of the authentication server
+    ///   });
+    ///   log("info", header);
+    /// }
+    /// ```
+    ///
+    /// # rhai-autodocs:index:1
+    #[rhai_fn(pure, return_raw)]
+    pub fn create_header(
+        ctx: &mut State<StatefulCtxReceived>,
+        params: rhai::Dynamic,
+    ) -> Result<String, Box<rhai::EvalAltResult>> {
+        const AUTH_RES_VERSION: i32 = 1;
+        let Params { auth_serv_id } = rhai::serde::from_dynamic(&params)?;
+        let mechanisms = ctx.read(|ctx| Into::<AuthMechanism>::into(ctx));
+
+        Ok(AuthMechanism::make_header(
+            mechanisms,
+            format!("{auth_serv_id} {AUTH_RES_VERSION};"),
+        ))
+    }
+
+    /// Add the `Authentication-Results` header to the message.
+    /// This method use the result of the previous authentication mechanisms.
+    /// See [iprev], [spf], [dkim], [dmarc] for more information.
+    ///
+    /// [iprev]:    http://dev.vsmtp.rs/docs/global/iprev
+    /// [spf]:      http://dev.vsmtp.rs/docs/global/spf
+    /// [dkim]:     http://dev.vsmtp.rs/docs/global/dkim
+    /// [dmarc]:    http://dev.vsmtp.rs/docs/global/dmarc
+    ///
+    /// # Example
+    ///
+    ///```
+    /// rule "add authentication results header" |ctx| {
+    ///   auth::add_header(ctx, #{
+    ///     auth_serv_id: "mydomain.tld" // The domain name of the authentication server
+    ///   });
+    /// }
+    /// ```
     /// # rhai-autodocs:index:2
-    #[doc(hidden)]
     #[rhai_fn(pure, return_raw)]
     pub fn add_header(
         ctx: &mut State<StatefulCtxReceived>,

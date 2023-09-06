@@ -4277,7 +4277,7 @@ dependencies = [
 
 [[package]]
 name = "tracing-amqp"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "futures-util",
  "humantime-serde",
@@ -4433,11 +4433,16 @@ dependencies = [
  "ipnet",
  "once_cell",
  "rand",
+ "ring",
+ "rustls 0.21.7",
+ "rustls-pemfile",
+ "rustls-webpki 0.101.4",
  "serde",
  "smallvec",
  "thiserror",
  "tinyvec",
  "tokio",
+ "tokio-rustls 0.24.1",
  "tracing",
  "url",
 ]
@@ -4476,12 +4481,15 @@ dependencies = [
  "parking_lot",
  "rand",
  "resolv-conf",
+ "rustls 0.21.7",
  "serde",
  "smallvec",
  "thiserror",
  "tokio",
+ "tokio-rustls 0.24.1",
  "tracing",
  "trust-dns-proto 0.23.0",
+ "webpki-roots 0.25.2",
 ]
 
 [[package]]
@@ -4647,14 +4655,14 @@ checksum = "d4e491cd772387346d2144fc41e35531e2dd53c20bd46d6e26ad92eb602905ff"
 
 [[package]]
 name = "vsmtp-antivirus"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "rhai",
 ]
 
 [[package]]
 name = "vsmtp-auth"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "addr",
  "base64 0.21.3",
@@ -4679,7 +4687,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-clamav-plugin"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "r2d2",
  "rhai",
@@ -4695,7 +4703,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-common"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "fake",
  "lapin",
@@ -4718,7 +4726,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-config"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "rhai",
  "semver 1.0.18",
@@ -4732,7 +4740,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-delivery"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "async-trait",
  "clap",
@@ -4762,7 +4770,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-log-dispatcher"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "clap",
  "lapin",
@@ -4784,7 +4792,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-mail-parser"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "convert_case 0.6.0",
  "pretty_assertions",
@@ -4795,7 +4803,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-plugin-csv"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "csv",
  "rhai",
@@ -4809,7 +4817,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-plugin-dnsxl"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "rhai",
  "rhai-autodocs",
@@ -4821,7 +4829,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-plugin-ldap"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "humantime-serde",
  "ldap3",
@@ -4836,7 +4844,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-plugin-memcached"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "humantime-serde",
  "memcache",
@@ -4849,7 +4857,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-plugin-mongodb"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "mongodb",
  "rhai",
@@ -4860,7 +4868,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-plugin-mysql"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "flate2",
  "humantime-serde",
@@ -4876,7 +4884,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-plugin-redis"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "humantime-serde",
  "r2d2",
@@ -4890,7 +4898,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-plugin-sqlite"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "humantime-serde",
  "r2d2",
@@ -4903,7 +4911,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-protocol"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "addr",
  "async-stream",
@@ -4932,7 +4940,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-receiver"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "async-stream",
  "async-trait",
@@ -4962,7 +4970,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-rule-engine"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "async-trait",
  "futures-util",
@@ -4996,7 +5004,7 @@ dependencies = [
 
 [[package]]
 name = "vsmtp-working"
-version = "3.0.0-alpha.0"
+version = "3.0.0-rc.1"
 dependencies = [
  "clap",
  "futures-lite",
@@ -5155,6 +5163,12 @@ checksum = "b03058f88386e5ff5310d9111d53f48b17d732b401aeb83a8d5190f2ac459338"
 dependencies = [
  "rustls-webpki 0.100.2",
 ]
+
+[[package]]
+name = "webpki-roots"
+version = "0.25.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14247bb57be4f377dfb94c72830b8ce8fc6beac03cf4bf7b9732eadd414123fc"
 
 [[package]]
 name = "widestring"
