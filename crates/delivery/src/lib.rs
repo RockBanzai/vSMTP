@@ -375,8 +375,9 @@ pub async fn delivery_main(
     )
     .await?;
 
-    let filter =
-        tracing_subscriber::filter::Targets::new().with_targets(config.logs.levels.clone());
+    let filter = tracing_subscriber::filter::Targets::new()
+        .with_targets(config.logs.levels.clone())
+        .with_default(config.logs().default_level);
 
     let (layer, task) = tracing_amqp::layer(&conn).await;
     tracing_subscriber::registry()

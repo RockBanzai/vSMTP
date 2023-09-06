@@ -9,21 +9,23 @@
  *
  */
 
+use serde_with::{serde_as, DisplayFromStr};
 use std::{collections::HashMap, str::FromStr};
 
+#[serde_as]
 #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
 pub struct Logs {
     #[serde(default = "Logs::default_queue")]
     pub queue: String,
     #[serde(default)]
     pub facility: LogsFacility,
-    // FIXME: probably unnecessary because of the log-dispatcher crate, which already handles level filters.
-    //        should it be up to the service or the log-dispatcher to handle this ?
+    #[serde_as(as = "DisplayFromStr")]
+    #[serde(default = "Logs::default_log_level")]
+    pub default_level: tracing_subscriber::filter::LevelFilter,
     /// Customize the log level of the different part of the program.
     ///
     /// See <https://docs.rs/tracing-subscriber/0.3.15/tracing_subscriber/filter/struct.EnvFilter.html>
     #[serde(
-        default = "Logs::default_levels",
         serialize_with = "Logs::serialize_levels",
         deserialize_with = "Logs::deserialize_levels"
     )]
@@ -35,11 +37,8 @@ impl Logs {
         "log".to_string()
     }
 
-    fn default_levels() -> HashMap<String, tracing_subscriber::filter::LevelFilter> {
-        HashMap::from([(
-            "default".to_string(),
-            tracing_subscriber::filter::LevelFilter::WARN,
-        )])
+    fn default_log_level() -> tracing_subscriber::filter::LevelFilter {
+        tracing_subscriber::filter::LevelFilter::WARN
     }
 
     fn serialize_levels<S: serde::Serializer>(
@@ -93,7 +92,8 @@ impl Default for Logs {
         Self {
             queue: Self::default_queue(),
             facility: LogsFacility::default(),
-            levels: Self::default_levels(),
+            default_level: Self::default_log_level(),
+            levels: HashMap::<String, tracing_subscriber::filter::LevelFilter>::default(),
         }
     }
 }

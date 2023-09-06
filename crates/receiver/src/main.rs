@@ -200,8 +200,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let conn = std::sync::Arc::new(conn);
 
     let (layer, task) = tracing_amqp::layer(&conn).await;
-    let filter =
-        tracing_subscriber::filter::Targets::new().with_targets(config.logs.levels.clone());
+    let filter = tracing_subscriber::filter::Targets::new()
+        .with_targets(config.logs.levels.clone())
+        .with_default(config.logs().default_level.clone());
 
     tracing_subscriber::registry()
         .with(layer.with_filter(filter))

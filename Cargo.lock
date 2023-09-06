@@ -4725,6 +4725,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_path_to_error",
+ "serde_with 3.3.0",
  "thiserror",
  "tracing-subscriber",
 ]

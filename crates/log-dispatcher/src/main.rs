@@ -80,9 +80,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         layers.push(loki_layer.boxed());
     }
 
-    let filter =
-        tracing_subscriber::filter::Targets::new().with_targets(config.logs().levels.clone());
-    // .with_target("external", tracing::Level::WARN);
+    let filter = tracing_subscriber::filter::Targets::new()
+        .with_targets(config.logs().levels.clone())
+        .with_default(config.logs().default_level.clone());
 
     let layer = tracing_subscriber::fmt::layer().with_filter(filter);
 
