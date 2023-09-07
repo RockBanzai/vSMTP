@@ -14,7 +14,13 @@ x===============================================x
 ## Launch the example
 
 ```sh
-./rebuild.sh && docker compose up --remove-orphans
+# Move to root scripts directory.
+cd ../../scripts
+# Build the services.
+./build.sh
+cd example/clamav
+# Execute the example using docker compose.
+docker compose up --remove-orphans
 ```
 
 ## Send a message
