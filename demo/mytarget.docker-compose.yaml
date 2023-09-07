@@ -19,8 +19,6 @@ services:
       - ./config/mytarget.tld/receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
       - ./config/mytarget.tld/receiver/rules.rhai:/rules.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-    env_file:
-      - ./config/mytarget.tld/services.env
     networks:
       demo_net:
         ipv4_address: 172.23.0.5
@@ -31,8 +29,6 @@ services:
     depends_on:
       broker:
         condition: service_healthy
-      log-dispatcher:
-        condition: service_started
       mytarget-users-db:
         condition: service_healthy
 
@@ -58,24 +54,18 @@ services:
       - ./config/mytarget.tld/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
-    env_file:
-      - ./config/mytarget.tld/services.env
     networks: [ demo_net ]
     depends_on:
       broker:
         condition: service_healthy
-      log-dispatcher:
-        condition: service_started
 
   mytarget-basic:
     image: vsmtp-basic:dev
     hostname: smtp-out.mytarget.tld
     volumes:
-      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/mytarget.tld/basic/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
-    env_file:
-      - ./config/mytarget.tld/services.env
     environment:
       - SYSTEM={"dns":{ "config":{ "name_servers":[ {"socket_addr":"172.23.0.1:53"} ] } }}
     networks:
@@ -86,8 +76,6 @@ services:
         condition: service_healthy
       dns-server:
         condition: service_healthy
-      log-dispatcher:
-        condition: service_started
 
   mytarget-delivery-maildir:
     build:
@@ -98,20 +86,16 @@ services:
         RUN apt-get update && apt-get install -y openssl
         RUN useradd -p $(openssl passwd -1 jenny.doe) --create-home jenny.doe@mytarget.tld
     volumes:
-      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/mytarget.tld/maildir/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
       - mytarget-maildir:/home:rw
-    env_file:
-      - ./config/mytarget.tld/services.env
     environment:
       - SYSTEM={"user_lookup":"full_address"}
     networks: [ demo_net ]
     depends_on:
       broker:
         condition: service_healthy
-      log-dispatcher:
-        condition: service_started
 
   mytarget-imap:
     build:

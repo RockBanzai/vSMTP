@@ -58,7 +58,50 @@ pub use viaspf;
 /// to recipient is through relays that typically make no substantive
 /// change to the message content and thus preserve the DKIM signature.
 /// ```
-pub mod dkim;
+pub mod dkim {
+    mod algorithm;
+    mod canonicalization;
+    mod mail;
+    mod private_key;
+    mod public_key;
+    mod record;
+    mod sign;
+    mod signature;
+    mod verify;
+
+    #[cfg(test)]
+    mod tests {
+        mod hash_header;
+        // mod sign_verify;
+        mod parse {
+            mod public_key;
+            mod signature_header;
+        }
+        mod canonicalization;
+    }
+
+    const RSA_MINIMUM_ACCEPTABLE_KEY_SIZE: usize = 1024;
+
+    pub use algorithm::{HashAlgorithm, SigningAlgorithm};
+    pub use canonicalization::Canonicalization;
+    pub use mail::{Header, Mail};
+    pub use private_key::PrivateKey;
+    pub use public_key::PublicKey;
+    pub use sign::{sign, SigningError};
+    pub use signature::Signature;
+    pub use verify::{verify, VerifierError};
+
+    /// Errors that can occur when verifying or signing a DKIM signature
+    #[derive(Debug, thiserror::Error)]
+    pub enum BackendError {
+        /// rsa errors
+        #[error("{0}")]
+        Rsa(#[from] rsa::errors::Error),
+        /// ed25519 errors
+        #[error("{0}")]
+        Ed25519(#[from] ring_compat::signature::Error),
+    }
+}
 
 /// The implementation follow the RFC 7489
 ///
@@ -69,7 +112,12 @@ pub mod dkim;
 /// message validation, disposition, and reporting, that a mail-receiving
 /// organization can use to improve mail handling.
 /// ```
-pub mod dmarc;
+pub mod dmarc {
+    mod record;
+
+    pub use record::ReceiverPolicy;
+    pub use record::Record;
+}
 
 ///
 #[must_use]
@@ -93,15 +141,6 @@ pub enum ParseError {
         ///
         reason: String,
     },
-}
-
-// FIXME: remove me (only used for strum::EnumIter)
-impl Default for ParseError {
-    fn default() -> Self {
-        Self::InvalidArgument {
-            reason: "`default` invoked".to_string(),
-        }
-    }
 }
 
 /// Return the root of a domain

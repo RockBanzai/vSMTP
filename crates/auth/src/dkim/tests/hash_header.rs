@@ -11,14 +11,48 @@
 
 use crate::dkim::{self, PublicKey, Signature};
 use base64::Engine;
-use vsmtp_mail_parser::Mail;
+
+struct DkimMail<'a> {
+    mail: &'a vsmtp_mail_parser::Mail,
+}
+
+struct DkimHeader<'a> {
+    header: &'a vsmtp_mail_parser::mail::headers::Header,
+}
+
+impl dkim::Header for DkimHeader<'_> {
+    fn field_name(&self) -> String {
+        self.header.name.clone()
+    }
+
+    fn get(&self) -> String {
+        self.header.to_string()
+    }
+}
+
+impl<'a> dkim::Mail for DkimMail<'a> {
+    type H = DkimHeader<'a>;
+
+    fn get_body(&self) -> String {
+        self.mail.body.to_string()
+    }
+
+    fn get_headers(&self) -> Vec<Self::H> {
+        self.mail
+            .headers
+            .0
+            .iter()
+            .map(|i| DkimHeader { header: i })
+            .collect::<Vec<_>>()
+    }
+}
 
 #[ignore = "used for debugging with FILE env var as input file"]
 #[test_log::test]
 fn verify_file() {
     let filepath = option_env!("FILE").unwrap();
     let file_content = std::fs::read_to_string(filepath).unwrap();
-    let mail = Mail::try_from(file_content.as_str()).unwrap();
+    let mail = vsmtp_mail_parser::Mail::try_from(file_content.as_str()).unwrap();
 
     let signature = <Signature as std::str::FromStr>::from_str(
         &mail.get_header("DKIM-Signature").unwrap().to_string(),
@@ -38,17 +72,15 @@ fn verify_file() {
         .collect::<Result<Vec<_>, <PublicKey as std::str::FromStr>::Err>>()
         .unwrap();
 
-    dkim::verify(&signature, &mail, keys.first().unwrap()).unwrap();
+    dkim::verify(&signature, &DkimMail { mail: &mail }, keys.first().unwrap()).unwrap();
 }
 
 #[test]
 fn mail_5() {
-    let mail = Mail::try_from(include_str!("mail_5.eml")).unwrap();
-
-    let signature = <Signature as std::str::FromStr>::from_str(
-        &mail.get_header("DKIM-Signature").unwrap().to_string(),
-    )
-    .unwrap();
+    let mail = vsmtp_mail_parser::Mail::try_from(include_str!("mail_5.eml")).unwrap();
+    let signature = mail.get_header("DKIM-Signature").unwrap().to_string();
+    let signature = <Signature as std::str::FromStr>::from_str(&signature).unwrap();
+    let mail = DkimMail { mail: &mail };
 
     let header = signature.get_header_for_hash(&mail);
 

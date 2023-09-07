@@ -33,8 +33,6 @@ services:
       - ./config/mydomain.tld/receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
       - ./config/mydomain.tld/receiver/rules-pre-av.rhai:/rules.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-    env_file:
-      - ./config/mydomain.tld/services.env
     networks:
       demo_net:
         ipv4_address: 172.23.0.3
@@ -43,8 +41,6 @@ services:
     depends_on:
       broker:
         condition: service_healthy
-      log-dispatcher:
-        condition: service_started
 
   mydomain-working:
     image: vsmtp-working:dev
@@ -53,14 +49,10 @@ services:
       - ./config/mydomain.tld/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
-    env_file:
-      - ./config/mydomain.tld/services.env
     networks: [ demo_net ]
     depends_on:
       broker:
         condition: service_healthy
-      log-dispatcher:
-        condition: service_started
 
   mydomain-delivery-maildir:
     build:
@@ -71,20 +63,16 @@ services:
         RUN apt-get update && apt-get install -y openssl
         RUN useradd -p $(openssl passwd -1 john.doe) --create-home john.doe@mydomain.tld
     volumes:
-      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/mydomain.tld/maildir/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
       - mydomain-maildir:/home:rw
-    env_file:
-      - ./config/mydomain.tld/services.env
     environment:
       - SYSTEM={"user_lookup":"full_address"}
     networks: [ demo_net ]
     depends_on:
       broker:
         condition: service_healthy
-      log-dispatcher:
-        condition: service_started
 
   mydomain-imap:
     build:
@@ -107,11 +95,9 @@ services:
     image: vsmtp-basic:dev
     hostname: out-v0.mydomain.tld
     volumes:
-      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/mydomain.tld/basic/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
-    env_file:
-      - ./config/mydomain.tld/services.env
     environment:
       - SYSTEM={"dns":{ "config":{ "name_servers":[ {"socket_addr":"172.23.0.1:53"} ] } }}
     networks:

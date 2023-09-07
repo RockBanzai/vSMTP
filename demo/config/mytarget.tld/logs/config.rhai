@@ -1,4 +1,4 @@
-fn on_config(config)  {
+fn on_config(config) {
     config.logs = #{
         levels: #{
             "external": "trace",
@@ -18,7 +18,6 @@ fn on_config(config)  {
             formatter: "json", // default: "json"
         },
     ];
-    config.broker.uri = "amqps://vsmtp-dev:password@rabbitmq.mydomain.tld:5671/vsmtp-dev";
-
+    config.broker.uri = "amqps://sink-mytarget:password@rabbitmq.mydomain.tld:5671/sink-mytarget";
     config
 }

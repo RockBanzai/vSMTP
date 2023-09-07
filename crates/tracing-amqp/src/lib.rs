@@ -64,7 +64,7 @@ impl tracing::field::Visit for Fields {
 pub const QUEUE_NAME: &str = "log";
 
 #[serde_with::serde_as]
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Event<'a> {
     #[serde(with = "humantime_serde")]
     pub timestamp: std::time::SystemTime,

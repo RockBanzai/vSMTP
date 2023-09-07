@@ -11,8 +11,7 @@
 
 use super::{
     record::{Flags, Record, Type},
-    verify::InnerError,
-    BackendError, SigningAlgorithm,
+    BackendError, SigningAlgorithm, VerifierError,
 };
 use crate::ParseError;
 
@@ -60,7 +59,7 @@ impl InnerPublicKey {
         hashed: &[u8],
         signature: &[u8],
         signing_algorithm: SigningAlgorithm,
-    ) -> Result<(), InnerError> {
+    ) -> Result<(), VerifierError> {
         match (self, signing_algorithm) {
             #[cfg(feature = "historic")]
             (Self::Rsa(rsa), SigningAlgorithm::RsaSha1) => rsa::RsaPublicKey::verify(
@@ -87,9 +86,9 @@ impl InnerPublicKey {
                     Err(e) | Ok(Err(e)) => Err(BackendError::Ed25519(e)),
                 }
             }
-            _ => return Err(InnerError::HashAlgorithmUnsupported { signing_algorithm }),
+            _ => return Err(VerifierError::HashAlgorithmUnsupported { signing_algorithm }),
         }
-        .map_err(InnerError::BackendError)
+        .map_err(VerifierError::BackendError)
     }
 }
 
@@ -140,7 +139,7 @@ impl TryFrom<&ring_compat::ring::signature::Ed25519KeyPair> for PublicKey {
     type Error = ();
 
     fn try_from(key: &ring_compat::ring::signature::Ed25519KeyPair) -> Result<Self, Self::Error> {
-        let key=  <ring_compat::ring::signature::Ed25519KeyPair as ring_compat::ring::signature::KeyPair>::public_key(key).as_ref();
+        let key= <ring_compat::ring::signature::Ed25519KeyPair as ring_compat::ring::signature::KeyPair>::public_key(key).as_ref();
 
         let key = ring_compat::signature::ed25519::VerifyingKey::from_slice(key).map_err(|_| ())?;
 

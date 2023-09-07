@@ -9,4 +9,4 @@ $ORIGIN                     0.23.172.IN-ADDR.ARPA.
                             IN  NS      mydomain.tld.
                             IN  A       127.0.0.1
 
-2                           IN PTR      out-v1.mydomain.tld.
+10                           IN PTR      out-v0.mydomain.tld.

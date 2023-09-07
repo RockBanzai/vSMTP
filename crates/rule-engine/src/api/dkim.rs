@@ -52,6 +52,41 @@ impl<const U: u64> const_u64<U> {
     }
 }
 
+struct DkimMail<'a> {
+    mail: &'a vsmtp_mail_parser::Mail,
+}
+
+struct DkimHeader<'a> {
+    header: &'a vsmtp_mail_parser::mail::headers::Header,
+}
+
+impl backend::Header for DkimHeader<'_> {
+    fn field_name(&self) -> String {
+        self.header.name.clone()
+    }
+
+    fn get(&self) -> String {
+        self.header.to_string()
+    }
+}
+
+impl<'a> backend::Mail for DkimMail<'a> {
+    type H = DkimHeader<'a>;
+
+    fn get_body(&self) -> String {
+        self.mail.body.to_string()
+    }
+
+    fn get_headers(&self) -> Vec<Self::H> {
+        self.mail
+            .headers
+            .0
+            .iter()
+            .map(|i| DkimHeader { header: i })
+            .collect::<Vec<_>>()
+    }
+}
+
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct VerifyParams {
@@ -159,7 +194,7 @@ mod dkim {
         let signature = {
             let mail = mail.read().unwrap();
             backend::sign(
-                &mail,
+                &DkimMail { mail: &mail },
                 &private_key,
                 sdid,
                 selector,
@@ -292,7 +327,7 @@ async fn verify_one(
         }
     };
 
-    if let Err(e) = backend::verify(&signature, mail, &public_key) {
+    if let Err(e) = backend::verify(&signature, &DkimMail { mail }, &public_key) {
         tracing::debug!("Failed to verify the DKIM signature: {:?}", e);
         return DkimVerificationResult {
             value: vsmtp_common::dkim::Value::PermFail,

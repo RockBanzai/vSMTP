@@ -120,8 +120,6 @@ async fn working(
         unreachable!("the working service always use a complete email")
     };
 
-    // TODO: should the `basic` be split to simplify the deferred logics?
-
     let deliveries = rcpt_to
         .recipient
         .into_iter()
@@ -162,7 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let filter = tracing_subscriber::filter::Targets::new()
         .with_targets(config.logs.levels.clone())
-        .with_default(config.logs().default_level.clone());
+        .with_default(config.logs().default_level);
 
     let (layer, task) = tracing_amqp::layer(&conn).await;
     tracing_subscriber::registry()
@@ -194,10 +192,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 })?)
                 .with_standard_global_modules()
                 .with_smtp_modules()
-                .with_static_modules([(
-                    "status".to_string(),
-                    rhai::exported_module!(rules::api::status).into(),
-                )])
+                .with_static_modules(
+                    std::iter::once((
+                        "status".to_string(),
+                        rhai::exported_module!(rules::api::status).into(),
+                    ))
+                    .chain(vsmtp_rule_engine::api::crypto_modules()),
+                )
                 .with_script_at(
                     &config.scripts.path,
                     "/etc/vsmtp/working/conf.d/config.rhai",

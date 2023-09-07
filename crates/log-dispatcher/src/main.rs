@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let filter = tracing_subscriber::filter::Targets::new()
         .with_targets(config.logs().levels.clone())
-        .with_default(config.logs().default_level.clone());
+        .with_default(config.logs().default_level);
 
     let layer = tracing_subscriber::fmt::layer().with_filter(filter);
 

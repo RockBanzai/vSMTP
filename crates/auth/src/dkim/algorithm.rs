@@ -35,7 +35,7 @@ pub enum SigningAlgorithm {
     /// See the implementation <https://docs.rs/sha2>
     #[strum(serialize = "rsa-sha256")]
     RsaSha256,
-    ///
+    /// See the implementation <https://docs.rs/ring-compat/0.7.0/ring_compat/signature/ed25519/index.html>
     #[strum(serialize = "ed25519-sha256")]
     Ed25519Sha256,
 }

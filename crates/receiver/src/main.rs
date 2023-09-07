@@ -20,7 +20,7 @@ use vsmtp_receiver::smtp::{
     session::Handler,
 };
 use vsmtp_rule_engine::{
-    api::{msa_modules, net_modules, process_modules, server_auth},
+    api::{crypto_modules, msa_modules, net_modules, process_modules, server_auth},
     rhai, RuleEngineConfigBuilder,
 };
 
@@ -130,7 +130,8 @@ async fn smtp_main(
                     .chain(msa_modules())
                     .chain(process_modules())
                     .chain(server_auth())
-                    .chain(net_modules()),
+                    .chain(net_modules())
+                    .chain(crypto_modules()),
                 )
                 .with_script_at(
                     &config.scripts.path,

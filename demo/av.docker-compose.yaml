@@ -17,11 +17,9 @@ services:
     image: vsmtp-forward:dev
     hostname: av.smtp-out-internal.mydomain.tld
     volumes:
-      - ./config/default.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/mydomain.tld/av-input/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
-    env_file:
-      - ./config/mydomain.tld/services.env
     environment:
       - SYSTEM={"service":"av", "target":"smtp://clamsmtp:10026"}
     networks: [ demo_net, av ]
@@ -34,14 +32,16 @@ services:
   av-output:
     image: vsmtp-receiver:dev
     hostname: post-av.smtp-in.mydomain.tld
-    env_file:
-      - ./config/mydomain.tld/services.env
     networks: [ demo_net, av ]
     volumes:
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/prelude.rhai:/prelude.rhai:ro
       - ./config/mydomain.tld/av-output/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
       - ./config/mydomain.tld/av-output/rules-post-av.rhai:/rules.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/mydomain.tld/av-output/rules.rhai:/rules.rhai:ro
+      - ./config/mydomain.tld/av-output/rsa-private-key.pem:/rsa-private-key.pem:ro
+      - ./config/mydomain.tld/av-output/ed25519-private-key.pem:/ed25519-private-key.pem:ro
+      - ./config/mydomain.tld/av-output/dkim-private-key.rhai:/dkim-private-key.rhai:ro
     depends_on:
       broker:
         condition: service_healthy

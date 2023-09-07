@@ -11,16 +11,30 @@ networks:
 
 
 services:
-  log-dispatcher:
+  mydomain-log-dispatcher:
     image: vsmtp-log-dispatcher:dev
     # environment:
     #   - JAEGER=telemetry:6831
     #   - LOKI_URL=http://loki:3100
-    env_file:
-      - ./config/mydomain.tld/services.env
     volumes:
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
+      - ./config/mydomain.tld/logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
+    networks:
+      - demo_net
+      # - jaeger
+      # - loki
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  mytarget-log-dispatcher:
+    image: vsmtp-log-dispatcher:dev
+    # environment:
+    #   - JAEGER=telemetry:6831
+    #   - LOKI_URL=http://loki:3100
+    volumes:
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/mytarget.tld/logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
     networks:
       - demo_net
       # - jaeger

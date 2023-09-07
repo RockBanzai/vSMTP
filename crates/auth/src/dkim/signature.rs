@@ -9,10 +9,9 @@
  *
  */
 
-use super::{Canonicalization, SigningAlgorithm};
+use super::{mail::Header, Canonicalization, SigningAlgorithm};
 use crate::ParseError;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use vsmtp_mail_parser::{mail::headers::Header, Mail};
 
 #[derive(
     Debug,
@@ -119,10 +118,10 @@ impl Signature {
         out
     }
 
-    pub(super) fn get_header_for_hash(&self, message: &Mail) -> String {
+    pub(super) fn get_header_for_hash(&self, message: &impl super::mail::Mail) -> String {
         let mut last_index = std::collections::HashMap::<String, usize>::new();
 
-        let headers = &message.headers;
+        let headers = message.get_headers();
 
         let mut output = vec![];
         for header in &self.headers_field {
@@ -133,10 +132,10 @@ impl Signature {
             if let Some((pos, full_header)) = headers[..idx]
                 .iter()
                 .enumerate()
-                .rfind(|(_, Header { name, .. })| name.eq_ignore_ascii_case(header))
+                .rfind(|(_, i)| i.field_name().eq_ignore_ascii_case(header))
             {
-                last_index.insert(full_header.name.to_lowercase(), pos);
-                output.push(full_header.to_string());
+                last_index.insert(full_header.field_name().to_lowercase(), pos);
+                output.push(full_header.get());
             }
         }
 
@@ -150,7 +149,7 @@ impl Signature {
         output
     }
 
-    pub(super) fn get_header_hash(&self, message: &Mail) -> Vec<u8> {
+    pub(super) fn get_header_hash(&self, message: &impl super::mail::Mail) -> Vec<u8> {
         let header = self.get_header_for_hash(message);
 
         tracing::debug!("header before hash={header:?}");
