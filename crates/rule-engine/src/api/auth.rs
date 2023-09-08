@@ -154,8 +154,8 @@ mod auth {
 
     /// Return a new `Authentication-Results` header.
     ///
-    /// If you want to add the header to the message, use [add_header](http://dev.vsmtp.rs/docs/global/auth#fn-add_header).
-    ///
+    /// This method is useful if you want to inspect and add the header to the message yourself.
+    /// If you want to create and add the header immediately, use [add_header](http://dev.vsmtp.rs/docs/global/auth#fn-add_header).
     ///
     /// [iprev]:    http://dev.vsmtp.rs/docs/global/iprev
     /// [spf]:      http://dev.vsmtp.rs/docs/global/spf
@@ -170,6 +170,8 @@ mod auth {
     ///     auth_serv_id: "mydomain.tld" // The domain name of the authentication server
     ///   });
     ///   log("info", header);
+    ///   ctx.prepend_header("Authentication-Results", header);
+    ///   status::next();
     /// }
     /// ```
     ///
@@ -205,6 +207,7 @@ mod auth {
     ///   auth::add_header(ctx, #{
     ///     auth_serv_id: "mydomain.tld" // The domain name of the authentication server
     ///   });
+    ///   status::next();
     /// }
     /// ```
     /// # rhai-autodocs:index:2

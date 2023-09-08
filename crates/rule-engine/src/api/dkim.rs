@@ -17,7 +17,7 @@ use rhai::plugin::{
 use vsmtp_auth::dkim as backend;
 use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
 use vsmtp_common::{dkim::DkimVerificationResult, dns_resolver::DnsResolver};
-use vsmtp_mail_parser::Mail;
+use vsmtp_mail_parser::{mail::headers::Header, Mail};
 
 pub use dkim::*;
 
@@ -27,7 +27,7 @@ struct SignParams {
     sdid: String,
     selector: String,
     #[serde(deserialize_with = "deserialize_private_key")]
-    private_key: std::sync::Arc<backend::PrivateKey>,
+    private_key: rhai::Shared<backend::PrivateKey>,
     #[serde(default)]
     headers_field: Option<Vec<String>>,
     #[serde(default, deserialize_with = "deserialize_canonicalization")]
@@ -95,12 +95,12 @@ struct VerifyParams {
     #[serde(default = "const_u64::<100>::value")]
     expiration_epsilon: u64,
     #[serde(deserialize_with = "super::deserialize_dns_resolver")]
-    dns_resolver: std::sync::Arc<DnsResolver>,
+    dns_resolver: rhai::Shared<DnsResolver>,
 }
 
 fn deserialize_private_key<'de, D>(
     deserializer: D,
-) -> Result<std::sync::Arc<backend::PrivateKey>, D::Error>
+) -> Result<rhai::Shared<backend::PrivateKey>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
@@ -170,19 +170,56 @@ async fn get_public_key(
     }
 }
 
-/// Generate and verify DKIM signatures.
-/// Implementation of RFC 6376. (<https://www.rfc-editor.org/rfc/rfc6376.html>)
+/// Implementation of:
+/// * [`RFC "DomainKeys Identified Mail (DKIM) Signatures"`](https://datatracker.ietf.org/doc/html/rfc8601)
+/// * [`RFC "Cryptographic Algorithm and Key Usage Update to DomainKeys Identified Mail (DKIM)"`](https://datatracker.ietf.org/doc/html/rfc8301)
+/// * [`RFC "A New Cryptographic Signature Method for DomainKeys Identified Mail (DKIM)'`](https://datatracker.ietf.org/doc/html/rfc8463)
 #[rhai::plugin::export_module]
 mod dkim {
-    use vsmtp_mail_parser::mail::headers::Header;
+    use crate::api::Result;
 
     /// Produce a DKIM signature with the given parameters.
+    ///
+    /// This method will produce a new signature for the message, with the given parameters **and
+    /// will not add** a `DKIM-Signature` header to the message.
+    ///
+    /// This method is useful if you want to inspect and add the signature to the message yourself.
+    /// If you want to create and add the signature immediately, use [add_signature](http://vsmtp.rs/docs/global/dkim#fn-add_signature).
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - A map containing the parameters for the signature.
+    ///   * `sdid` - The domain name of the signing domain (used to retrieves the public key).
+    ///   * `selector` - The selector for the signing domain (used to retrieves the public key).
+    ///   * `private_key` - The private key to use for the signature, loaded with the [crypto] module.
+    ///   * `headers_field` - The list of headers to sign, optional `["From", "To", "Date", "Subject", "From"]` by default.
+    ///   * `canonicalization` - The canonicalization algorithm to use, optional `"simple/relaxed"` by default.
+    ///
+    /// [crypto]: http://vsmtp.rs/docs/global/crypto
+    ///
+    /// # Example
+    ///
+    ///```
+    /// rule "add dkim signature" |ctx| {
+    ///   let signature = dkim::create_sign(ctx.mail, #{
+    ///     sdid: "mydomain.tld",
+    ///     selector: "myselector",
+    ///     private_key: crypto::load_pem_rsa_pkcs8_file("/etc/vsmtp/keys/my_key.pem"),
+    ///     headers_field: ["From", "To", "Date", "Subject", "From"],
+    ///     canonicalization: "simple/relaxed",
+    ///   });
+    ///   log("info", `My DKIM signature: ${signature}`);
+    ///   ctx.prepend_header("DKIM-Signature", signature);
+    ///   status::next();
+    /// }
+    /// ```
+    ///
     /// # rhai-autodocs:index:1
     #[rhai_fn(return_raw)]
     pub fn create_sign(
-        mail: &mut std::sync::Arc<std::sync::RwLock<Mail>>,
+        mail: &mut rhai::Shared<std::sync::RwLock<Mail>>,
         params: rhai::Dynamic,
-    ) -> Result<String, Box<rhai::EvalAltResult>> {
+    ) -> Result<String> {
         let SignParams {
             sdid,
             selector,
@@ -225,12 +262,41 @@ mod dkim {
         }
     }
 
+    /// This method will produce a new signature for the message, with the given parameters and
+    /// add a `DKIM-Signature` header to the message.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - A map containing the parameters for the signature.
+    ///   * `sdid` - The domain name of the signing domain (used to retrieves the public key).
+    ///   * `selector` - The selector for the signing domain (used to retrieves the public key).
+    ///   * `private_key` - The private key to use for the signature, loaded with the [crypto] module.
+    ///   * `headers_field` - The list of headers to sign, optional `["From", "To", "Date", "Subject", "From"]` by default.
+    ///   * `canonicalization` - The canonicalization algorithm to use, optional `"simple/relaxed"` by default.
+    ///
+    /// [crypto]: http://vsmtp.rs/docs/global/crypto
+    ///
+    /// # Example
+    ///
+    ///```
+    /// rule "add dkim signature" |ctx| {
+    ///   dkim::add_signature(ctx.mail, #{
+    ///     sdid: "mydomain.tld",
+    ///     selector: "myselector",
+    ///     private_key: crypto::load_pem_rsa_pkcs8_file("/etc/vsmtp/keys/my_key.pem"),
+    ///     headers_field: ["From", "To", "Date", "Subject", "From"],
+    ///     canonicalization: "simple/relaxed",
+    ///   });
+    ///   status::next();
+    /// }
+    /// ```
+    ///
     /// # rhai-autodocs:index:2
     #[rhai_fn(return_raw)]
     pub fn add_signature(
-        mail: &mut std::sync::Arc<std::sync::RwLock<Mail>>,
+        mail: &mut rhai::Shared<std::sync::RwLock<Mail>>,
         params: rhai::Dynamic,
-    ) -> Result<(), Box<rhai::EvalAltResult>> {
+    ) -> Result<()> {
         let signature = create_sign(mail, params)?;
         mail.write()
             .unwrap()
@@ -244,13 +310,44 @@ mod dkim {
         format!("{v:?}")
     }
 
+    /// Verify all the DKIM signature of the message. This method will return a list of
+    /// DKIM verification result, one for each signature (or an array of one element with
+    /// the value `none` if there is no `DKIM-Signature` header).
+    ///
+    /// You can then store the result in the `ctx` with [store](http://vsmtp.rs/docs/global/dkim#fn-store),
+    /// it will then be used by the [add_header](http://vsmtp.rs/docs/global/auth#fn-add_header) method.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - A map containing the parameters for the verification.
+    ///   * `header_limit_count` - The maximum number of `DKIM-Signature` header to verify, optional `5` by default.
+    ///   * `expiration_epsilon` - The number of seconds of tolerance for the signature expiration, optional `100` by default.
+    ///   * `dns_resolver` - The DNS resolver to use for the verification, loaded with the [dns] module.
+    ///
+    /// [dns]: http://vsmtp.rs/docs/global/dns
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// rule "verify dkim signature" |ctx| {
+    ///   const dkim_results = dkim::verify(#{
+    ///     header_limit_count: 5,
+    ///     expiration_epsilon: 100,
+    ///     dns_resolver: dns::resolver(),
+    ///   });
+    ///   log("info", `DKIM results: ${dkim_results}`);
+    ///   dkim::store(dkim_results);
+    ///   status::next();
+    /// }
+    /// ```
+    ///
     /// # rhai-autodocs:index:4
     #[allow(clippy::significant_drop_tightening)]
     #[rhai_fn(return_raw)]
     pub fn verify(
-        ctx: &mut std::sync::Arc<std::sync::RwLock<Mail>>,
+        ctx: &mut rhai::Shared<std::sync::RwLock<Mail>>,
         params: rhai::Dynamic,
-    ) -> Result<rhai::Shared<Vec<DkimVerificationResult>>, Box<rhai::EvalAltResult>> {
+    ) -> Result<rhai::Shared<Vec<DkimVerificationResult>>> {
         let VerifyParams {
             header_limit_count,
             expiration_epsilon,
@@ -276,12 +373,13 @@ mod dkim {
         }
     }
 
+    /// See the documentation of [verify](http://vsmtp.rs/docs/global/dkim#fn-verify).
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, pure, return_raw)]
     pub fn store(
         ctx: &mut State<StatefulCtxReceived>,
         dkim_result: rhai::Shared<Vec<DkimVerificationResult>>,
-    ) -> Result<(), Box<rhai::EvalAltResult>> {
+    ) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_complete()?.dkim = Some(dkim_result);
             Ok(())
