@@ -19,6 +19,7 @@ services:
     volumes:
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/mydomain.tld/logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
+      - /run/systemd/journal/socket:/run/systemd/journal/socket
     networks:
       - demo_net
       # - jaeger

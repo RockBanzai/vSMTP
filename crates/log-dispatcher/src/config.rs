@@ -11,25 +11,65 @@
 
 pub(crate) use vsmtp_config::Config;
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "formatter", rename_all = "lowercase")]
+pub enum LogFormat {
+    Full,
+    Compact,
+    Pretty,
+    Json,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "formatter", rename_all = "lowercase")]
+pub enum SyslogRfc {
+    RFC5424,
+    RFC3164,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "protocol")]
+pub enum SyslogProtocol {
+    #[serde(rename = "INET_STREAM")]
+    Udp,
+    #[serde(rename = "INET_DGRAM")]
+    Tcp,
+    #[serde(rename = "UNIX_DGRAM")]
+    UnixSocket,
+    #[serde(rename = "UNIX_STREAM")]
+    UnixSocketStream,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "rotation", rename_all = "lowercase")]
+pub enum FileRotation {
+    Minutely,
+    Hourly,
+    Daily,
+    Never,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum LogTopic {
     Console {
-        formatter: String,
+        #[serde(default = "LogDispatcherConfig::default_log_format", flatten)]
+        formatter: LogFormat,
     },
     File {
-        file: String,
-        formatter: String,
-        // TODO: missing rotation
+        folder: String,
+        #[serde(default = "LogDispatcherConfig::default_file_rotation", flatten)]
+        rotation: FileRotation,
     },
     Syslog {
-        formatter: String,
-        address: std::net::IpAddr, // FIXME: surely not the right type
-                                   // TODO: missing protocol
+        #[serde(default = "LogDispatcherConfig::default_syslog_rfc", flatten)]
+        formatter: SyslogRfc,
+        #[serde(default = "LogDispatcherConfig::default_syslog_protocol", flatten)]
+        protocol: SyslogProtocol,
+        #[serde(default = "LogDispatcherConfig::default_syslog_address")]
+        address: String,
     },
-    Journald {
-        formatter: String,
-    },
+    Journald,
 }
 
 /// Configuration for log dispatcher service.
@@ -60,6 +100,30 @@ pub struct LogDispatcherConfig {
 impl LogDispatcherConfig {
     fn default_name() -> String {
         "log-dispatcher".to_string()
+    }
+
+    #[allow(dead_code)]
+    fn default_syslog_protocol() -> SyslogProtocol {
+        SyslogProtocol::Udp
+    }
+
+    #[allow(dead_code)]
+    fn default_syslog_rfc() -> SyslogRfc {
+        SyslogRfc::RFC5424
+    }
+
+    #[allow(dead_code)]
+    fn default_log_format() -> LogFormat {
+        LogFormat::Compact
+    }
+
+    #[allow(dead_code)]
+    fn default_file_rotation() -> FileRotation {
+        FileRotation::Never
+    }
+
+    fn default_syslog_address() -> String {
+        "udp://localhost:514".to_string()
     }
 }
 
