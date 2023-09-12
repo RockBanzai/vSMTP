@@ -41,7 +41,7 @@ addr = { version = "0.15.6", default-features = false, features = ["std"] }
 async-stream = { version = "0.3.5", default-features = false }
 async-trait = { version = "0.1.73", default-features = false }
 base64 = { version = "0.21.4", default-features = false, features = ["std"] }
-bytes = { version = "1.4.0", default-features = false }
+bytes = { version = "1.5.0", default-features = false }
 csv = { version = "1.2.2", default-features = false }
 fake = { version = "2.8.0", default-features = false, features = ["derive", "uuid", "time"] }
 flate2 = { version = "1.0.27", default-features = false, features = ["zlib"] }
