@@ -12,7 +12,7 @@
 use futures_lite::stream::StreamExt;
 use rules::{stage::WorkingStage, status::WorkingStatus};
 use vsmtp_common::{
-    api::write_to_delivery,
+    api::{write_to_delivery, write_to_quarantine},
     broker::{Exchange, Queue},
     ctx_received::CtxReceived,
     stateful_ctx_received::StatefulCtxReceived,
@@ -103,41 +103,50 @@ async fn working(
     let rule_engine =
         RuleEngine::from_config_with_state(rule_engine_config, StatefulCtxReceived::Complete(ctx));
 
-    // TODO: use the status.
-    //       delivery configuration should be returned by the rhai script.
-    let _status = rule_engine.run(&WorkingStage::PostQueue);
+    match rule_engine.run(&WorkingStage::PostQueue) {
+        WorkingStatus::Next | WorkingStatus::Success => {
+            let StatefulCtxReceived::Complete(CtxReceived {
+                connect: _,
+                helo: _,
+                mail_from,
+                rcpt_to,
+                mail,
+                complete: _,
+            }) = rule_engine.take_state()
+            else {
+                unreachable!("the working service always use a complete email")
+            };
 
-    // TODO: add enhance batching possibility using rhai rules.
-    let StatefulCtxReceived::Complete(CtxReceived {
-        connect: _,
-        helo: _,
-        mail_from,
-        rcpt_to,
-        mail,
-        complete: _,
-    }) = rule_engine.take_state()
-    else {
-        unreachable!("the working service always use a complete email")
-    };
+            let deliveries = rcpt_to
+                .recipient
+                .into_iter()
+                .filter(|(_, v)| !v.is_empty())
+                .map(|(route, recipient)| {
+                    vsmtp_common::ctx_delivery::CtxDelivery::new(
+                        route,
+                        mail_from.clone(),
+                        recipient,
+                        mail.clone(),
+                    )
+                })
+                .collect::<Vec<_>>();
 
-    let deliveries = rcpt_to
-        .recipient
-        .into_iter()
-        .filter(|(_, v)| !v.is_empty())
-        .map(|(route, recipient)| {
-            vsmtp_common::ctx_delivery::CtxDelivery::new(
-                route,
-                mail_from.clone(),
-                recipient,
-                mail.clone(),
-            )
-        })
-        .collect::<Vec<_>>();
+            for ctx_processed in deliveries {
+                let payload = ctx_processed.to_json().unwrap();
+                tracing::warn!("Sending to delivery at: {}", ctx_processed.routing_key);
+                write_to_delivery(channel, &ctx_processed.routing_key.to_string(), payload).await;
+            }
+        }
+        WorkingStatus::Fail => unimplemented!(),
+        WorkingStatus::Quarantine(name) => {
+            tracing::trace!("Putting in quarantine: {}", name);
+            let StatefulCtxReceived::Complete(ctx) = rule_engine.take_state() else {
+                unreachable!("the working service always use a complete email")
+            };
 
-    for ctx_processed in deliveries {
-        let payload = ctx_processed.to_json().unwrap();
-        tracing::warn!("Sending to delivery at: {}", ctx_processed.routing_key);
-        write_to_delivery(channel, &ctx_processed.routing_key.to_string(), payload).await;
+            let payload = ctx.to_json().unwrap();
+            write_to_quarantine(channel, &name, payload).await;
+        }
     }
 }
 

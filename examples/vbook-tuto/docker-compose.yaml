@@ -1,0 +1,95 @@
+version: '3.9'
+
+volumes:
+  out-maildir:
+
+
+services:
+  broker:
+    image: vsmtp-broker:dev
+    hostname: example.com
+    ports:
+      - 127.0.0.1:15672:15672
+      - 127.0.0.1:15671:15671
+    volumes:
+      - ./broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./broker/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  users:
+    image: mysql:8.0.34-debian
+    volumes:
+      - ./config/users.sql:/docker-entrypoint-initdb.d/users.sql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: tuto
+      MYSQL_PASSWORD: tuto
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+
+  receiver:
+    image: vsmtp-receiver:dev
+    hostname: receiver.example.com
+    volumes:
+      - ./config/smtp-receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
+      - ./config/smtp-receiver/filter.rhai:/etc/vsmtp/receiver-smtp/filter.rhai:ro
+    ports:
+      - 127.0.0.1:10025:25
+      - 127.0.0.1:10587:587
+    depends_on:
+      broker:
+        condition: service_healthy
+      users:
+        condition: service_healthy
+
+  working:
+    image: vsmtp-working:dev
+    volumes:
+      - ./config/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
+      - ./config/working/script.rhai:/etc/vsmtp/working/script.rhai:ro
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  clamav:
+    image: clamav/clamav:1.1
+    healthcheck:
+      test: sh -c "[[ \"$(echo PING | nc localhost 3310)\" = \"PONG\" ]] || exit 1"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 0s
+
+  basic:
+    image: vsmtp-basic:dev
+    volumes:
+      - ./config/basic/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+    environment:
+      - SYSTEM={"dns":{"config":"google"}}
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  maildir:
+    build:
+      context: .
+      dockerfile_inline: |
+        # syntax=docker/dockerfile:1
+        FROM vsmtp-maildir:dev
+        RUN apt-get update && apt-get install -y openssl
+        RUN useradd -p $(openssl passwd -1 john.doe) --create-home john.doe@example.com
+    volumes:
+      - ./config/maildir/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - out-maildir:/home/john.doe@example.com:rw
+    environment:
+      - SYSTEM={"user_lookup":"full_address"}
+    depends_on:
+      broker:
+        condition: service_healthy

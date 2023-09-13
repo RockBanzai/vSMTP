@@ -5,29 +5,17 @@ build_broker() {
     echo "build image vsmtp-broker:dev"
     docker build .. -f ../rabbitmq.Dockerfile \
         --tag vsmtp-broker:dev
-    # --cache-from type=registry,ref=localhost:5000/vsmtp3-broker \
-    # --cache-to   type=registry,ref=localhost:5000/vsmtp3-broker,mode=max \
-    # --tag localhost:5000/vsmtp3-broker:dev \
-    # --push .
 }
 
 ### Build the vsmtp3-all-in-one image, which contains all the binaries
 build_all_in_one() {
     echo "build image vsmtp-all-in-one:dev"
     docker build .. -f ../all-in-one.Dockerfile --tag vsmtp-all-in-one:dev || exit 1
-    # --cache-from type=registry,ref=localhost:5000/vsmtp3-all-in-one \
-    # --cache-to   type=registry,ref=localhost:5000/vsmtp3-all-in-one,mode=max \
-    # --tag localhost:5000/vsmtp3-all-in-one:dev \
-    # --push .
 }
 
 ### Copy the binary we are interested in from the all-in-one image
 build_service() {
     echo "build image vsmtp3-$i:dev"
-    # --cache-from type=registry,ref=localhost:5000/vsmtp3-$i \
-    # --cache-to   type=registry,ref=localhost:5000/vsmtp3-$i,mode=max \
-    # --tag localhost:5000/vsmtp3-$i:dev \
-    # --push .
     docker build --tag $i:dev --build-arg BIN=$i - <<'EOF'
 FROM vsmtp-all-in-one:dev as all-in-one
 FROM debian:buster-slim AS runtime
@@ -36,6 +24,7 @@ COPY --from=all-in-one /app/bin/$BIN /app/bin/$BIN
 COPY --from=all-in-one /usr/lib/vsmtp /usr/lib/vsmtp
 RUN mkdir -p /etc/vsmtp/plugins
 RUN ln -s /usr/lib/vsmtp/libvsmtp_plugin_mysql.so /etc/vsmtp/plugins/libvsmtp_plugin_mysql.so
+RUN ln -s /usr/lib/vsmtp/libvsmtp_clamav_plugin.so /etc/vsmtp/plugins/libvsmtp_clamav_plugin.so
 ENV BIN_=$BIN
 ENV PATH="$PATH:/app/bin"
 CMD $BIN_
