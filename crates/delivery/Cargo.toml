@@ -31,7 +31,7 @@ tracing-amqp = { workspace = true }
 tracing-subscriber = { workspace = true }
 trust-dns-resolver = { workspace = true, optional = true }
 url = { workspace = true }
-users = { workspace = true }
+uzers = { workspace = true }
 vsmtp-common = { workspace = true }
 vsmtp-config = { workspace = true }
 vsmtp-mail-parser = { workspace = true }

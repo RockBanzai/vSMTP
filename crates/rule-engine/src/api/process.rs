@@ -95,7 +95,7 @@ mod process_rhai {
         command.stderr(std::process::Stdio::piped());
 
         if let Some(user) = user {
-            if let Some(user) = users::get_user_by_name(&user) {
+            if let Some(user) = uzers::get_user_by_name(&user) {
                 std::os::unix::prelude::CommandExt::uid(&mut command, user.uid());
             } else {
                 return Err(format!("user not found: '{user}'").into());
@@ -103,7 +103,7 @@ mod process_rhai {
         }
 
         if let Some(group) = group {
-            if let Some(group) = users::get_group_by_name(&group) {
+            if let Some(group) = uzers::get_group_by_name(&group) {
                 std::os::unix::prelude::CommandExt::gid(&mut command, group.gid());
             } else {
                 return Err(format!("group not found: '{group}'").into());

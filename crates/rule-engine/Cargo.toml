@@ -27,7 +27,7 @@ thiserror = { workspace = true }
 time = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
-users = { workspace = true }
+uzers = { workspace = true }
 uuid = { workspace = true, features = ["serde"] }
 viaspf = { workspace = true }
 vsmtp-auth = { workspace = true }

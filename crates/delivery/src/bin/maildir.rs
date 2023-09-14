@@ -28,7 +28,7 @@ enum UserLookup {
 #[derive(serde::Serialize, serde::Deserialize)]
 struct Maildir {
     #[serde(default, with = "option_group")]
-    group_local: Option<users::Group>,
+    group_local: Option<uzers::Group>,
     #[serde(default)]
     user_lookup: UserLookup,
     api_version: vsmtp_config::semver::VersionReq,
@@ -44,19 +44,19 @@ struct Maildir {
 
 mod option_group {
 
-    pub fn deserialize<'de, D>(d: D) -> Result<Option<users::Group>, D::Error>
+    pub fn deserialize<'de, D>(d: D) -> Result<Option<uzers::Group>, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         match <Option<String> as serde::Deserialize>::deserialize(d)? {
-            Some(group_local) => Ok(Some(users::get_group_by_name(&group_local).ok_or_else(
+            Some(group_local) => Ok(Some(uzers::get_group_by_name(&group_local).ok_or_else(
                 || serde::de::Error::custom(format!("Group '{group_local}' does not exist.")),
             )?)),
             None => Ok(None),
         }
     }
 
-    pub fn serialize<S>(this: &Option<users::Group>, serializer: S) -> Result<S::Ok, S::Error>
+    pub fn serialize<S>(this: &Option<uzers::Group>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
@@ -71,8 +71,8 @@ impl Maildir {
     #[tracing::instrument(name = "create-maildir", fields(folder = ?path.display()))]
     fn create_and_chown(
         path: &std::path::PathBuf,
-        user: &users::User,
-        group_local: &Option<users::Group>,
+        user: &uzers::User,
+        group_local: &Option<uzers::Group>,
     ) -> std::io::Result<()> {
         if path.exists() {
             tracing::info!("Folder already exists.");
@@ -83,14 +83,14 @@ impl Maildir {
 
             tracing::trace!(
                 user = user.uid(),
-                group = group_local.as_ref().map_or(u32::MAX, users::Group::gid),
+                group = group_local.as_ref().map_or(u32::MAX, uzers::Group::gid),
                 "Setting permissions.",
             );
 
             chown(
                 path,
                 Some(user.uid()),
-                group_local.as_ref().map(users::Group::gid),
+                group_local.as_ref().map(uzers::Group::gid),
             )?;
         }
 
@@ -100,7 +100,7 @@ impl Maildir {
     fn write(
         &self,
         addr: &Address,
-        user: &users::User,
+        user: &uzers::User,
         msg_uuid: &uuid::Uuid,
         content: &[u8],
     ) -> std::io::Result<()> {
@@ -125,7 +125,7 @@ impl Maildir {
         chown(
             &file_in_maildir_inbox,
             Some(user.uid()),
-            self.group_local.as_ref().map(users::Group::gid),
+            self.group_local.as_ref().map(uzers::Group::gid),
         )?;
 
         Ok(())
@@ -156,7 +156,7 @@ impl DeliverySystem for Maildir {
                 UserLookup::FullAddress => i.forward_path.0.full(),
             };
 
-            match users::get_user_by_name(user)
+            match uzers::get_user_by_name(user)
                 .map(|user| self.write(&i.forward_path.0, &user, &ctx.uuid, content.as_bytes()))
             {
                 None => {
