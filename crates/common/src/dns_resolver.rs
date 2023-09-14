@@ -18,6 +18,20 @@ pub struct DnsResolver {
     pub resolver: trust_dns_resolver::TokioAsyncResolver,
 }
 
+impl DnsResolver {
+    #[must_use]
+    pub fn google() -> Self {
+        let config = trust_dns_resolver::config::ResolverConfig::google();
+        let option = trust_dns_resolver::config::ResolverOpts::default();
+
+        Self {
+            config: config.clone(),
+            option,
+            resolver: trust_dns_resolver::TokioAsyncResolver::tokio(config, option),
+        }
+    }
+}
+
 impl<'de> serde::Deserialize<'de> for DnsResolver {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

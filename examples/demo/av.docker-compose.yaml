@@ -17,11 +17,9 @@ services:
     image: vsmtp-forward:dev
     hostname: av.smtp-out-internal.mydomain.tld
     volumes:
-      - ./config/mydomain.tld/av-input/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/mydomain.tld/av-input/config.rhai:/etc/vsmtp/forward/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
-    environment:
-      - SYSTEM={"service":"av", "target":"smtp://clamsmtp:10026"}
     networks: [ demo_net, av ]
     depends_on:
       broker:

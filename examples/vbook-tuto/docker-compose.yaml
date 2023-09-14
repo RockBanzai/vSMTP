@@ -70,9 +70,7 @@ services:
   basic:
     image: vsmtp-basic:dev
     volumes:
-      - ./config/basic/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
-    environment:
-      - SYSTEM={"dns":{"config":"google"}}
+      - ./config/basic/config.rhai:/etc/vsmtp/basic/conf.d/config.rhai:ro
     depends_on:
       broker:
         condition: service_healthy
@@ -86,10 +84,8 @@ services:
         RUN apt-get update && apt-get install -y openssl
         RUN useradd -p $(openssl passwd -1 john.doe) --create-home john.doe@example.com
     volumes:
-      - ./config/maildir/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
       - out-maildir:/home/john.doe@example.com:rw
-    environment:
-      - SYSTEM={"user_lookup":"full_address"}
     depends_on:
       broker:
         condition: service_healthy

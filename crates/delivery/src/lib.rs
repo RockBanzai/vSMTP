@@ -28,9 +28,9 @@ use vsmtp_common::{
     delivery_attempt::{Action, DeliveryAttempt},
     delivery_route::DeliveryRoute,
 };
+use vsmtp_config::Config;
 use vsmtp_protocol::NotifyOn;
 
-mod config;
 mod frequency;
 pub use frequency::Frequency;
 
@@ -357,27 +357,23 @@ pub async fn start_delivery(
 }
 
 pub async fn delivery_main(
-    system: std::sync::Arc<impl DeliverySystem + 'static>,
+    system: std::sync::Arc<impl DeliverySystem + Config + 'static>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use crate::config::Config;
     use tracing_subscriber::prelude::*;
 
-    let args = <config::Args as clap::Parser>::parse();
-    let config = config::DeliveryConfig::from_rhai_file(&args.config)?;
-
     let conn = lapin::Connection::connect_with_config(
-        &config.broker().uri,
+        &system.broker().uri,
         lapin::ConnectionProperties::default(),
         lapin::tcp::OwnedTLSConfig {
             identity: None,
-            cert_chain: config.broker().certificate_chain.clone(),
+            cert_chain: system.broker().certificate_chain.clone(),
         },
     )
     .await?;
 
     let filter = tracing_subscriber::filter::Targets::new()
-        .with_targets(config.logs.levels.clone())
-        .with_default(config.logs().default_level);
+        .with_targets(system.logs().levels.clone())
+        .with_default(system.logs().default_level);
 
     let (layer, task) = tracing_amqp::layer(&conn).await;
     tracing_subscriber::registry()

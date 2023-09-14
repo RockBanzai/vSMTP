@@ -17,6 +17,7 @@ use vsmtp_common::{
     stateful_ctx_received::MailFromProps,
     Recipient,
 };
+use vsmtp_config::Config;
 use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, ShouldNotify};
 use vsmtp_protocol::Domain;
 
@@ -26,10 +27,19 @@ use vsmtp_protocol::Domain;
 /// * group the recipients by domain (meaning it support multiple domains per message)
 /// * for each domain, lookup the MX records and take the MX with the higher priority
 /// * make only one attempt to send the message to that MX
-#[derive(serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Basic {
     dns: DnsResolver,
+    api_version: vsmtp_config::semver::VersionReq,
+    #[serde(default)]
+    queues: vsmtp_config::Queues,
+    #[serde(default)]
+    broker: vsmtp_config::Broker,
+    #[serde(default)]
+    logs: vsmtp_config::Logs,
+    #[serde(skip)]
+    path: std::path::PathBuf,
 }
 
 impl Basic {
@@ -149,16 +159,52 @@ impl DeliverySystem for Basic {
     }
 }
 
+impl Config for Basic {
+    fn with_path(_: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self> {
+        Ok(Self {
+            dns: DnsResolver::google(),
+            api_version: vsmtp_config::semver::VersionReq::default(),
+            queues: vsmtp_config::Queues::default(),
+            broker: vsmtp_config::Broker::default(),
+            logs: vsmtp_config::Logs::default(),
+            path: std::path::PathBuf::default(),
+        })
+    }
+
+    fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
+        &self.api_version
+    }
+
+    fn broker(&self) -> &vsmtp_config::Broker {
+        &self.broker
+    }
+
+    fn queues(&self) -> &vsmtp_config::Queues {
+        &self.queues
+    }
+
+    fn logs(&self) -> &vsmtp_config::logs::Logs {
+        &self.logs
+    }
+
+    fn path(&self) -> &std::path::Path {
+        &self.path
+    }
+}
+
 #[derive(clap::Parser)]
 #[command(author, version, about)]
-struct Args {}
+struct Args {
+    /// Path to the rhai configuration file.
+    #[arg(short, long, default_value_t = String::from("/etc/vsmtp/basic/conf.d/config.rhai"))]
+    pub config: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    <Args as clap::Parser>::parse();
+    let Args { config } = <Args as clap::Parser>::parse();
 
-    let system = std::env::var("SYSTEM").expect("SYSTEM");
-    let system = std::sync::Arc::from(serde_json::from_str::<Basic>(&system)?);
+    let system = std::sync::Arc::from(Basic::from_rhai_file(&config)?);
 
     delivery_main(system).await
 }

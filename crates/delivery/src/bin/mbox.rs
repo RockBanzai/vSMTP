@@ -13,9 +13,10 @@ use std::sync::Arc;
 use vsmtp_common::{
     ctx_delivery::CtxDelivery, delivery_attempt::DeliveryAttempt, delivery_route::DeliveryRoute,
 };
+use vsmtp_config::Config;
 use vsmtp_delivery::{delivery_main, DeliverySystem, ShouldNotify};
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Mbox {}
 
@@ -38,16 +39,45 @@ impl DeliverySystem for Mbox {
     }
 }
 
+impl Config for Mbox {
+    fn with_path(_: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self> {
+        todo!()
+    }
+
+    fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
+        todo!()
+    }
+
+    fn broker(&self) -> &vsmtp_config::broker::Broker {
+        todo!()
+    }
+
+    fn queues(&self) -> &vsmtp_config::queues::Queues {
+        todo!()
+    }
+
+    fn logs(&self) -> &vsmtp_config::logs::Logs {
+        todo!()
+    }
+
+    fn path(&self) -> &std::path::Path {
+        todo!()
+    }
+}
+
 #[derive(clap::Parser)]
 #[command(author, version, about)]
-struct Args {}
+struct Args {
+    /// Path to the rhai configuration file.
+    #[arg(short, long, default_value_t = String::from("/etc/vsmtp/mbox/conf.d/config.rhai"))]
+    pub config: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    <Args as clap::Parser>::parse();
+    let Args { config } = <Args as clap::Parser>::parse();
 
-    let system = std::env::var("SYSTEM").expect("SYSTEM");
-    let system = std::sync::Arc::from(serde_json::from_str::<Mbox>(&system)?);
+    let system = std::sync::Arc::from(Mbox::from_rhai_file(&config)?);
 
     delivery_main(system).await
 }

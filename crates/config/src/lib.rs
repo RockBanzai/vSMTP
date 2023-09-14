@@ -49,7 +49,7 @@ pub trait Config: serde::Serialize + serde::de::DeserializeOwned + Sized {
         );
 
         let script = std::fs::read_to_string(path_ref)
-            .map_err(|error| error::ConfigError::OpenScript(path_ref.into(), error))?;
+            .map_err(|error| error::ConfigError::FileOpen(path_ref.into(), error))?;
 
         Self::from_rhai_script(path, script, Some(&config_dir))
     }
@@ -77,33 +77,16 @@ pub trait Config: serde::Serialize + serde::de::DeserializeOwned + Sized {
             );
         }
 
-        let ast = engine
-            .compile(script)
-            .map_err(error::ConfigError::ScriptCompilation)?;
+        let ast = engine.compile(script)?;
 
-        let default_config_json = rhai::Engine::new()
-            .parse_json(
-                serde_json::to_string(&Self::with_path(path)?)
-                    .map_err(|error| error::ConfigError::ConfigObject(error.to_string()))?,
-                true,
-            )
-            .map_err(|error| error::ConfigError::ConfigObject(error.to_string()))?;
-
-        let final_config: rhai::Map = engine
-            .call_fn(
-                &mut rhai::Scope::new(),
-                &ast,
-                "on_config",
-                (default_config_json,),
-            )
-            .map_err(error::ConfigError::ScriptExecution)?;
-
-        let raw_config = serde_json::to_string(&final_config)
-            .map_err(|error| error::ConfigError::ConfigObject(error.to_string()))?;
-        let mut config = serde_json::Deserializer::from_str(&raw_config);
-
-        serde_path_to_error::deserialize(&mut config)
-            .map_err(|error| error::ConfigError::ConfigObject(error.to_string()))
+        let cfg = Self::with_path(path)?;
+        let cfg = serde_json::to_string(&cfg)?;
+        let cfg = rhai::Engine::new().parse_json(cfg, true)?;
+        let cfg =
+            engine.call_fn::<rhai::Map>(&mut rhai::Scope::new(), &ast, "on_config", (cfg,))?;
+        let cfg = serde_json::to_string(&cfg)?;
+        let mut cfg = serde_json::Deserializer::from_str(&cfg);
+        Ok(serde_path_to_error::deserialize(&mut cfg)?)
     }
 
     /// The JSON API version to use to communicate with the current service.

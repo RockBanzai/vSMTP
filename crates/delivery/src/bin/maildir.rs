@@ -13,33 +13,57 @@ use std::sync::Arc;
 use vsmtp_common::delivery_attempt::{DeliveryAttempt, LocalInformation};
 use vsmtp_common::libc::{chown, getpwuid};
 use vsmtp_common::{ctx_delivery::CtxDelivery, delivery_route::DeliveryRoute, uuid};
+use vsmtp_config::Config;
 use vsmtp_delivery::{delivery_main, DeliverySystem, ShouldNotify};
 use vsmtp_protocol::Address;
 
-#[derive(serde::Deserialize)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum UserLookup {
+    #[default]
     LocalPart,
     FullAddress,
 }
 
-#[derive(serde::Deserialize)]
-#[serde(deny_unknown_fields)]
+#[derive(serde::Serialize, serde::Deserialize)]
 struct Maildir {
-    #[serde(default, deserialize_with = "deser_option_group")]
+    #[serde(default, with = "option_group")]
     group_local: Option<users::Group>,
+    #[serde(default)]
     user_lookup: UserLookup,
+    api_version: vsmtp_config::semver::VersionReq,
+    #[serde(default)]
+    queues: vsmtp_config::Queues,
+    #[serde(default)]
+    broker: vsmtp_config::Broker,
+    #[serde(default)]
+    logs: vsmtp_config::Logs,
+    #[serde(skip)]
+    path: std::path::PathBuf,
 }
 
-fn deser_option_group<'de, D>(d: D) -> Result<Option<users::Group>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    match <Option<String> as serde::Deserialize>::deserialize(d)? {
-        Some(group_local) => Ok(Some(users::get_group_by_name(&group_local).ok_or_else(
-            || serde::de::Error::custom(format!("Group '{group_local}' does not exist.")),
-        )?)),
-        None => Ok(None),
+mod option_group {
+
+    pub fn deserialize<'de, D>(d: D) -> Result<Option<users::Group>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        match <Option<String> as serde::Deserialize>::deserialize(d)? {
+            Some(group_local) => Ok(Some(users::get_group_by_name(&group_local).ok_or_else(
+                || serde::de::Error::custom(format!("Group '{group_local}' does not exist.")),
+            )?)),
+            None => Ok(None),
+        }
+    }
+
+    pub fn serialize<S>(this: &Option<users::Group>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match this {
+            Some(group) => serializer.serialize_some(&group.name().to_string_lossy()),
+            None => serializer.serialize_none(),
+        }
     }
 }
 
@@ -160,16 +184,53 @@ impl DeliverySystem for Maildir {
     }
 }
 
+impl Config for Maildir {
+    fn with_path(_: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self> {
+        Ok(Self {
+            group_local: None,
+            user_lookup: UserLookup::default(),
+            api_version: vsmtp_config::semver::VersionReq::default(),
+            queues: vsmtp_config::Queues::default(),
+            broker: vsmtp_config::Broker::default(),
+            logs: vsmtp_config::Logs::default(),
+            path: std::path::PathBuf::default(),
+        })
+    }
+
+    fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
+        &self.api_version
+    }
+
+    fn broker(&self) -> &vsmtp_config::Broker {
+        &self.broker
+    }
+
+    fn queues(&self) -> &vsmtp_config::Queues {
+        &self.queues
+    }
+
+    fn logs(&self) -> &vsmtp_config::logs::Logs {
+        &self.logs
+    }
+
+    fn path(&self) -> &std::path::Path {
+        &self.path
+    }
+}
+
 #[derive(clap::Parser)]
 #[command(author, version, about)]
-struct Args {}
+struct Args {
+    /// Path to the rhai configuration file.
+    #[arg(short, long, default_value_t = String::from("/etc/vsmtp/maildir/conf.d/config.rhai"))]
+    pub config: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    <Args as clap::Parser>::parse();
+    let Args { config } = <Args as clap::Parser>::parse();
 
-    let system = std::env::var("SYSTEM").expect("SYSTEM");
-    let system = std::sync::Arc::from(serde_json::from_str::<Maildir>(&system)?);
+    let system = std::sync::Arc::from(Maildir::from_rhai_file(&config)?);
 
     delivery_main(system).await
 }

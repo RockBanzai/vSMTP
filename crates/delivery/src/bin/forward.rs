@@ -13,13 +13,23 @@ use std::sync::Arc;
 use vsmtp_common::{
     ctx_delivery::CtxDelivery, delivery_attempt::DeliveryAttempt, delivery_route::DeliveryRoute,
 };
+use vsmtp_config::Config;
 use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, ShouldNotify};
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Forward {
     service: String,
     target: url::Url,
+    api_version: vsmtp_config::semver::VersionReq,
+    #[serde(default)]
+    queues: vsmtp_config::Queues,
+    #[serde(default)]
+    broker: vsmtp_config::Broker,
+    #[serde(default)]
+    logs: vsmtp_config::Logs,
+    #[serde(skip)]
+    path: std::path::PathBuf,
 }
 
 #[async_trait::async_trait]
@@ -67,16 +77,53 @@ impl DeliverySystem for Forward {
     }
 }
 
+impl Config for Forward {
+    fn with_path(_: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self> {
+        Ok(Self {
+            target: url::Url::parse("smtp://localhost").unwrap(),
+            service: String::default(),
+            api_version: vsmtp_config::semver::VersionReq::default(),
+            queues: vsmtp_config::Queues::default(),
+            broker: vsmtp_config::Broker::default(),
+            logs: vsmtp_config::Logs::default(),
+            path: std::path::PathBuf::default(),
+        })
+    }
+
+    fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
+        &self.api_version
+    }
+
+    fn broker(&self) -> &vsmtp_config::Broker {
+        &self.broker
+    }
+
+    fn queues(&self) -> &vsmtp_config::Queues {
+        &self.queues
+    }
+
+    fn logs(&self) -> &vsmtp_config::logs::Logs {
+        &self.logs
+    }
+
+    fn path(&self) -> &std::path::Path {
+        &self.path
+    }
+}
+
 #[derive(clap::Parser)]
 #[command(author, version, about)]
-struct Args {}
+struct Args {
+    /// Path to the rhai configuration file.
+    #[arg(short, long, default_value_t = String::from("/etc/vsmtp/forward/conf.d/config.rhai"))]
+    pub config: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    <Args as clap::Parser>::parse();
+    let Args { config } = <Args as clap::Parser>::parse();
 
-    let system = std::env::var("SYSTEM").expect("SYSTEM");
-    let system = std::sync::Arc::from(serde_json::from_str::<Forward>(&system)?);
+    let system = std::sync::Arc::from(Forward::from_rhai_file(&config)?);
 
     delivery_main(system).await
 }

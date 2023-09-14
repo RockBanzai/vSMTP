@@ -63,12 +63,10 @@ services:
         RUN apt-get update && apt-get install -y openssl
         RUN useradd -p $(openssl passwd -1 john.doe) --create-home john.doe@mydomain.tld
     volumes:
-      - ./config/mydomain.tld/maildir/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/mydomain.tld/maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
       - mydomain-maildir:/home:rw
-    environment:
-      - SYSTEM={"user_lookup":"full_address"}
     networks: [ demo_net ]
     depends_on:
       broker:
@@ -95,11 +93,9 @@ services:
     image: vsmtp-basic:dev
     hostname: out-v0.mydomain.tld
     volumes:
-      - ./config/mydomain.tld/basic/config.rhai:/etc/vsmtp/delivery/conf.d/config.rhai:ro
+      - ./config/mydomain.tld/basic/config.rhai:/etc/vsmtp/basic/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./config/no-rules.rhai:/rules.rhai:ro
-    environment:
-      - SYSTEM={"dns":{ "config":{ "name_servers":[ {"socket_addr":"172.23.0.1:53"} ] } }}
     networks:
       demo_net:
         ipv4_address: 172.23.0.10
