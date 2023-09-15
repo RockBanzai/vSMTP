@@ -4,7 +4,7 @@ import "prelude" as prel;
 const defaults = #{
 
     connect: [
-        action "log connection" |ctx| print(`client: ${ctx.client_ip()}:${ctx.client_port()}`),
+        action "log connection" |ctx| print(`client: ${ctx.client_ip}:${ctx.client_port}`),
         rule   "do stuff"      |ctx| status::ok(),
     ],
 

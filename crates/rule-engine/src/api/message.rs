@@ -46,7 +46,7 @@ mod message {
     /// ```
     ///
     /// # rhai-autodocs:index:1
-    #[rhai_fn(global, name = "mail_str", return_raw)]
+    #[rhai_fn(global, get = "mail_str", return_raw)]
     pub fn mail_str(ctx: &mut State<StatefulCtxReceived>) -> Result<String> {
         ctx.read(|ctx| ctx.get_mail(ToString::to_string).map_err(StateError::into))
     }
@@ -243,7 +243,7 @@ mod message {
     /// ```
     ///
     /// # rhai-autodocs:index:6
-    #[rhai_fn(global, name = "get_header", return_raw)]
+    #[rhai_fn(global, index_get, return_raw)]
     pub fn get_header(ctx: &mut State<StatefulCtxReceived>, header: &str) -> Result<rhai::Dynamic> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| {
@@ -295,7 +295,7 @@ mod message {
     /// ```
     ///
     /// # rhai-autodocs:index:7
-    #[rhai_fn(global, name = "get_all_headers", return_raw)]
+    #[rhai_fn(global, get = "headers", return_raw)]
     pub fn get_all_headers(ctx: &mut State<StatefulCtxReceived>) -> Result<rhai::Array> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| {
@@ -309,7 +309,7 @@ mod message {
     }
 
     #[doc(hidden)]
-    #[rhai_fn(global, name = "get_all_headers", return_raw)]
+    #[rhai_fn(global, name = "headers", return_raw)]
     pub fn get_all_headers_str(
         ctx: &mut State<StatefulCtxReceived>,
         name: &str,
@@ -366,7 +366,7 @@ mod message {
     /// ```
     ///
     /// # rhai-autodocs:index:8
-    #[rhai_fn(global, name = "get_header_untouched", return_raw)]
+    #[rhai_fn(global, name = "header_untouched", return_raw)]
     pub fn get_header_untouched(
         ctx: &mut State<StatefulCtxReceived>,
         name: &str,
@@ -556,7 +556,7 @@ mod message {
     /// ```
     ///
     /// # rhai-autodocs:index:11
-    #[rhai_fn(global, name = "set_header", return_raw)]
+    #[rhai_fn(global, index_set, return_raw)]
     pub fn set_header(
         ctx: &mut State<StatefulCtxReceived>,
         header: &str,
@@ -851,7 +851,7 @@ mod message {
     /// TODO:
     /// ```
     /// # rhai-autodocs:index:18
-    #[rhai_fn(global, name = "body_string", return_raw)]
+    #[rhai_fn(global, get = "body", return_raw)]
     pub fn body_string(ctx: &mut State<StatefulCtxReceived>) -> Result<String> {
         ctx.write(|ctx| ctx.get_mail(|mail| mail.body.to_string()))
             .map_err(StateError::into)

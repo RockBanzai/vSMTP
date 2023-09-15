@@ -59,19 +59,19 @@ mod process_rhai {
     }
 
     /// # rhai-autodocs:index:2
-    #[rhai_fn(global, pure, get = "stderr")]
+    #[rhai_fn(global, get = "stderr", pure)]
     pub fn stderr(ctx: &mut rhai::Shared<ProcessOutput>) -> String {
         ctx.stderr.clone()
     }
 
     /// # rhai-autodocs:index:3
-    #[rhai_fn(global, pure, get = "stdout")]
+    #[rhai_fn(global, get = "stdout", pure)]
     pub fn stdout(ctx: &mut rhai::Shared<ProcessOutput>) -> String {
         ctx.stdout.clone()
     }
 
     /// # rhai-autodocs:index:4
-    #[rhai_fn(global, pure)]
+    #[rhai_fn(global, get = "status", pure)]
     pub fn status(ctx: &mut rhai::Shared<ProcessOutput>) -> std::process::ExitStatus {
         ctx.status
     }

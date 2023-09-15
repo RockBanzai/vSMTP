@@ -118,25 +118,25 @@ const rules = #{
 };
 
 fn on_connect(ctx) {
-    global::rules[ctx.server_port().to_string()].connect(ctx)
+    global::rules[ctx.server_port.to_string()].connect(ctx)
 }
 
 fn on_helo(ctx) {
-    global::rules[ctx.server_port().to_string()].helo(ctx)
+    global::rules[ctx.server_port.to_string()].helo(ctx)
 }
 
 fn on_auth(ctx) {
-    global::rules[ctx.server_port().to_string()].auth(ctx)
+    global::rules[ctx.server_port.to_string()].auth(ctx)
 }
 
 fn on_mail_from(ctx) {
-    global::rules[ctx.server_port().to_string()].mail_from(ctx)
+    global::rules[ctx.server_port.to_string()].mail_from(ctx)
 }
 
 fn on_rcpt_to(ctx) {
-    global::rules[ctx.server_port().to_string()].rcpt_to(ctx)
+    global::rules[ctx.server_port.to_string()].rcpt_to(ctx)
 }
 
 fn on_pre_queue(ctx) {
-    global::rules[ctx.server_port().to_string()].pre_queue(ctx)
+    global::rules[ctx.server_port.to_string()].pre_queue(ctx)
 }

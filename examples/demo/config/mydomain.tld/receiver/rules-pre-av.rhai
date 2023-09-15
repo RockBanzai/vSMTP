@@ -21,7 +21,7 @@ fn on_connect(ctx)   { ctx.run([ prelude::debug_ctx ]) }
 fn on_helo(ctx)      { ctx.run([ prelude::debug_ctx ]) }
 
 fn on_auth(ctx) {
-    ctx.run(if ctx.server_port() == 25 {
+    ctx.run(if ctx.server_port == 25 {
         [ prelude::debug_ctx ]
     } else { [
         prelude::debug_ctx,
@@ -37,7 +37,7 @@ fn on_auth(ctx) {
 }
 
 fn on_mail_from(ctx) {
-    ctx.run(if ctx.server_port() == 25 {
+    ctx.run(if ctx.server_port == 25 {
         [ prelude::debug_ctx ]
     } else { [
         prelude::debug_ctx,

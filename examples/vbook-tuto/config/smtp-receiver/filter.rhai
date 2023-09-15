@@ -20,7 +20,7 @@ fn on_auth(ctx) {
 }
 
 fn on_mail_from(ctx) {
-    if ctx.server_port() == 587 && !ctx.is_authenticated {
+    if ctx.server_port == 587 && !ctx.is_authenticated {
         status::deny("530 5.7.0 Authentication required")
     } else {
         status::next()
