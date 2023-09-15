@@ -84,7 +84,7 @@ impl<CONTEXT, STATUS: Status, STAGE: Stage> Default
     /// You must specify the [`Status`] type that will be returned by directives and [`Stage`] that will
     /// be used to select directives batches to run.
     ///
-    /// The [`Context`] for the used when calling rhai apis is generic, but prefer to use the [`State<StatefulCtxReceived>`] context,
+    /// The `CONTEXT` type used when calling rhai apis is generic, but prefer to use the [`State<StatefulCtxReceived>`] context,
     /// because it is the argument used in most functions exposed by the rule engine. Some services will make their
     /// own apis without importing those of the rule engine by default, that is why the context is generic.
     fn default() -> Self {

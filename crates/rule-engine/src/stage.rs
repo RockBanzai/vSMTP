@@ -9,7 +9,7 @@
  *
  */
 
-/// "Hooks" used to identify when to run a batch of [`Directives`].
+/// "Hooks" used to identify when to run a batch of [`crate::Directives`].
 pub trait Stage:
     std::fmt::Debug + Copy + Clone + Ord + std::fmt::Display + std::str::FromStr + Send + Sync
 {

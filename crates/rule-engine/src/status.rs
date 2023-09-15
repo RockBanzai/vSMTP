@@ -11,7 +11,7 @@
 
 use crate::{DirectiveError, Stage};
 
-/// "Hooks" used to identify when to run a batch of [`Directives`].
+/// "Hooks" used to identify when to run a batch of [`crate::Directives`].
 pub trait Status: std::fmt::Debug + Clone + PartialEq + Send + Sync + 'static {
     /// The status to return when no rules are found
     /// for a given stage.

@@ -199,7 +199,7 @@ mod dkim {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// rule "add dkim signature" |ctx| {
     ///   let signature = dkim::create_sign(ctx.mail, #{
     ///     sdid: "mydomain.tld",
@@ -278,7 +278,7 @@ mod dkim {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// rule "add dkim signature" |ctx| {
     ///   dkim::add_signature(ctx.mail, #{
     ///     sdid: "mydomain.tld",
@@ -328,7 +328,7 @@ mod dkim {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```js
     /// rule "verify dkim signature" |ctx| {
     ///   const dkim_results = dkim::verify(#{
     ///     header_limit_count: 5,

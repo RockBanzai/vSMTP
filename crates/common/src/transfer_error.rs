@@ -89,11 +89,11 @@ pub enum Lookup {
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "testing", derive(PartialEq, Eq))]
 pub enum Queuer {
-    /// The recipient is still in status [`crate::transfer::Status::Waiting`] after a delivery attempt
+    /// The recipient is still in waiting status after a delivery attempt.
     #[error("recipient is still in status waiting")]
     StillWaiting,
 
-    /// Failed too many time to deliver the email
+    /// Failed too many time to deliver the email.
     #[error("max deferred attempt reached")]
     MaxDeferredAttemptReached,
 }

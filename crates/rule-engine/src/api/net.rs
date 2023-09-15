@@ -78,7 +78,7 @@ mod net {
         new_rg4("10.0.0.0/8").expect("valid range")
     }
 
-    /// Return a list of non routable networks ([`net_192`], [`net_172`], and [`net_10`]).
+    /// Return a list of non routable networks (`net_192`, `net_172`, and `net_10`).
     ///
     /// # rhai-autodocs:index:4
     #[must_use]

@@ -12,7 +12,7 @@
 #![doc = include_str!("../README.md")]
 
 mod dsl {
-    /// Rules implementation.
+    /// Rules and actions syntax implementation.
     pub mod directives;
 }
 
@@ -49,10 +49,8 @@ fn block_on<O>(f: impl std::future::Future<Output = O>) -> O {
 
 /// A runtime to execute rules from scripts.
 ///
-/// Directives (rules and actions) syntax is defined in the [`dsl`] module.
-///
 /// See [`RuleEngineConfig`] with contains pre-compiled scripts and [`RuleEngineConfigBuilder`]
-/// to build the configuration, then [`RuleEngine::from_config`] to generate a new rule engine
+/// to build the configuration, then [`RuleEngine::from_config_with_state`] to generate a new rule engine
 /// from the configuration.
 #[derive(Debug)]
 pub struct RuleEngine<CONTEXT, STATUS, STAGE>

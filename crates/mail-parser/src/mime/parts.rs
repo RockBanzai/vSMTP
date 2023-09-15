@@ -14,7 +14,7 @@ use crate::mail::Mail;
 use super::Mime;
 
 /// Type of a Mime part.
-/// https://www.rfc-editor.org/rfc/rfc2045#section-5
+/// <https://www.rfc-editor.org/rfc/rfc2045#section-5>
 #[derive(Clone, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub enum Part {
     /// Text content type.
@@ -32,11 +32,11 @@ pub enum Part {
 /// Boundary separated parts.
 #[derive(Clone, Debug, Default, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
 pub struct Multipart {
-    /// https://www.rfc-editor.org/rfc/rfc2046#section-5
+    /// <https://www.rfc-editor.org/rfc/rfc2046#section-5>
     pub preamble: String,
-    ///
+    /// Embedded mime parts.
     pub parts: Vec<Mime>,
-    /// https://www.rfc-editor.org/rfc/rfc2046#section-5
+    /// <https://www.rfc-editor.org/rfc/rfc2046#section-5>
     pub epilogue: String,
 }
 

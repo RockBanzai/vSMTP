@@ -17,7 +17,7 @@ pub mod builder;
 /// to spawn cheap rule engines in case of a multi-threaded
 /// environment.
 ///
-/// Call the [`RuleEngineConfigBuilder`] to create an instance.
+/// Call the [`crate::RuleEngineConfigBuilder`] to create an instance.
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug)]
 pub struct RuleEngineConfig<STATE: 'static, STATUS: crate::Status, STAGE: crate::Stage> {

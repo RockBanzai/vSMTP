@@ -112,7 +112,7 @@ def! {
     }
 }
 
-/// Helper type for [`E`] that implements [`serde::Serialize`], using [`std::fmt::Display`].
+/// Helper type for `E` that implements [`serde::Serialize`], using [`std::fmt::Display`].
 ///
 /// The [`serde::Deserialize`] store the value as a string.
 #[derive(Debug, serde::Deserialize)]
