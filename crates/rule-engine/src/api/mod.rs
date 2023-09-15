@@ -167,6 +167,32 @@ pub fn crypto_modules() -> [(String, rhai::Shared<rhai::Module>); 1] {
     )]
 }
 
+#[must_use]
+pub fn utils_modules() -> [(String, rhai::Shared<rhai::Module>); 3] {
+    [
+        (
+            "utils".to_string(),
+            rhai::Shared::new(rhai::exported_module!(utils)),
+        ),
+        (
+            "logging".to_string(),
+            rhai::Shared::new(rhai::exported_module!(logging)),
+        ),
+        (
+            "time".to_string(),
+            rhai::Shared::new(rhai::exported_module!(time)),
+        ),
+    ]
+}
+
+#[must_use]
+pub fn fs_modules() -> [(String, rhai::Shared<rhai::Module>); 1] {
+    [(
+        "fs".to_string(),
+        rhai::Shared::new(rhai::exported_module!(fs)),
+    )]
+}
+
 fn deserialize_dns_resolver<'de, D>(
     deserializer: D,
 ) -> std::result::Result<std::sync::Arc<DnsResolver>, D::Error>
