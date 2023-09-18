@@ -14,6 +14,7 @@ use std::{collections::HashMap, str::FromStr};
 
 #[serde_as]
 #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct Logs {
     #[serde(default = "Logs::default_queue")]
     pub queue: String,

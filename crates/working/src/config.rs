@@ -55,6 +55,7 @@ impl WorkingConfig {
 
 /// Scripts location and parameters.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Scripts {
     #[serde(default = "Scripts::default_script_path")]
     pub path: std::path::PathBuf,

@@ -12,6 +12,7 @@
 // TODO: This configuration could be parsed from an url.
 // See https://github.com/viridIT/rfc/blob/main/text/0008-smtp-receiver/0008-smtp-receiver.md#complete-example
 #[derive(Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct Broker {
     // FIXME: Which default should be used ?
     /// AMQP endpoint.

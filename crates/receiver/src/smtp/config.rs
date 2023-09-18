@@ -111,6 +111,7 @@ impl Default for SMTPReceiverConfig {
 
 /// Listeners that receives trafic via SMTP.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Interfaces {
     /// 25.
     #[serde(default)]
@@ -125,6 +126,7 @@ pub struct Interfaces {
 
 /// Error handling for clients.
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Errors {
     /// Soft error count before dropping the email. -1 to disable.
     #[serde(default = "Errors::default_soft_count")]
@@ -164,6 +166,7 @@ impl Default for Errors {
 
 /// TLS parameters.
 #[derive(serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Tls {
     /// Ignore the client’s ciphersuite order.
     /// Instead, choose the top ciphersuite in the server list which is supported by the client.
@@ -226,6 +229,7 @@ impl Tls {
 
 /// Scripts location and parameters.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Scripts {
     #[serde(default = "Scripts::default_script_path")]
     pub path: std::path::PathBuf,
@@ -240,6 +244,7 @@ impl Scripts {
 
 /// Extended Simple Mail Transfer Protocol (ESMTP) options.
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Esmtp {
     /// Authentication policy.
     #[serde(default = "Esmtp::default_auth")]
@@ -317,6 +322,7 @@ impl Default for Esmtp {
 
 /// Authentication options.
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Auth {
     /// Some mechanisms are considered unsecure under non-TLS connections.
     /// If `false`, the server will allow to use them even on clair connections.

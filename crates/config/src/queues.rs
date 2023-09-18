@@ -13,6 +13,7 @@
 //        Are there any use cases where the user would want to change those ?
 //        e. g. setup multiple quarantine queues specific to some processes ?
 #[derive(Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
 pub struct Queues {
     // NOTE: those fields will probably never be touched by the user.
     /// Name of the quarantine queue.
