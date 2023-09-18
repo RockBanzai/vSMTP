@@ -18,7 +18,10 @@ use vsmtp_common::{
     stateful_ctx_received::StatefulCtxReceived,
 };
 use vsmtp_config::Config;
-use vsmtp_rule_engine::{rhai, RuleEngine, RuleEngineConfig, RuleEngineConfigBuilder};
+use vsmtp_rule_engine::{
+    api::{crypto_modules, server_auth},
+    rhai, RuleEngine, RuleEngineConfig, RuleEngineConfigBuilder,
+};
 use vsmtp_working::{config, rules};
 
 async fn init(channel: &lapin::Channel) -> lapin::Result<lapin::Consumer> {
@@ -206,7 +209,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         "status".to_string(),
                         rhai::exported_module!(rules::api::status).into(),
                     ))
-                    .chain(vsmtp_rule_engine::api::crypto_modules()),
+                    .chain(server_auth())
+                    .chain(crypto_modules()),
                 )
                 .with_script_at(
                     &config.scripts.path,

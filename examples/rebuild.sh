@@ -45,9 +45,3 @@ for i in "${bins[@]}"; do
         build_service "$i"
     fi
 done
-
-docker network create -d bridge \
-    --subnet=172.23.0.0/16 \
-    --ip-range=172.23.5.0/24 \
-    --gateway=172.23.5.254 \
-    demo_net || true

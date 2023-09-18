@@ -1,4 +1,4 @@
-version: "3.9"
+version: '3.9'
 
 volumes:
   clamav-cache:
@@ -8,43 +8,64 @@ volumes:
       device: "tmpfs"
 
 networks:
-  av:
-  demo_net:
-    external: true
+  vsmtp:
+
 
 services:
-  av-input:
-    image: vsmtp-forward:dev
-    hostname: av.smtp-out-internal.mydomain.tld
+  broker:
+    image: vsmtp-broker:dev
+    hostname: broker.mydomain.tld
+    ports:
+      - 127.0.0.1:15672:15672
     volumes:
-      - ./config/mydomain.tld/av-input/config.rhai:/etc/vsmtp/forward/conf.d/config.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/no-rules.rhai:/rules.rhai:ro
-    networks: [ demo_net, av ]
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./definitions.json:/etc/rabbitmq/definitions.json:ro
+    networks: [ vsmtp ]
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  receiver:
+    image: vsmtp-receiver:dev
+    hostname: receiver.mydomain.tld
+    networks: [ vsmtp ]
+    ports:
+      - 127.0.0.1:10025:25
+    depends_on:
+      broker:
+        condition: service_healthy
+    volumes:
+      - ./receiver.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
+      - ./receiver-rules.rhai:/etc/vsmtp/receiver-smtp/filter.rhai:ro
+
+  working:
+    image: vsmtp-working:dev
+    hostname: working.mydomain.tld
+    networks: [ vsmtp ]
+    volumes:
+      - ./working.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
+      - ./working-rules.rhai:/etc/vsmtp/working/script.rhai:ro
+    depends_on:
+      broker:
+        condition: service_healthy
+
+  forwarder:
+    image: vsmtp-forward:dev
+    networks: [ vsmtp ]
+    volumes:
+      - ./forwarder.rhai:/etc/vsmtp/forward/conf.d/config.rhai:ro
     depends_on:
       broker:
         condition: service_healthy
       clamsmtp:
         condition: service_healthy
 
-  av-output:
-    image: vsmtp-receiver:dev
-    hostname: post-av.smtp-in.mydomain.tld
-    networks: [ demo_net, av ]
-    volumes:
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/prelude.rhai:/prelude.rhai:ro
-      - ./config/mydomain.tld/av-output/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
-      - ./config/mydomain.tld/av-output/rules-post-av.rhai:/rules.rhai:ro
-      - ./config/mydomain.tld/av-output/rules.rhai:/rules.rhai:ro
-      - ./config/mydomain.tld/av-output/rsa-private-key.pem:/rsa-private-key.pem:ro
-      - ./config/mydomain.tld/av-output/ed25519-private-key.pem:/ed25519-private-key.pem:ro
-      - ./config/mydomain.tld/av-output/dkim-private-key.rhai:/dkim-private-key.rhai:ro
-    depends_on:
-      broker:
-        condition: service_healthy
-
   clamsmtp:
+    hostname: clamsmtp.mydomain.tld
+    networks: [ vsmtp ]
     build:
       context: .
       dockerfile_inline: |
@@ -60,7 +81,7 @@ services:
         RUN echo "Action: pass" >> /etc/clamsmtpd.conf
 
         RUN sed -i 's/^User: .*$/User: clamav/g' /etc/clamsmtpd.conf
-        RUN sed -i 's/^OutAddress: .*$/OutAddress: post-av.smtp-in.mydomain.tld:10025/g' /etc/clamsmtpd.conf
+        RUN sed -i 's/^OutAddress: .*$/OutAddress: receiver.mydomain.tld:10025/g' /etc/clamsmtpd.conf
         RUN sed -i 's/^ClamAddress: .*$/ClamAddress: av.mydomain.tld:3310/g' /etc/clamsmtpd.conf
 
         RUN mkdir -p /var/spool/clamsmtp/
@@ -68,10 +89,7 @@ services:
 
         ## CMD ["/bin/bash", "-c", "cat /etc/clamsmtpd.conf && clamsmtpd -d 4 -f /etc/clamsmtpd.conf"]
         CMD ["/bin/bash", "-c", "clamsmtpd -d 4 -f /etc/clamsmtpd.conf"]
-    hostname: clamsmtp.mydomain.tld
-    networks: [ av ]
-    volumes:
-      - clamav-cache:/var/spool/clamsmtp/:rw
+    volumes: [ clamav-cache:/var/spool/clamsmtp/:rw ]
     healthcheck:
       test: sh -c "netstat -an | grep 10026 > /dev/null; if [ 0 != $? ]; then exit 1; fi;"
       interval: 5s
@@ -81,10 +99,12 @@ services:
     depends_on:
       clamav:
         condition: service_healthy
-      av-output:
+      receiver:
         condition: service_started
 
   clamav:
+    hostname: av.mydomain.tld
+    networks: [ vsmtp ]
     build:
       context: .
       dockerfile_inline: |
@@ -93,12 +113,7 @@ services:
         ## Remove the User line of the clamd.conf file
         ## This is needed to run the clamav as root (do not drop privileges)
         RUN sed -i '/User clamav/d' /etc/clamav/clamd.conf
-    hostname: av.mydomain.tld
-    volumes:
-      - clamav-cache:/var/spool/clamsmtp/:rw
-    networks: [ av ]
-    ports:
-      - 13310:3310
+    volumes: [ clamav-cache:/var/spool/clamsmtp/:rw ]
     environment:
       - CLAMAV_NO_FRESHCLAMD=true
     healthcheck:

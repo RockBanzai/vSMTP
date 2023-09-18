@@ -34,7 +34,7 @@ services:
       - ./config/mydomain.tld/receiver/rules-pre-av.rhai:/rules.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
     networks:
-      demo_net:
+      net:
         ipv4_address: 172.23.0.3
     ports:
       - 127.0.0.1:10587:587
@@ -46,12 +46,17 @@ services:
     image: vsmtp-working:dev
     command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
     volumes:
-      - ./config/mydomain.tld/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/no-rules.rhai:/rules.rhai:ro
-    networks: [ demo_net ]
+      - ./config/mydomain.tld/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
+      - ./config/mydomain.tld/working/rules.rhai:/rules.rhai:ro
+      - ./config/mydomain.tld/working/rsa-private-key.pem:/rsa-private-key.pem:ro
+      - ./config/mydomain.tld/working/ed25519-private-key.pem:/ed25519-private-key.pem:ro
+      - ./config/mydomain.tld/working/dkim-private-key.rhai:/dkim-private-key.rhai:ro
+    networks: [ net ]
     depends_on:
       broker:
+        condition: service_healthy
+      clamav:
         condition: service_healthy
 
   mydomain-delivery-maildir:
@@ -65,9 +70,8 @@ services:
     volumes:
       - ./config/mydomain.tld/maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/no-rules.rhai:/rules.rhai:ro
       - mydomain-maildir:/home:rw
-    networks: [ demo_net ]
+    networks: [ net ]
     depends_on:
       broker:
         condition: service_healthy
@@ -95,12 +99,38 @@ services:
     volumes:
       - ./config/mydomain.tld/basic/config.rhai:/etc/vsmtp/basic/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/no-rules.rhai:/rules.rhai:ro
     networks:
-      demo_net:
+      net:
         ipv4_address: 172.23.0.10
     depends_on:
       broker:
         condition: service_healthy
       dns-server:
+        condition: service_healthy
+
+  clamav:
+    image: clamav/clamav:1.1
+    networks: [ net ]
+    healthcheck:
+      test: sh -c "[[ \"$(echo PING | nc localhost 3310)\" = \"PONG\" ]] || exit 1"
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 0s
+
+  mydomain-log-dispatcher:
+    image: vsmtp-log-dispatcher:dev
+    # environment:
+    #   - JAEGER=telemetry:6831
+    #   - LOKI_URL=http://loki:3100
+    volumes:
+      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./config/mydomain.tld/logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
+      - /run/systemd/journal/socket:/run/systemd/journal/socket
+    networks:
+      - demo_net
+      # - jaeger
+      # - loki
+    depends_on:
+      broker:
         condition: service_healthy

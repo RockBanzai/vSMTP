@@ -12,8 +12,8 @@ services:
       - 127.0.0.1:15672:15672
       - 127.0.0.1:15671:15671
     volumes:
-      - ./broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
-      - ./broker/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./config/broker/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      - ./config/broker/definitions.json:/etc/rabbitmq/definitions.json:ro
     healthcheck:
       test: rabbitmq-diagnostics -q ping
       interval: 10s

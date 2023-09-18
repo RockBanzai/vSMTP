@@ -1,5 +1,13 @@
 version: '3.9'
 
+networks:
+  net:
+    ipam:
+      config:
+        - subnet: "172.23.0.0/16"
+          gateway: "172.23.5.254"
+          ip_range: "172.23.5.0/24"
+
 services:
   dns-server:
     hostname: dns.mydomain.tld

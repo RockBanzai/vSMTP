@@ -1,22 +1,5 @@
 import "prelude" as prelude;
 
-// arbitrary putting in quarantine message if their uuid starts with `d`, `e` or `f`
-const quarantine_def = rule "quarantine definition" |ctx| {
-    let first_char_of_id = ctx.message_id?[0];
-    if first_char_of_id in "def" {
-        status::quarantine(`${first_char_of_id}`)
-    } else {
-        status::next()
-    }
-};
-
-// transfer the ownership of the message to a clamsmtp <-> vsmtp delegation
-// NOTE: should set a properties to known which rules resume on post delegation?
-const delegate_to_clamav = rule "delegate to clamav" |ctx| {
-    prelude::forward_to_for_all(ctx, "av");
-    status::next()
-};
-
 fn on_connect(ctx)   { ctx.run([ prelude::debug_ctx ]) }
 fn on_helo(ctx)      { ctx.run([ prelude::debug_ctx ]) }
 
@@ -62,8 +45,6 @@ fn on_rcpt_to(ctx)   { ctx.run([ prelude::debug_ctx ]) }
 fn on_pre_queue(ctx) {
     ctx.run([
         prelude::debug_ctx,
-        // global::quarantine_def,
-        global::delegate_to_clamav,
         prelude::debug_ctx,
     ]);
 }

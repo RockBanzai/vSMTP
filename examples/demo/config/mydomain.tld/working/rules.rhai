@@ -1,31 +1,30 @@
-import "prelude" as prelude;
+import "/etc/vsmtp/plugins/libvsmtp_clamav_plugin" as clamav;
 import "dkim-private-key" as dkim_private_key;
 
-fn on_connect(ctx)   { ctx.run([ prelude::debug_ctx ]) }
-fn on_helo(ctx)      { ctx.run([ prelude::debug_ctx ]) }
-fn on_mail_from(ctx) { ctx.run([ prelude::debug_ctx ]) }
-fn on_rcpt_to(ctx)   { ctx.run([ prelude::debug_ctx ]) }
-fn on_pre_queue(ctx) {
+const bridge = clamav::connect(#{
+    url: "tcp://clamav:3310",
+});
+
+fn on_post_queue(ctx) {
     ctx.run([
-        prelude::debug_ctx,
         rule "check antivirus status" |ctx| {
-            if ctx.has_header("X-Virus-Infected") {
+            if global::bridge.scan(ctx) {
                 status::quarantine("virus")
             } else {
                 status::next()
             }
         },
         rule "set routing path" |ctx| {
-            const MY_DOMAINS = ["mydomain.tld"];
-
             for i in ctx.recipients {
-                if MY_DOMAINS.contains(i.domain) {
+                if i.domain is "mydomain.tld" {
                     // set a routing maildir for my domain's recipients
                     ctx.set_routing_path(i, "maildir");
                 } else {
-                    // nothing to do here, default value is `basic`
+                    // nothing to do here, default value is `basic`, equivalent to:
+                    // ctx.set_routing_path(i, "basic");
                 }
             }
+
             status::next()
         },
         rule "double dkim signature" |ctx| {
@@ -48,6 +47,5 @@ fn on_pre_queue(ctx) {
 
             status::next()
         },
-        prelude::debug_ctx,
     ])
 }

@@ -114,7 +114,6 @@ services:
     volumes:
       # - ./config/maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/no-rules.rhai:/empty.rhai:ro
       - out-maildir:/home/jenny.doe@mytarget.tld:rw
     environment:
       - SYSTEM={"user_lookup":"full_address"}
