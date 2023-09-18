@@ -32,12 +32,6 @@ pub mod auth {
     pub use mechanism::Mechanism;
 }
 
-pub mod tls {
-    mod protocol_version;
-
-    pub use protocol_version::ProtocolVersion;
-}
-
 mod types {
     pub mod address;
     pub mod client_name;

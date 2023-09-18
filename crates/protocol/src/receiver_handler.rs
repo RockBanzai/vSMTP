@@ -119,7 +119,7 @@ pub trait ReceiverHandler {
     #[inline]
     async fn on_help(&mut self, _: UnparsedArgs) -> Reply {
         #[allow(clippy::expect_used)]
-        "214 joining us https://viridit.com/support"
+        "214 https://viridit.com/support"
             .parse()
             .expect("valid syntax")
     }
@@ -150,7 +150,8 @@ pub trait ReceiverHandler {
     /// Called when the stage of the transaction (obtained with [`get_stage`](Self::get_stage))
     /// and the command are not compatible.
     #[inline]
-    async fn on_bad_sequence(&mut self, _: (Verb, Stage)) -> Reply {
+    async fn on_bad_sequence(&mut self, (command, stage): (Verb, Stage)) -> Reply {
+        tracing::trace!(?command, ?stage, "Bad sequence of commands");
         #[allow(clippy::expect_used)]
         "503 Bad sequence of commands\r\n"
             .parse()

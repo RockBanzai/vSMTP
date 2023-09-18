@@ -153,8 +153,21 @@ async fn smtp_main(
     ]))
     .await?;
 
-    let pipelining_support = config.esmtp.pipelining;
-    let config_arc = std::sync::Arc::new(config);
+    let config = std::sync::Arc::new(config);
+    let config_clone = config.clone();
+    let rustls_config = if let Some(tls) = &config.tls {
+        Some(std::sync::Arc::new(vsmtp_common::tls::get_rustls_config(
+            &tls.protocol_version,
+            &tls.cipher_suite,
+            tls.preempt_cipherlist,
+            &config.name,
+            tls.root.as_ref(),
+            &tls.r#virtual,
+        )?))
+    } else {
+        None
+    };
+
     let on_accept = move |args| async move {
         let channel = conn.create_channel().await.unwrap();
         channel
@@ -169,14 +182,18 @@ async fn smtp_main(
             args,
             rule_engine_config.clone(),
             channel,
-            config_arc.clone(),
+            config_clone,
+            rustls_config,
         )
     };
 
-    let server = Server { socket: sockets };
+    let server = Server {
+        socket: sockets,
+        config,
+    };
 
     tracing::info!("SMTP server is listening");
-    server.listen(on_accept, pipelining_support).await;
+    server.listen(on_accept).await;
     tracing::info!("SMTP server has stop");
 
     Ok(())
@@ -226,7 +243,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _ = init(&channel).await?;
 
     if let Err(e) = smtp_main(conn, config).await {
-        tracing::error!(?e, "error");
+        tracing::error!(?e, "Failed to run SMTP receiver");
         Err(e)
     } else {
         Ok(())

@@ -14,24 +14,14 @@ use futures_lite::StreamExt;
 use vsmtp_common::uuid;
 use vsmtp_protocol::{AcceptArgs, ConnectionKind, ReceiverContext, Reply};
 
-// TODO: how to implement a better virtual host system?
+use super::config::SMTPReceiverConfig;
+
 pub struct Server {
     pub socket: std::collections::HashMap<ConnectionKind, Vec<tokio::net::TcpListener>>,
+    pub config: std::sync::Arc<SMTPReceiverConfig>,
 }
 
 impl Server {
-    fn listener_to_stream(
-        listener: &tokio::net::TcpListener,
-    ) -> impl tokio_stream::Stream<
-        Item = std::io::Result<(tokio::net::TcpStream, std::net::SocketAddr)>,
-    > + '_ {
-        async_stream::stream! {
-            loop {
-                yield listener.accept().await;
-            }
-        }
-    }
-
     fn as_incoming_connection_stream(
         &self,
     ) -> impl futures_lite::Stream<
@@ -47,7 +37,11 @@ impl Server {
                     (
                         (*kind, socket.local_addr().unwrap()),
                         // TODO: can add throttling here
-                        Box::pin(Self::listener_to_stream(socket)),
+                        Box::pin(async_stream::stream! {
+                            loop {
+                                yield socket.accept().await;
+                            }
+                        }),
                     )
                 })
             })
@@ -56,12 +50,13 @@ impl Server {
 
     async fn serve<Fun, Future>(
         on_accept: Fun,
-        (server_addr, client_addr, tcp_stream): (
+        (kind, server_addr, client_addr, tcp_stream): (
+            ConnectionKind,
             std::net::SocketAddr,
             std::net::SocketAddr,
             tokio::net::TcpStream,
         ),
-        pipelining_support: bool,
+        config: std::sync::Arc<SMTPReceiverConfig>,
     ) where
         Fun: FnOnce(AcceptArgs) -> Future + Send,
         Future: std::future::Future<Output = (Handler, ReceiverContext, Option<Reply>)> + Send,
@@ -71,11 +66,11 @@ impl Server {
 
         let message_stream = vsmtp_protocol::Receiver::<_, SaslValidation, _, _>::new(
             tcp_stream,
-            vsmtp_protocol::ConnectionKind::Relay,
-            5,
-            10,
-            20 * 1024 * 1024,
-            pipelining_support,
+            kind,
+            config.errors.soft_count,
+            config.errors.hard_count,
+            config.message_size_limit,
+            config.esmtp.pipelining,
         )
         .into_stream(on_accept, client_addr, server_addr, timestamp, uuid);
         tokio::pin!(message_stream);
@@ -92,7 +87,7 @@ impl Server {
         tracing::info!("Connection closed cleanly.");
     }
 
-    pub async fn listen<Fun, Future>(&self, on_accept: Fun, pipelining_support: bool)
+    pub async fn listen<Fun, Future>(&self, on_accept: Fun)
     where
         Fun: FnOnce(AcceptArgs) -> Future + Send + Clone + 'static,
         Future: std::future::Future<Output = (Handler, ReceiverContext, Option<Reply>)>
@@ -107,7 +102,7 @@ impl Server {
                 }
                 Ok((tcp_stream, client_addr)) => {
                     tracing::info!("Accepted connection from {client_addr}");
-                    Some((server_addr, client_addr, tcp_stream))
+                    Some((kind, server_addr, client_addr, tcp_stream))
                 }
             },
         );
@@ -118,7 +113,7 @@ impl Server {
 
         while let Some(session) = incoming_connection.next().await {
             tracing::debug!("Serving a new connection");
-            tokio::spawn(Self::serve(on_accept.clone(), session, pipelining_support));
+            tokio::spawn(Self::serve(on_accept.clone(), session, self.config.clone()));
         }
     }
 }

@@ -28,11 +28,15 @@ services:
       - ./receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
       - ./receiver/rules-pre-av.rhai:/rules.rhai:ro
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./receiver/generated/smtp-msa.mydomain.tld.crt:/etc/ssl/certs/smtp-msa.mydomain.tld.crt:ro
+      - ./receiver/generated/smtp-msa.mydomain.tld.key:/etc/ssl/certs/smtp-msa.mydomain.tld.key:ro
     networks:
       net:
         ipv4_address: 172.23.0.3
     ports:
+      - 127.0.0.1:10025:25
       - 127.0.0.1:10587:587
+      - 127.0.0.1:10465:465
     depends_on:
       broker:
         condition: service_healthy

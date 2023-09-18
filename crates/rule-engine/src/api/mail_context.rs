@@ -342,8 +342,8 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:11
     #[rhai_fn(global, name = "is_secured")]
-    pub fn is_secured(_ctx: &mut State<StatefulCtxReceived>) -> bool {
-        todo!("add tls support first")
+    pub fn is_secured(ctx: &mut State<StatefulCtxReceived>) -> bool {
+        ctx.read(|ctx| ctx.is_secured())
     }
 
     /// Get the value of the `HELO/EHLO` command sent by the client.

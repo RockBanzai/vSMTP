@@ -12,8 +12,8 @@
 use crate::broker::{Exchange, Queue};
 use lapin::protocol::{AMQPErrorKind, AMQPSoftError};
 
+// TODO: Can be merged into a broker crate, with the rest of lapin abstraction.
 // NOTE: must put those in a trait, to have a small abstraction layer
-
 pub async fn write_to_working(channel: &lapin::Channel, payload: Vec<u8>) {
     let confirm = channel
         .basic_publish(

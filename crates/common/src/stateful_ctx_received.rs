@@ -16,11 +16,12 @@ use crate::{
     faker::{ClientNameFaker, DsnReturnFaker, IpFaker, NameFaker, RcptToFaker},
     iprev,
     spf::SpfResult,
+    tls::TlsProps,
     Mailbox, Recipient,
 };
 use fake::faker::time::fr_fr::DateTimeBetween;
 use vsmtp_mail_parser::Mail;
-use vsmtp_protocol::{ClientName, Domain, DsnReturn, NotifyOn, Stage};
+use vsmtp_protocol::{rustls, ClientName, Domain, DsnReturn, NotifyOn, Stage};
 
 macro_rules! exactly {
     ($i:expr) => {
@@ -125,7 +126,7 @@ impl StatefulCtxReceived {
         using_deprecated: bool,
     ) -> Result<&mut Self, StateError> {
         match self {
-            Self::Connect { connect } => {
+            Self::Connect { connect } | Self::Helo { connect, .. } => {
                 *self = Self::Helo {
                     connect: connect.clone(),
                     helo: HeloProps {
@@ -136,7 +137,58 @@ impl StatefulCtxReceived {
                 };
                 Ok(self)
             }
-            _ => Err(StateError::new(exactly!(Stage::Connect), self.get_stage())),
+            _ => Err(StateError::new(
+                Stage::Connect..=Stage::Helo,
+                self.get_stage(),
+            )),
+        }
+    }
+
+    /// Has the connection been encrypted using TLS ?
+    #[inline]
+    #[must_use]
+    pub fn is_secured(&self) -> bool {
+        match self {
+            Self::Connect { connect }
+            | Self::Helo { connect, .. }
+            | Self::MailFrom { connect, .. }
+            | Self::RcptTo { connect, .. }
+            | Self::Complete(CtxReceived { connect, .. }) => connect.tls.is_some(),
+        }
+    }
+
+    /// Change a raw transaction into a secured one by setting the [`TlsProps`].
+    ///
+    /// # Errors
+    ///
+    /// * state if not [`StatefulCtxReceived::Connect`] or [`StatefulCtxReceived::Helo`]
+    #[inline]
+    pub fn set_secured(
+        &mut self,
+        sni: Option<Domain>,
+        protocol_version: rustls::ProtocolVersion,
+        cipher_suite: rustls::CipherSuite,
+        peer_certificates: Option<Vec<rustls::Certificate>>,
+        alpn_protocol: Option<Vec<u8>>,
+    ) -> Result<(), StateError> {
+        match self {
+            Self::Connect { connect, .. } | Self::Helo { connect, .. } => {
+                connect.tls = Some(crate::tls::TlsProps {
+                    protocol_version: crate::tls::ProtocolVersion(protocol_version),
+                    cipher_suite: crate::tls::CipherSuite(cipher_suite),
+                    peer_certificates,
+                    alpn_protocol,
+                });
+
+                if let Some(sni) = sni {
+                    connect.server_name = sni;
+                }
+
+                Ok(())
+            }
+            Self::MailFrom { .. } | Self::RcptTo { .. } | Self::Complete(_) => Err(
+                StateError::new(Stage::Connect..=Stage::Helo, self.get_stage()),
+            ),
         }
     }
 
@@ -402,7 +454,9 @@ pub struct ConnectProps {
     pub server_name: Domain,
     pub sasl: Option<SaslAuthProps>,
     pub iprev: Option<iprev::IpRevResult>,
-    // pub tls: Option<TlsProperties>,
+    /// This field is `Some` when the client and server
+    /// exchange data through a secure tunnel.
+    pub tls: Option<TlsProps>,
 }
 
 struct CredentialsFaker;

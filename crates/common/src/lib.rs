@@ -26,6 +26,7 @@ pub mod response;
 pub mod serde_helper;
 pub mod spf;
 pub mod stateful_ctx_received;
+pub mod tls;
 pub mod transfer_error;
 
 pub use time;

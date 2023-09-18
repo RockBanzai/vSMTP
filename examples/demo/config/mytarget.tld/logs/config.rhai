@@ -1,8 +1,15 @@
 fn on_config(config) {
     config.logs = #{
+        default_level: "trace",
         levels: #{
-            "external": "trace",
-            "log-dispatcher": "info",
+            external: "trace",
+            lapin: "warn",
+            pinky_swear: "warn",
+            mio: "warn",
+            polling: "warn",
+            want: "warn",
+            async_io: "warn",
+            rustls: "warn",
         },
     };
     config.topics = [

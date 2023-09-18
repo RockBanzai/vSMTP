@@ -40,6 +40,7 @@ if [ "$#" -ne 0 ]; then
 else
     bins=(vsmtp-broker all_in_one vsmtp-receiver vsmtp-working vsmtp-log-dispatcher vsmtp-maildir vsmtp-mbox vsmtp-basic vsmtp-forward)
 fi
+
 for i in "${bins[@]}"; do
     if [ "$i" == "vsmtp-broker" ]; then
         build_broker

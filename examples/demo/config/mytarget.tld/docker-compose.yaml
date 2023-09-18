@@ -17,6 +17,8 @@ services:
       - ./receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
       - ./receiver/rules.rhai:/rules.rhai:ro
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./receiver/generated/smtp-in.mytarget.tld.crt:/etc/ssl/certs/smtp-in.mytarget.tld.crt:ro
+      - ./receiver/generated/smtp-in.mytarget.tld.key:/etc/ssl/certs/smtp-in.mytarget.tld.key:ro
     networks:
       net:
         ipv4_address: 172.23.0.5
@@ -24,6 +26,7 @@ services:
     ports:
       - 127.0.0.1:11025:25 # Relay
       - 127.0.0.1:11587:587 # Submission
+      - 127.0.0.1:11465:465 # SubmissionS
     depends_on:
       broker:
         condition: service_healthy

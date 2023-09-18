@@ -72,7 +72,7 @@ rustls-pemfile = { version = "1.0.3", default-features = false }
 mysql = { version = "24.0.0", default-features = false, features = ["rustls-tls", "buffer-pool"] }
 semver = { version = "1.0.18", default-features = false, features = ["std", "serde"] }
 serde = { version = "1.0.188", default-features = false, features = ["std", "derive"] }
-serde_with = { version = "3.3.0", default-features = false, features = ["std", "macros"] }
+serde_with = { version = "3.3.0", default-features = false, features = ["std", "macros", "base64"] }
 serde_json = { version = "1.0.106", default-features = false, features = ["std"] }
 serde_path_to_error = { version = "0.1.14", default-features = false }
 sha2 = { version = "0.10.7", default-features = false, features = ["std", "oid"] }

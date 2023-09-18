@@ -26,3 +26,4 @@ uuid = { workspace = true, features = ["serde"] }
 vsmtp-auth = { workspace = true }
 vsmtp-mail-parser = { workspace = true }
 vsmtp-protocol = { workspace = true }
+rustls-pemfile = { workspace = true }

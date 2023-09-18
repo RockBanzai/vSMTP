@@ -92,11 +92,44 @@ pub struct Receiver<
     h: std::marker::PhantomData<H>,
 }
 
-impl<H: ReceiverHandler + Send, V: rsasl::validate::Validation + Send>
-    Receiver<H, V, tokio::net::tcp::OwnedWriteHalf, tokio::net::tcp::OwnedReadHalf>
+impl<H, V> Receiver<H, V, tokio::net::tcp::OwnedWriteHalf, tokio::net::tcp::OwnedReadHalf>
 where
+    H: ReceiverHandler + Send,
+    V: rsasl::validate::Validation + Send,
     V::Value: Send + Sync,
 {
+    /// Create a new [`Receiver`] from a TCP/IP stream.
+    #[inline]
+    pub fn new(
+        tcp_stream: tokio::net::TcpStream,
+        kind: ConnectionKind,
+        threshold_soft_error: i64,
+        threshold_hard_error: i64,
+        message_size_max: usize,
+        support_pipelining: bool,
+    ) -> Self {
+        let (read, write) = tcp_stream.into_split();
+        let (stream, sink) = (
+            Reader::new(read, support_pipelining),
+            WindowWriter::new(write),
+        );
+        Self {
+            sink,
+            stream,
+            error_counter: ErrorCounter {
+                error_count: 0,
+                threshold_soft_error,
+                threshold_hard_error,
+            },
+            context: ReceiverContext { outcome: None },
+            kind,
+            message_size_max,
+            support_pipelining,
+            v: std::marker::PhantomData,
+            h: std::marker::PhantomData,
+        }
+    }
+
     fn upgrade_tls(
         self,
         handler: H,
@@ -172,37 +205,6 @@ where
         }
     }
 
-    /// Create a new [`Receiver`] from a TCP/IP stream.
-    #[inline]
-    pub fn new(
-        tcp_stream: tokio::net::TcpStream,
-        kind: ConnectionKind,
-        threshold_soft_error: i64,
-        threshold_hard_error: i64,
-        message_size_max: usize,
-        support_pipelining: bool,
-    ) -> Self {
-        let (read, write) = tcp_stream.into_split();
-        let (stream, sink) = (
-            Reader::new(read, support_pipelining),
-            WindowWriter::new(write),
-        );
-        Self {
-            sink,
-            stream,
-            error_counter: ErrorCounter {
-                error_count: 0,
-                threshold_soft_error,
-                threshold_hard_error,
-            },
-            context: ReceiverContext { outcome: None },
-            kind,
-            message_size_max,
-            support_pipelining,
-            v: std::marker::PhantomData,
-            h: std::marker::PhantomData,
-        }
-    }
     /// Handle the inner stream to produce a [`tokio_stream::Stream`], each item
     /// being a successful SMTP transaction.
     ///
@@ -226,7 +228,7 @@ where
             .map(|e| match e {
                 Ok(()) => Ok(()),
                 Err(e) => {
-                    tracing::error!(?e);
+                    tracing::warn!(?e, "Error while handling a transaction");
                     Err(())
                 }
             })
@@ -341,7 +343,6 @@ impl<
 where
     V::Value: Send + Sync,
 {
-    #[allow(clippy::panic)]
     fn into_secured_stream(
         mut self,
         mut handler: T,
@@ -390,7 +391,6 @@ where
 
                         yield ();
                     },
-                    HandshakeOutcome::UpgradeTLS { .. } => panic!("smtp_handshake should not return UpgradeTLS"),
                     HandshakeOutcome::Authenticate { mechanism, initial_response } => {
                         let auth_result = self.authenticate(&mut handler, mechanism, initial_response).await;
                         // if security layer ...
@@ -403,8 +403,8 @@ where
                         if matches!(std::mem::take(&mut self.context).outcome, Some(HandshakeOutcome::Quit)) {
                             return;
                         }
-
                     },
+                    HandshakeOutcome::UpgradeTLS { .. } => panic!("smtp_handshake should not return UpgradeTLS"),
                     HandshakeOutcome::Quit => break,
                 }
             }
@@ -482,7 +482,6 @@ where
                                 .await?;
                             continue;
                         }
-                        tracing::error!(?e);
                         return Err(e);
                     }
                 };

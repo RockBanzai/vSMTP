@@ -9,16 +9,15 @@
  *
  */
 
-use vsmtp_config::deserialize_certificate;
+use vsmtp_common::tls::{secret::Secret, CipherSuite, ProtocolVersion};
 use vsmtp_config::{logs, semver, Broker, Config, ConfigResult, Logs, Queues};
-use vsmtp_protocol::{rustls, tls::ProtocolVersion};
+use vsmtp_protocol::{rustls, Domain};
 
 pub mod cli;
-pub mod tls_cipher_suite;
 pub const SUBMIT_TO: &str = "working";
 
 /// Configuration for the SMTP receiver.
-#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SMTPReceiverConfig {
     pub api_version: semver::VersionReq,
@@ -42,7 +41,7 @@ pub struct SMTPReceiverConfig {
     pub message_size_limit: usize,
     /// TLS parameters.
     #[serde(default)]
-    pub tls: Tls,
+    pub tls: Option<Tls>,
     /// Queue names to redirect or forward the email.
     #[serde(default = "SMTPReceiverConfig::default_queues")]
     pub queues: Queues,
@@ -89,6 +88,27 @@ impl SMTPReceiverConfig {
     }
 }
 
+impl Default for SMTPReceiverConfig {
+    fn default() -> Self {
+        Self {
+            api_version: semver::VersionReq::default(),
+            name: SMTPReceiverConfig::default_name(),
+            interfaces: Interfaces::default(),
+            esmtp: Esmtp::default(),
+            errors: Errors::default(),
+            max_clients: SMTPReceiverConfig::default_max_client(),
+            message_size_limit: SMTPReceiverConfig::default_message_size_limit(),
+            tls: None,
+            queues: SMTPReceiverConfig::default_queues(),
+            scripts: Scripts::default(),
+            storage: SMTPReceiverConfig::default_storage(),
+            broker: Broker::default(),
+            logs: Logs::default(),
+            path: std::path::PathBuf::default(),
+        }
+    }
+}
+
 /// Listeners that receives trafic via SMTP.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 pub struct Interfaces {
@@ -104,7 +124,7 @@ pub struct Interfaces {
 }
 
 /// Error handling for clients.
-#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Errors {
     /// Soft error count before dropping the email. -1 to disable.
     #[serde(default = "Errors::default_soft_count")]
@@ -113,7 +133,7 @@ pub struct Errors {
     #[serde(default = "Errors::default_hard_count")]
     pub hard_count: i64,
     /// Delay between errors.
-    #[serde(default = "Errors::default_delay")]
+    #[serde(default = "Errors::default_delay", with = "humantime_serde")]
     pub delay: std::time::Duration,
 }
 
@@ -132,15 +152,19 @@ impl Errors {
     }
 }
 
+impl Default for Errors {
+    fn default() -> Self {
+        Self {
+            soft_count: Self::default_soft_count(),
+            hard_count: Self::default_hard_count(),
+            delay: Self::default_delay(),
+        }
+    }
+}
+
 /// TLS parameters.
-#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Tls {
-    #[serde(
-        default,
-        skip_serializing,
-        deserialize_with = "deserialize_certificate"
-    )]
-    pub root_certificate: Option<String>,
     /// Ignore the client’s ciphersuite order.
     /// Instead, choose the top ciphersuite in the server list which is supported by the client.
     #[serde(default)]
@@ -148,16 +172,35 @@ pub struct Tls {
     /// Timeout for the TLS handshake. Sending a timeout reply to the client.
     #[serde(default = "Tls::default_handshake_timeout", with = "humantime_serde")]
     pub handshake_timeout: std::time::Duration,
-    /// TLS protocol supported
+    /// TLS protocol supported.
     #[serde(default)]
     pub protocol_version: Vec<ProtocolVersion>,
-    /// TLS cipher suite supported
+    /// TLS cipher suite supported.
     #[serde(default = "Tls::default_cipher_suite")]
-    pub cipher_suite: Vec<tls_cipher_suite::CipherSuite>,
+    pub cipher_suite: Vec<CipherSuite>,
+    /// Certificate used by default if no SNI parameter is provided by the client.
+    #[serde(default)]
+    pub root: Option<Secret>,
+    /// Virtual domain used by the server for Server Name Identification (SNI).
+    #[serde(default)]
+    pub r#virtual: std::collections::BTreeMap<Domain, Secret>,
+}
+
+impl Default for Tls {
+    fn default() -> Self {
+        Self {
+            preempt_cipherlist: Default::default(),
+            handshake_timeout: Self::default_handshake_timeout(),
+            protocol_version: Vec::default(),
+            cipher_suite: Self::default_cipher_suite(),
+            root: Option::default(),
+            r#virtual: std::collections::BTreeMap::default(),
+        }
+    }
 }
 
 impl Tls {
-    pub(crate) fn default_cipher_suite() -> Vec<tls_cipher_suite::CipherSuite> {
+    pub(crate) fn default_cipher_suite() -> Vec<CipherSuite> {
         [
             // TLS1.3 suites
             rustls::CipherSuite::TLS13_AES_256_GCM_SHA384,
@@ -172,7 +215,7 @@ impl Tls {
             rustls::CipherSuite::TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
         ]
         .into_iter()
-        .map(tls_cipher_suite::CipherSuite)
+        .map(CipherSuite)
         .collect::<Vec<_>>()
     }
 
@@ -196,7 +239,7 @@ impl Scripts {
 }
 
 /// Extended Simple Mail Transfer Protocol (ESMTP) options.
-#[derive(Default, Debug, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Esmtp {
     /// Authentication policy.
     #[serde(default = "Esmtp::default_auth")]
@@ -257,6 +300,18 @@ impl Esmtp {
 
     pub(crate) const fn default_dsn() -> bool {
         true
+    }
+}
+
+impl Default for Esmtp {
+    fn default() -> Self {
+        Self {
+            auth: Self::default_auth(),
+            starttls: Self::default_starttls(),
+            pipelining: Self::default_pipelining(),
+            size: Self::default_size(),
+            dsn: Self::default_dsn(),
+        }
     }
 }
 

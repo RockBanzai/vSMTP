@@ -9,7 +9,7 @@
  *
  */
 
-use tokio_rustls::rustls;
+use vsmtp_protocol::rustls;
 
 /// Wrapper around [`rustls::ProtocolVersion`] to implement [`serde::Deserialize`] and [`serde::Serialize`]
 #[derive(

@@ -10,7 +10,7 @@
  */
 
 use super::{
-    config::SMTPReceiverConfig,
+    config::{Esmtp, SMTPReceiverConfig},
     rules::{stages::ReceiverStage, status::ReceiverStatus},
 };
 use futures_util::stream::TryStreamExt;
@@ -24,8 +24,8 @@ use vsmtp_common::{
 };
 use vsmtp_mail_parser::ParserError;
 use vsmtp_protocol::{
-    rsasl, rustls, AcceptArgs, AuthArgs, AuthError, ClientName, Domain, EhloArgs, Error, HeloArgs,
-    MailFromArgs, ParseArgsError, RcptToArgs, ReceiverContext, Reply, Stage,
+    rsasl, rustls, AcceptArgs, AuthArgs, AuthError, ClientName, ConnectionKind, Domain, EhloArgs,
+    Error, HeloArgs, MailFromArgs, ParseArgsError, RcptToArgs, ReceiverContext, Reply, Stage,
 };
 use vsmtp_rule_engine::{RuleEngine, RuleEngineConfig};
 
@@ -35,6 +35,7 @@ pub struct Handler {
     channel: lapin::Channel,
     // receiver config
     config: std::sync::Arc<SMTPReceiverConfig>,
+    rustls_config: Option<std::sync::Arc<rustls::ServerConfig>>,
 }
 
 fn default_deny() -> Reply {
@@ -71,7 +72,7 @@ impl Handler {
             server_addr,
             timestamp,
             uuid,
-            kind: _,
+            kind,
             ..
         }: AcceptArgs,
         rule_engine_config: std::sync::Arc<
@@ -79,6 +80,7 @@ impl Handler {
         >,
         channel: lapin::Channel,
         config: std::sync::Arc<SMTPReceiverConfig>,
+        rustls_config: Option<std::sync::Arc<rustls::ServerConfig>>,
     ) -> (Self, ReceiverContext, Option<Reply>) {
         let mut ctx = ReceiverContext::default();
 
@@ -98,6 +100,7 @@ impl Handler {
                 connect_uuid: uuid,
                 sasl: None,
                 iprev: None,
+                tls: None,
             }),
         );
 
@@ -109,12 +112,28 @@ impl Handler {
 
         let status = rule_engine.run(&ReceiverStage::Connect);
 
+        let config_clone = config.clone();
+        let rustls_config_clone = rustls_config.clone();
         let make = |going_to_quarantine| Self {
             rule_engine: rule_engine.into(),
             going_to_quarantine,
             channel,
-            config,
+            config: config_clone,
+            rustls_config: rustls_config_clone,
         };
+
+        // NOTE: The rule engine result is ignored in this case ...
+        if kind == ConnectionKind::Tunneled {
+            match (rustls_config, config.tls.as_ref()) {
+                (Some(rustls_config), Some(tls_config)) => {
+                    ctx.upgrade_tls(rustls_config, tls_config.handshake_timeout);
+                }
+                // Tunneled connection without TLS config is not allowed.
+                _ => ctx.deny(),
+            };
+
+            return (make(None), ctx, None);
+        }
 
         // NOTE: do we want to allow the user to override the reply on accept?
         match status {
@@ -216,17 +235,60 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
 
     async fn on_post_tls_handshake(
         &mut self,
-        _sni: Option<String>,
-        _protocol_version: rustls::ProtocolVersion,
-        _cipher_suite: rustls::CipherSuite,
-        _peer_certificates: Option<Vec<rustls::Certificate>>,
-        _alpn_protocol: Option<Vec<u8>>,
+        sni: Option<String>,
+        protocol_version: rustls::ProtocolVersion,
+        cipher_suite: rustls::CipherSuite,
+        peer_certificates: Option<Vec<rustls::Certificate>>,
+        alpn_protocol: Option<Vec<u8>>,
     ) -> Reply {
-        todo!()
+        match self.rule_engine.write_state(|state| {
+            // FIXME: should return an error instead of ignoring the SNI if could not been parsed ?
+            let sni = sni
+                .clone()
+                .and_then(|sni| <Domain as std::str::FromStr>::from_str(&sni).ok());
+
+            state.set_secured(
+                sni,
+                protocol_version,
+                cipher_suite,
+                peer_certificates,
+                alpn_protocol,
+            )
+        }) {
+            Ok(()) => format!(
+                "220 {} Service ready\r\n",
+                sni.unwrap_or_else(|| self.config.name.clone())
+            )
+            .parse::<Reply>()
+            .unwrap(),
+            Err(error) => {
+                tracing::warn!(%error, "Post TLS handshake called during a wrong stage");
+                "451 Requested action aborted: error in processing.\r\n"
+                    .parse::<Reply>()
+                    .unwrap()
+            }
+        }
     }
 
-    async fn on_starttls(&mut self, _ctx: &mut ReceiverContext) -> Reply {
-        todo!()
+    async fn on_starttls(&mut self, ctx: &mut ReceiverContext) -> Reply {
+        if !self.config.esmtp.starttls {
+            // https://www.ietf.org/rfc/rfc5321.txt#4.2.4
+            "502 Command not implemented\r\n".parse::<Reply>().unwrap()
+        } else if self.rule_engine.read_state(StatefulCtxReceived::is_secured) {
+            "554 5.5.1 Error: TLS already active\r\n"
+                .parse::<Reply>()
+                .unwrap()
+        } else {
+            match (self.rustls_config.as_ref(), self.config.tls.as_ref()) {
+                (Some(rustls_config), Some(tls_config)) => {
+                    ctx.upgrade_tls(rustls_config.clone(), tls_config.handshake_timeout);
+                    "220 Ready to start TLS\r\n".parse::<Reply>().unwrap()
+                }
+                _ => "454 TLS not available due to temporary reason\r\n"
+                    .parse::<Reply>()
+                    .unwrap(),
+            }
+        }
     }
 
     // TODO: handle "538 5.7.11 Encryption required for requested authentication mechanism\r\n"
@@ -313,7 +375,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
                     .parse::<Reply>()
                     .unwrap()
             }
-            Err(AuthError::IO(e)) => todo!("{e}"),
+            Err(AuthError::IO(e)) => todo!("io auth error {e}"),
             Err(AuthError::ConfigError(rsasl::prelude::SASLError::NoSharedMechanism)) => {
                 ctx.deny();
                 "504 5.5.4 Mechanism is not supported\r\n"
@@ -340,9 +402,13 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
             }
         };
 
-        self.rule_engine.write_state(|i| {
-            i.set_helo(ClientName::Domain(client_name), true).unwrap();
-        });
+        if let Err(error) = self.rule_engine.write_state(|i| {
+            i.set_helo(ClientName::Domain(client_name), true)
+                .map(|_| ())
+        }) {
+            tracing::debug!(?error, "Client sent bad HELO/EHLO command");
+            return "503 Bad sequence of commands\r\n".parse().unwrap();
+        }
 
         // NOTE: do we want to allow the user to override the reply on helo?
         match self.rule_engine.run(&ReceiverStage::Helo) {
@@ -526,6 +592,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
             going_to_quarantine,
             channel: _,
             config: _,
+            rustls_config: _,
         } = self;
 
         let ctx: CtxReceived =
@@ -576,33 +643,56 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
 impl Handler {
     fn build_ehlo_reply(&mut self, client_name: &ClientName) -> Reply {
         self.rule_engine.write_state(|i| {
-            i.set_helo(client_name.clone(), false).unwrap();
+            if let Err(error) = i.set_helo(client_name.clone(), false) {
+                tracing::debug!(?error, "Client sent bad HELO/EHLO command");
+                return "503 Bad sequence of commands\r\n".parse().unwrap();
+            }
+
+            let Esmtp {
+                auth,
+                starttls,
+                pipelining,
+                size: _,
+                dsn,
+            } = &self.config.esmtp;
+
             [
                 Some(format!(
-                    "250-{} Greetings {client_name}\r\n",
-                    i.server_name()
+                    "250-{} Greetings {}\r\n",
+                    i.server_name(),
+                    client_name
                 )),
                 Some(format!("250-{}\r\n", Extension::EnhancedStatusCodes)),
-                self.config
-                    .esmtp
-                    .pipelining
-                    .then(|| format!("250-{}\r\n", Extension::Pipelining)),
-                self.config
-                    .esmtp
-                    .dsn
-                    .then(|| format!("250-{}\r\n", Extension::DeliveryStatusNotification)),
-                Some(format!(
-                    "250-{} {}\r\n",
-                    Extension::Auth,
-                    ["PLAIN", "LOGIN"].join(" ")
-                )),
+                pipelining.then(|| format!("250-{}\r\n", Extension::Pipelining)),
+                dsn.then(|| format!("250-{}\r\n", Extension::DeliveryStatusNotification)),
+                if *starttls {
+                    if self.config.tls.is_some() {
+                        Some(format!("250-{}\r\n", Extension::StartTls))
+                    } else {
+                        tracing::warn!("STARTTLS is enabled but, TLS is not configured");
+                        None
+                    }
+                } else {
+                    None
+                },
+                auth.as_ref().map(|auth| {
+                    format!(
+                        "250-{} {}\r\n",
+                        Extension::Auth,
+                        auth.mechanisms
+                            .iter()
+                            .map(ToString::to_string)
+                            .collect::<Vec<_>>()
+                            .join(" ")
+                    )
+                }),
                 Some("250 \r\n".to_string()),
             ]
             .into_iter()
             .flatten()
             .collect::<String>()
             .parse()
-            .unwrap()
+            .expect("EHLO must be valid")
         })
     }
 }

@@ -1,6 +1,7 @@
 1000
 ahash
 alloc
+alpn
 amqp
 AMQP
 Amqps
@@ -104,6 +105,7 @@ params
 parsers
 pemfile
 permerror
+PKCS
 postd
 postq
 prepend
