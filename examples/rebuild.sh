@@ -1,5 +1,7 @@
 #!/bin/env bash
 
+MODE="${MODE:-release}"
+
 ### Build the vsmtp message broker, currently using rabbitmq
 build_broker() {
     echo "build image vsmtp-broker:dev"
@@ -10,7 +12,9 @@ build_broker() {
 ### Build the vsmtp3-all-in-one image, which contains all the binaries
 build_all_in_one() {
     echo "build image vsmtp-all-in-one:dev"
-    docker build .. -f ../all-in-one.Dockerfile --tag vsmtp-all-in-one:dev || exit 1
+    docker build .. -f ../all-in-one.Dockerfile \
+        --build-arg "MODE=$MODE" \
+        --tag vsmtp-all-in-one:dev || exit 1
 }
 
 ### Copy the binary we are interested in from the all-in-one image
@@ -25,8 +29,8 @@ COPY --from=all-in-one /usr/lib/vsmtp /usr/lib/vsmtp
 RUN mkdir -p /etc/vsmtp/plugins
 RUN ln -s /usr/lib/vsmtp/libvsmtp_plugin_mysql.so /etc/vsmtp/plugins/libvsmtp_plugin_mysql.so
 RUN ln -s /usr/lib/vsmtp/libvsmtp_clamav_plugin.so /etc/vsmtp/plugins/libvsmtp_clamav_plugin.so
-ENV BIN_=$BIN
 ENV PATH="$PATH:/app/bin"
+ENV BIN_=$BIN
 CMD $BIN_
 EOF
 }

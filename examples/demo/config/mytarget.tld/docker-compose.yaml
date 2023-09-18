@@ -1,8 +1,6 @@
 version: '3.9'
 
 networks:
-  demo_net:
-    external: true
   mysql:
 
 
@@ -15,12 +13,12 @@ services:
     image: vsmtp-receiver:dev
     hostname: smtp-in.mytarget.tld
     volumes:
-      - ./config/prelude.rhai:/prelude.rhai:ro
-      - ./config/mytarget.tld/receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
-      - ./config/mytarget.tld/receiver/rules.rhai:/rules.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ../prelude.rhai:/prelude.rhai:ro
+      - ./receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
+      - ./receiver/rules.rhai:/rules.rhai:ro
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
     networks:
-      demo_net:
+      net:
         ipv4_address: 172.23.0.5
       mysql:
     ports:
@@ -35,7 +33,7 @@ services:
   mytarget-users-db:
     image: mysql:8.0.34-debian
     volumes:
-      - ./config/mytarget.tld/users.sql:/docker-entrypoint-initdb.d/users.sql
+      - ./users.sql:/docker-entrypoint-initdb.d/users.sql:ro
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_USER: vsmtp-dev
@@ -51,10 +49,10 @@ services:
     image: vsmtp-working:dev
     command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
     volumes:
-      - ./config/mytarget.tld/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/mytarget.tld/working/rules.rhai:/rules.rhai:ro
-    networks: [ demo_net ]
+      - ./working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./working/rules.rhai:/rules.rhai:ro
+    networks: [ net ]
     depends_on:
       broker:
         condition: service_healthy
@@ -63,10 +61,10 @@ services:
     image: vsmtp-basic:dev
     hostname: smtp-out.mytarget.tld
     volumes:
-      - ./config/mytarget.tld/basic/config.rhai:/etc/vsmtp/basic/conf.d/config.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./basic/config.rhai:/etc/vsmtp/basic/conf.d/config.rhai:ro
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
     networks:
-      demo_net:
+      net:
         ipv4_address: 172.23.0.6
     depends_on:
       broker:
@@ -83,10 +81,10 @@ services:
         RUN apt-get update && apt-get install -y openssl
         RUN useradd -p $(openssl passwd -1 jenny.doe) --create-home jenny.doe@mytarget.tld
     volumes:
-      - ./config/mytarget.tld/maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - mytarget-maildir:/home:rw
-    networks: [ demo_net ]
+    networks: [ net ]
     depends_on:
       broker:
         condition: service_healthy
@@ -106,7 +104,7 @@ services:
       # - 127.0.0.1:11993:993 # IMAPS
     volumes:
       - mytarget-maildir:/home:rw
-      - ./config/mytarget.tld/dovecot.conf:/etc/dovecot/dovecot.conf:ro
+      - ./dovecot.conf:/etc/dovecot/dovecot.conf:ro
     depends_on:
       mytarget-delivery-maildir:
         condition: service_started
@@ -117,10 +115,10 @@ services:
     #   - JAEGER=telemetry:6831
     #   - LOKI_URL=http://loki:3100
     volumes:
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/mytarget.tld/logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
     networks:
-      - demo_net
+      - net
       # - jaeger
       # - loki
     depends_on:

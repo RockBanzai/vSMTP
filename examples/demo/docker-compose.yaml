@@ -1,5 +1,9 @@
 version: '3.9'
 
+include:
+  - ./config/mydomain.tld/docker-compose.yaml
+  - ./config/mytarget.tld/docker-compose.yaml
+
 networks:
   net:
     ipam:
@@ -18,7 +22,7 @@ services:
         FROM ubuntu/bind9:9.18-22.04_beta
         RUN apt update && apt install -y net-tools
     networks:
-      demo_net:
+      net:
         ipv4_address: 172.23.0.1
     volumes:
       - ./config/dns/named.conf:/named.conf:ro
@@ -38,7 +42,7 @@ services:
   broker:
     image: vsmtp-broker:dev
     hostname: rabbitmq.mydomain.tld
-    networks: [ demo_net ]
+    networks: [ net ]
     ports:
       - 127.0.0.1:15672:15672
       - 127.0.0.1:15671:15671

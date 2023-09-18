@@ -1,9 +1,5 @@
 version: '3.9'
 
-networks:
-  demo_net:
-    external: true
-
 volumes:
   mydomain-maildir:
 
@@ -28,11 +24,10 @@ services:
         # USER vsmtp
     command: sh -c "saslauthd -a shadow && vsmtp-receiver"
     volumes:
-      # TODO: create separate rules for every service and only mount one volume per configuration.
-      - ./config/prelude.rhai:/prelude.rhai:ro
-      - ./config/mydomain.tld/receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
-      - ./config/mydomain.tld/receiver/rules-pre-av.rhai:/rules.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ../prelude.rhai:/prelude.rhai:ro
+      - ./receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
+      - ./receiver/rules-pre-av.rhai:/rules.rhai:ro
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
     networks:
       net:
         ipv4_address: 172.23.0.3
@@ -46,12 +41,12 @@ services:
     image: vsmtp-working:dev
     command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
     volumes:
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/mydomain.tld/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
-      - ./config/mydomain.tld/working/rules.rhai:/rules.rhai:ro
-      - ./config/mydomain.tld/working/rsa-private-key.pem:/rsa-private-key.pem:ro
-      - ./config/mydomain.tld/working/ed25519-private-key.pem:/ed25519-private-key.pem:ro
-      - ./config/mydomain.tld/working/dkim-private-key.rhai:/dkim-private-key.rhai:ro
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
+      - ./working/rules.rhai:/rules.rhai:ro
+      - ./working/rsa-private-key.pem:/rsa-private-key.pem:ro
+      - ./working/ed25519-private-key.pem:/ed25519-private-key.pem:ro
+      - ./working/dkim-private-key.rhai:/dkim-private-key.rhai:ro
     networks: [ net ]
     depends_on:
       broker:
@@ -68,8 +63,8 @@ services:
         RUN apt-get update && apt-get install -y openssl
         RUN useradd -p $(openssl passwd -1 john.doe) --create-home john.doe@mydomain.tld
     volumes:
-      - ./config/mydomain.tld/maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - mydomain-maildir:/home:rw
     networks: [ net ]
     depends_on:
@@ -91,14 +86,14 @@ services:
       # - 127.0.0.1:10993:993 # IMAPS
     volumes:
       - mydomain-maildir:/home:rw
-      - ./config/mydomain.tld/dovecot.conf:/etc/dovecot/dovecot.conf:ro
+      - ./dovecot.conf:/etc/dovecot/dovecot.conf:ro
 
   mydomain-basic:
     image: vsmtp-basic:dev
     hostname: out-v0.mydomain.tld
     volumes:
-      - ./config/mydomain.tld/basic/config.rhai:/etc/vsmtp/basic/conf.d/config.rhai:ro
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./basic/config.rhai:/etc/vsmtp/basic/conf.d/config.rhai:ro
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
     networks:
       net:
         ipv4_address: 172.23.0.10
@@ -124,11 +119,11 @@ services:
     #   - JAEGER=telemetry:6831
     #   - LOKI_URL=http://loki:3100
     volumes:
-      - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./config/mydomain.tld/logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
+      - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ./logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
       - /run/systemd/journal/socket:/run/systemd/journal/socket
     networks:
-      - demo_net
+      - net
       # - jaeger
       # - loki
     depends_on:
