@@ -13,7 +13,6 @@ use vsmtp_common::dns_resolver::DnsResolver;
 
 // mod fs;
 mod auth;
-mod crypto;
 mod dkim;
 mod dmarc;
 mod dns;
@@ -24,11 +23,8 @@ mod logging;
 mod mail_context;
 mod message;
 mod net;
-mod process;
 mod sasl;
 mod spf;
-mod time;
-mod utils;
 
 /// Error produced by Rust API function calls.
 pub type Result<T> = std::result::Result<T, Box<rhai::EvalAltResult>>;
@@ -110,14 +106,6 @@ pub fn msa_modules() -> [(String, rhai::Shared<rhai::Module>); 1] {
     )]
 }
 
-#[must_use]
-pub fn process_modules() -> [(String, rhai::Shared<rhai::Module>); 1] {
-    [(
-        "process".to_string(),
-        rhai::Shared::new(rhai::exported_module!(process)),
-    )]
-}
-
 /// Network related modules.
 #[must_use]
 pub fn net_modules() -> [(String, rhai::Shared<rhai::Module>); 2] {
@@ -160,37 +148,17 @@ pub fn server_auth() -> [(String, rhai::Shared<rhai::Module>); 5] {
 }
 
 #[must_use]
-pub fn crypto_modules() -> [(String, rhai::Shared<rhai::Module>); 1] {
-    [(
-        "crypto".to_string(),
-        rhai::Shared::new(rhai::exported_module!(crypto)),
-    )]
-}
-
-#[must_use]
-pub fn utils_modules() -> [(String, rhai::Shared<rhai::Module>); 3] {
+pub fn utils_modules() -> [(String, rhai::Shared<rhai::Module>); 2] {
     [
-        (
-            "utils".to_string(),
-            rhai::Shared::new(rhai::exported_module!(utils)),
-        ),
         (
             "logging".to_string(),
             rhai::Shared::new(rhai::exported_module!(logging)),
         ),
         (
-            "time".to_string(),
-            rhai::Shared::new(rhai::exported_module!(time)),
+            "fs".to_string(),
+            rhai::Shared::new(rhai::exported_module!(fs)),
         ),
     ]
-}
-
-#[must_use]
-pub fn fs_modules() -> [(String, rhai::Shared<rhai::Module>); 1] {
-    [(
-        "fs".to_string(),
-        rhai::Shared::new(rhai::exported_module!(fs)),
-    )]
 }
 
 fn deserialize_dns_resolver<'de, D>(

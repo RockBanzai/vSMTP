@@ -3,10 +3,8 @@ version: '3.9'
 networks:
   mysql:
 
-
 volumes:
   mytarget-maildir:
-
 
 services:
   mytarget-receiver:
@@ -32,6 +30,8 @@ services:
         condition: service_healthy
       mytarget-users-db:
         condition: service_healthy
+    env_file:
+      - broker-mytarget.env
 
   mytarget-users-db:
     image: mysql:8.0.34-debian
@@ -59,6 +59,8 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+    env_file:
+      - broker-mytarget.env
 
   mytarget-basic:
     image: vsmtp-basic:dev
@@ -74,6 +76,8 @@ services:
         condition: service_healthy
       dns-server:
         condition: service_healthy
+    env_file:
+      - broker-mytarget.env
 
   mytarget-delivery-maildir:
     build:
@@ -91,6 +95,8 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+    env_file:
+      - broker-mytarget.env
 
   mytarget-imap:
     build:
@@ -127,3 +133,5 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+    env_file:
+      - broker-mytarget.env

@@ -123,7 +123,7 @@ impl<CONTEXT: 'static + std::fmt::Debug, STATUS: Status, STAGE: Stage>
 
         rhai_engine
             .on_print(|msg| tracing::info!("{}", msg))
-            .on_debug(move |msg, src, pos| tracing::debug!(?src, ?pos, "{}", msg));
+            .on_debug(move |msg, src, pos| tracing::debug!(?src, ?pos, msg));
 
         // Setting up directive parsing.
         // FIXME: this should not be necessary because the AST as already been parsed, right ?

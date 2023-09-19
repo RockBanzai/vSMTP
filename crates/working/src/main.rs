@@ -19,7 +19,7 @@ use vsmtp_common::{
 };
 use vsmtp_config::Config;
 use vsmtp_rule_engine::{
-    api::{crypto_modules, server_auth},
+    api::{server_auth, utils_modules},
     rhai, RuleEngine, RuleEngineConfig, RuleEngineConfigBuilder,
 };
 use vsmtp_working::{config, rules};
@@ -158,7 +158,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use tracing_subscriber::prelude::*;
 
     let args = <config::cli::Args as clap::Parser>::parse();
-    let config = config::WorkingConfig::from_rhai_file(&args.config)?;
+    let config = config::WorkingConfig::from_rhai_file(&args.config).map_err(|error| {
+        eprintln!("Failed to boot Working service: {error}");
+        error
+    })?;
 
     let conn = lapin::Connection::connect_with_config(
         &config.broker.uri,
@@ -210,7 +213,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         rhai::exported_module!(rules::api::status).into(),
                     ))
                     .chain(server_auth())
-                    .chain(crypto_modules()),
+                    .chain(utils_modules())
+                    .chain([
+                        vsmtp_rhai_utils::time(),
+                        vsmtp_rhai_utils::env(),
+                        vsmtp_rhai_utils::process(),
+                        vsmtp_rhai_utils::crypto(),
+                    ]),
                 )
                 .with_script_at(
                     &config.scripts.path,

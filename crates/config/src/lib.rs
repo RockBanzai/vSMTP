@@ -77,13 +77,27 @@ pub trait Config: serde::Serialize + serde::de::DeserializeOwned + Sized {
             );
         }
 
-        let ast = engine.compile(script)?;
+        vec![
+            vsmtp_rhai_utils::crypto(),
+            vsmtp_rhai_utils::env(),
+            vsmtp_rhai_utils::process(),
+            vsmtp_rhai_utils::time(),
+        ]
+        .into_iter()
+        .for_each(|(name, module)| {
+            engine.register_static_module(name, module);
+        });
+
+        let ast = engine.compile_into_self_contained(&rhai::Scope::new(), script)?;
 
         let cfg = Self::with_path(path)?;
         let cfg = serde_json::to_string(&cfg)?;
         let cfg = rhai::Engine::new().parse_json(cfg, true)?;
         let cfg =
-            engine.call_fn::<rhai::Map>(&mut rhai::Scope::new(), &ast, "on_config", (cfg,))?;
+            engine.call_fn::<rhai::Dynamic>(&mut rhai::Scope::new(), &ast, "on_config", (cfg,))?;
+
+        // NOTE: we could use rhai::serde::from_dynamic here, but we would lose the error information, like location of
+        // the error, the field where the error occurred etc.)
         let cfg = serde_json::to_string(&cfg)?;
         let mut cfg = serde_json::Deserializer::from_str(&cfg);
         Ok(serde_path_to_error::deserialize(&mut cfg)?)

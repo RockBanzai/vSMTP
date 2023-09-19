@@ -18,11 +18,9 @@ const DATE_FORMAT: &[time::format_description::FormatItem<'_>] =
 const TIME_FORMAT: &[time::format_description::FormatItem<'_>] =
     time::macros::format_description!("[hour]:[minute]:[second]");
 
-pub use time_mod::*;
-
 /// Utilities to get the current time and date.
 #[rhai::plugin::export_module]
-mod time_mod {
+pub mod api {
     /// Get the current time.
     ///
     /// # Return

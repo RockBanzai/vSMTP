@@ -29,6 +29,7 @@ tokio-stream = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 tracing-amqp = { workspace = true }
 tracing-subscriber = { workspace = true }
+vsmtp-rhai-utils = { workspace = true }
 vsmtp-common = { workspace = true }
 vsmtp-config = { workspace = true }
 vsmtp-mail-parser = { workspace = true }

@@ -69,14 +69,15 @@ impl Scripts {
 }
 
 impl Config for WorkingConfig {
+    #[allow(clippy::field_reassign_with_default)]
     fn with_path(path: &impl AsRef<std::path::Path>) -> ConfigResult<Self>
     where
         Self: Config + serde::de::DeserializeOwned + serde::Serialize,
     {
-        Ok(Self {
-            path: path.as_ref().into(),
-            ..Default::default()
-        })
+        let mut config = Self::default();
+        config.path = path.as_ref().into();
+
+        Ok(config)
     }
 
     fn api_version(&self) -> &semver::VersionReq {

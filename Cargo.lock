@@ -4811,6 +4811,7 @@ dependencies = [
  "serde_with 3.3.0",
  "thiserror",
  "tracing-subscriber",
+ "vsmtp-rhai-utils",
 ]
 
 [[package]]
@@ -5046,7 +5047,28 @@ dependencies = [
  "vsmtp-config",
  "vsmtp-mail-parser",
  "vsmtp-protocol",
+ "vsmtp-rhai-utils",
  "vsmtp-rule-engine",
+]
+
+[[package]]
+name = "vsmtp-rhai-utils"
+version = "3.0.0-rc.1"
+dependencies = [
+ "humantime",
+ "humantime-serde",
+ "pem-rfc7468",
+ "rhai",
+ "ring-compat",
+ "rsa",
+ "rustls 0.21.7",
+ "serde",
+ "time 0.3.28",
+ "tracing",
+ "uzers",
+ "vsmtp-auth",
+ "vsmtp-common",
+ "wait-timeout",
 ]
 
 [[package]]
@@ -5098,6 +5120,7 @@ dependencies = [
  "tracing-subscriber",
  "vsmtp-common",
  "vsmtp-config",
+ "vsmtp-rhai-utils",
  "vsmtp-rule-engine",
 ]
 

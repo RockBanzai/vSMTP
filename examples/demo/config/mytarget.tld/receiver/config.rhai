@@ -5,7 +5,7 @@ fn on_config(config) {
         addr_submissions: ["0.0.0.0:465"],
     };
 
-    config.broker.uri = "amqps://sink-mytarget:password@rabbitmq.mydomain.tld:5671/sink-mytarget";
+    config.broker.uri = env::variable("BROKER");
     config.broker.certificate_chain = "/etc/ssl/certs/ca-certificates.crt";
     config.scripts.path = "/rules.rhai";
 

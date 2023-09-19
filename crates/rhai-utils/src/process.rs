@@ -14,8 +14,6 @@ use rhai::plugin::{
     TypeId,
 };
 
-pub use process_rhai::*;
-
 #[derive(Debug, serde::Deserialize)]
 struct Args {
     args: Vec<String>,
@@ -50,7 +48,7 @@ fn to_string<T: std::io::Read>(ctx: Option<T>) -> std::io::Result<String> {
 }
 
 #[rhai::plugin::export_module]
-mod process_rhai {
+pub mod api {
 
     /// # rhai-autodocs:index:1
     #[rhai_fn(global, pure)]

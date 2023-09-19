@@ -21,3 +21,4 @@ tracing-subscriber = { workspace = true }
 vsmtp-common = { workspace = true }
 vsmtp-config = { workspace = true }
 vsmtp-rule-engine = { workspace = true }
+vsmtp-rhai-utils = { workspace = true }

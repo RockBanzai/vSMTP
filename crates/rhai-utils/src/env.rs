@@ -14,11 +14,9 @@ use rhai::plugin::{
     PluginFunction, RhaiResult, TypeId,
 };
 
-pub use utils::*;
-
 /// Utility functions to interact with the system.
 #[rhai::plugin::export_module]
-mod utils {
+pub mod api {
     /// Fetch an environment variable from the current process.
     ///
     /// # Args
@@ -41,14 +39,14 @@ mod utils {
     ///     rule "get env variable" || {
     ///
     ///       // get the HOME environment variable.
-    ///       let home = utils::env("HOME");
+    ///       let home = env::variable("HOME");
     ///
     /// #       if home == () {
     /// #           return state::deny(`500 home,${home}`);
     /// #       }
     ///
     ///       // "VSMTP=ENV" is malformed, this will return the unit type '()'.
-    ///       let invalid = utils::env("VSMTP=ENV");
+    ///       let invalid = env::variable("VSMTP=ENV");
     ///
     /// #       if invalid != () {
     /// #           return state::deny(`500 invalid,${invalid}`);
@@ -67,8 +65,8 @@ mod utils {
     /// ```
     ///
     /// # rhai-autodocs:index:1
-    #[rhai_fn(global, name = "env")]
-    pub fn env_str(variable: &str) -> rhai::Dynamic {
+    #[rhai_fn(global, name = "variable")]
+    pub fn variable_str(variable: &str) -> rhai::Dynamic {
         std::env::var(variable).map_or(rhai::Dynamic::UNIT, std::convert::Into::into)
     }
 }

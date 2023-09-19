@@ -18,6 +18,6 @@ fn on_config(config) {
             formatter: "compact",
         },
     ];
-    config.broker.uri = "amqps://sink-mytarget:password@rabbitmq.mydomain.tld:5671/sink-mytarget";
+    config.broker.uri = env::variable("BROKER");
     config
 }

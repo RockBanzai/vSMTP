@@ -20,7 +20,7 @@ use vsmtp_receiver::smtp::{
     session::Handler,
 };
 use vsmtp_rule_engine::{
-    api::{crypto_modules, msa_modules, net_modules, process_modules, server_auth},
+    api::{msa_modules, net_modules, server_auth, utils_modules},
     rhai, RuleEngineConfigBuilder,
 };
 
@@ -128,10 +128,15 @@ async fn smtp_main(
                     ]
                     .into_iter()
                     .chain(msa_modules())
-                    .chain(process_modules())
                     .chain(server_auth())
                     .chain(net_modules())
-                    .chain(crypto_modules()),
+                    .chain(utils_modules())
+                    .chain([
+                        vsmtp_rhai_utils::time(),
+                        vsmtp_rhai_utils::env(),
+                        vsmtp_rhai_utils::process(),
+                        vsmtp_rhai_utils::crypto(),
+                    ]),
                 )
                 .with_script_at(
                     &config.scripts.path,
@@ -204,7 +209,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     use tracing_subscriber::prelude::*;
     let args = <Args as clap::Parser>::parse();
 
-    let config = SMTPReceiverConfig::from_rhai_file(&args.config)?;
+    let config = SMTPReceiverConfig::from_rhai_file(&args.config).map_err(|error| {
+        eprintln!("Failed to boot SMTP Receiver service: {error}");
+        error
+    })?;
 
     let conn = lapin::Connection::connect_with_config(
         &config.broker().uri,

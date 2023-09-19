@@ -9,6 +9,7 @@ members = [
     "crates/config",
     "crates/mail-parser",
     "crates/rule-engine",
+    "crates/rhai-utils",
     "crates/tracing-amqp",
     "crates/auth",
     "crates/protocol",
@@ -37,6 +38,7 @@ vsmtp-rule-engine = { path = "./crates/rule-engine" }
 vsmtp-auth = { path = "./crates/auth" }
 vsmtp-protocol = { path = "./crates/protocol" }
 vsmtp-antivirus = { path = "./crates/antivirus" }
+vsmtp-rhai-utils = { path = "./crates/rhai-utils" }
 addr = { version = "0.15.6", default-features = false, features = ["std"] }
 async-stream = { version = "0.3.5", default-features = false }
 async-trait = { version = "0.1.73", default-features = false }

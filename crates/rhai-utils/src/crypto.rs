@@ -9,18 +9,17 @@
  *
  */
 
-use crate::api::Result;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
+
 use vsmtp_auth::dkim as backend;
 
-pub use crypto::*;
+pub type Result<T> = std::result::Result<T, Box<rhai::EvalAltResult>>;
 
 #[rhai::plugin::export_module]
-mod crypto {
-
+pub mod api {
     /// Load a RSA private key from a PEM file, with the format **pkcs8*.
     ///
     /// # Arguments

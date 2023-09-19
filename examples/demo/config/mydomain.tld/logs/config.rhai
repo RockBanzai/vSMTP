@@ -16,6 +16,13 @@ fn on_config(config) {
         },
     ];
 
-    config.broker.uri = "amqps://vsmtp-dev:password@rabbitmq.mydomain.tld:5671/vsmtp-dev";
+    let result = process::run(#{
+        args: ["env"],
+    });
+
+    print(result.stdout);
+    debug(result.stdout);
+
+    config.broker.uri = env::variable("BROKER");
     config
 }
