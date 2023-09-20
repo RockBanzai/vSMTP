@@ -93,113 +93,65 @@ async fn init(channel: &lapin::Channel) -> lapin::Result<lapin::Consumer> {
     Ok(consumer)
 }
 
-#[tracing::instrument(name = "working_", skip_all, fields(
-    uuid = ?ctx.mail_from.message_uuid.to_string()[0..8],
-))]
-async fn working(
-    channel: &lapin::Channel,
-    rule_engine_config: std::sync::Arc<
-        RuleEngineConfig<StatefulCtxReceived, WorkingStatus, WorkingStage>,
-    >,
-    ctx: CtxReceived,
-) {
-    let rule_engine =
-        RuleEngine::from_config_with_state(rule_engine_config, StatefulCtxReceived::Complete(ctx));
-
-    match rule_engine.run(&WorkingStage::PostQueue) {
-        WorkingStatus::Next | WorkingStatus::Success => {
-            let StatefulCtxReceived::Complete(CtxReceived {
-                connect: _,
-                helo: _,
-                mail_from,
-                rcpt_to,
-                mail,
-                complete: _,
-            }) = rule_engine.take_state()
-            else {
-                unreachable!("the working service always use a complete email")
-            };
-
-            let deliveries = rcpt_to
-                .recipient
-                .into_iter()
-                .filter(|(_, v)| !v.is_empty())
-                .map(|(route, recipient)| {
-                    vsmtp_common::ctx_delivery::CtxDelivery::new(
-                        route,
-                        mail_from.clone(),
-                        recipient,
-                        mail.clone(),
-                    )
-                })
-                .collect::<Vec<_>>();
-
-            for ctx_processed in deliveries {
-                let payload = ctx_processed.to_json().unwrap();
-                tracing::warn!("Sending to delivery at: {}", ctx_processed.routing_key);
-                write_to_delivery(channel, &ctx_processed.routing_key.to_string(), payload).await;
-            }
-        }
-        WorkingStatus::Fail => unimplemented!(),
-        WorkingStatus::Quarantine(name) => {
-            tracing::trace!("Putting in quarantine: {}", name);
-            let StatefulCtxReceived::Complete(ctx) = rule_engine.take_state() else {
-                unreachable!("the working service always use a complete email")
-            };
-
-            let payload = ctx.to_json().unwrap();
-            write_to_quarantine(channel, &name, payload).await;
-        }
-    }
+/// Builder to separate initialization from the main function.
+struct Working {
+    #[allow(dead_code)]
+    config: config::WorkingConfig,
+    #[allow(dead_code)]
+    conn: lapin::Connection,
+    channel: lapin::Channel,
+    from_receiver: lapin::Consumer,
+    rule_engine_config:
+        std::sync::Arc<RuleEngineConfig<StatefulCtxReceived, WorkingStatus, WorkingStage>>,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use tracing_subscriber::prelude::*;
+impl Working {
+    /// Build the configuration, AMQP connections and rule engine for the service.
+    async fn build() -> Result<Self, Box<dyn std::error::Error>> {
+        use tracing_subscriber::prelude::*;
 
-    let args = <config::cli::Args as clap::Parser>::parse();
-    let config = config::WorkingConfig::from_rhai_file(&args.config).map_err(|error| {
-        eprintln!("Failed to boot Working service: {error}");
-        error
-    })?;
+        let args = <config::cli::Args as clap::Parser>::parse();
+        let config = config::WorkingConfig::from_rhai_file(&args.config).map_err(|error| {
+            eprintln!("Failed to boot Working service: {error}");
+            error
+        })?;
 
-    let conn = lapin::Connection::connect_with_config(
-        &config.broker.uri,
-        lapin::ConnectionProperties::default(),
-        lapin::tcp::OwnedTLSConfig {
-            identity: None,
-            cert_chain: config.broker.certificate_chain.clone(),
-        },
-    )
-    .await?;
-
-    let filter = tracing_subscriber::filter::Targets::new()
-        .with_targets(config.logs.levels.clone())
-        .with_default(config.logs().default_level);
-
-    let (layer, task) = tracing_amqp::layer(&conn).await;
-    tracing_subscriber::registry()
-        .with(layer.with_filter(filter))
-        .try_init()
-        .unwrap();
-    tokio::spawn(task);
-
-    std::panic::set_hook(Box::new(|e| {
-        tracing::error!(?e, "Panic occurred");
-    }));
-
-    let channel = conn.create_channel().await?;
-    channel
-        .confirm_select(lapin::options::ConfirmSelectOptions::default())
-        .await?;
-    channel
-        .basic_qos(1, lapin::options::BasicQosOptions::default())
+        let conn = lapin::Connection::connect_with_config(
+            &config.broker.uri,
+            lapin::ConnectionProperties::default(),
+            lapin::tcp::OwnedTLSConfig {
+                identity: None,
+                cert_chain: config.broker.certificate_chain.clone(),
+            },
+        )
         .await?;
 
-    let mut from_receiver = init(&channel).await?;
+        let filter = tracing_subscriber::filter::Targets::new()
+            .with_targets(config.logs.levels.clone())
+            .with_default(config.logs().default_level);
 
-    let rule_engine_config =
-        std::sync::Arc::new(
+        let (layer, task) = tracing_amqp::layer(&conn).await;
+        tracing_subscriber::registry()
+            .with(layer.with_filter(filter))
+            .try_init()
+            .unwrap();
+        tokio::spawn(task);
+
+        std::panic::set_hook(Box::new(|e| {
+            tracing::error!(?e, "Panic occurred");
+        }));
+
+        let channel = conn.create_channel().await?;
+        channel
+            .confirm_select(lapin::options::ConfirmSelectOptions::default())
+            .await?;
+        channel
+            .basic_qos(1, lapin::options::BasicQosOptions::default())
+            .await?;
+
+        let from_receiver = init(&channel).await?;
+
+        let rule_engine_config = std::sync::Arc::new(
             RuleEngineConfigBuilder::default()
                 .with_configuration(&config)?
                 .with_default_module_resolvers(config.scripts.path.parent().ok_or_else(|| {
@@ -228,8 +180,89 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .build(),
         );
 
+        Ok(Self {
+            config,
+            conn,
+            from_receiver,
+            rule_engine_config,
+            channel,
+        })
+    }
+
+    /// Run the service.
+    #[tracing::instrument(name = "working_", skip_all, fields(uuid = ?ctx.mail_from.message_uuid.to_string()[0..8]))]
+    async fn run(&mut self, ctx: CtxReceived) {
+        let rule_engine = RuleEngine::from_config_with_state(
+            self.rule_engine_config.clone(),
+            StatefulCtxReceived::Complete(ctx),
+        );
+
+        match rule_engine.run(&WorkingStage::PostQueue) {
+            WorkingStatus::Next | WorkingStatus::Success => {
+                let StatefulCtxReceived::Complete(CtxReceived {
+                    connect: _,
+                    helo: _,
+                    mail_from,
+                    rcpt_to,
+                    mail,
+                    complete: _,
+                }) = rule_engine.take_state()
+                else {
+                    unreachable!("the working service always use a complete email")
+                };
+
+                let deliveries = rcpt_to
+                    .recipient
+                    .into_iter()
+                    .filter(|(_, v)| !v.is_empty())
+                    .map(|(route, recipient)| {
+                        vsmtp_common::ctx_delivery::CtxDelivery::new(
+                            route,
+                            mail_from.clone(),
+                            recipient,
+                            mail.clone(),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+                for ctx_processed in deliveries {
+                    let payload = ctx_processed.to_json().unwrap();
+                    tracing::warn!("Sending to delivery at: {}", ctx_processed.routing_key);
+                    write_to_delivery(
+                        &self.channel,
+                        &ctx_processed.routing_key.to_string(),
+                        payload,
+                    )
+                    .await;
+                }
+            }
+            WorkingStatus::Fail => unimplemented!(),
+            WorkingStatus::Quarantine(name) => {
+                tracing::trace!("Putting in quarantine: {}", name);
+                let StatefulCtxReceived::Complete(ctx) = rule_engine.take_state() else {
+                    unreachable!("the working service always use a complete email")
+                };
+
+                let payload = ctx.to_json().unwrap();
+                write_to_quarantine(&self.channel, &name, payload).await;
+            }
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let mut working = match Working::build().await {
+        Ok(working) => working,
+        Err(error) => {
+            eprintln!("Failed to boot Working service: {error}");
+            return;
+        }
+    };
+
     tracing::info!("Working service is starting");
-    while let Some(delivery) = from_receiver.next().await {
+
+    while let Some(delivery) = working.from_receiver.next().await {
         let delivery = delivery.expect("error in consumer");
 
         let lapin::message::Delivery { data, .. } = &delivery;
@@ -245,8 +278,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await
             .expect("ack");
 
-        working(&channel, rule_engine_config.clone(), ctx).await;
+        working.run(ctx).await;
     }
-
-    Ok(())
 }

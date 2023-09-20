@@ -102,12 +102,65 @@ async fn bind(config: SocketsConfig) -> Result<SocketsBound, std::io::Error> {
         .map(vec_to_map)
 }
 
-async fn smtp_main(
-    conn: std::sync::Arc<lapin::Connection>,
+/// Builder to separate initialization from the main function.
+struct Receiver {
     config: SMTPReceiverConfig,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let rule_engine_config =
-        std::sync::Arc::new(
+    conn: std::sync::Arc<lapin::Connection>,
+    #[allow(dead_code)]
+    channel: lapin::Channel,
+    rule_engine_config: std::sync::Arc<
+        vsmtp_rule_engine::RuleEngineConfig<
+            vsmtp_common::stateful_ctx_received::StatefulCtxReceived,
+            vsmtp_receiver::smtp::rules::status::ReceiverStatus,
+            vsmtp_receiver::smtp::rules::stages::ReceiverStage,
+        >,
+    >,
+}
+
+impl Receiver {
+    /// Build the configuration, AMQP connections and rule engine for the service.
+    async fn build() -> Result<Self, Box<dyn std::error::Error>> {
+        use tracing_subscriber::prelude::*;
+        let args = <Args as clap::Parser>::parse();
+
+        let config = SMTPReceiverConfig::from_rhai_file(&args.config)?;
+
+        let conn = lapin::Connection::connect_with_config(
+            &config.broker().uri,
+            lapin::ConnectionProperties::default(),
+            lapin::tcp::OwnedTLSConfig {
+                identity: None,
+                cert_chain: config.broker.certificate_chain.clone(),
+            },
+        )
+        .await?;
+        let conn = std::sync::Arc::new(conn);
+
+        let (layer, task) = tracing_amqp::layer(&conn).await;
+        let filter = tracing_subscriber::filter::Targets::new()
+            .with_targets(config.logs.levels.clone())
+            .with_default(config.logs().default_level);
+
+        tracing_subscriber::registry()
+            .with(layer.with_filter(filter))
+            .try_init()?;
+
+        tokio::spawn(task);
+
+        std::panic::set_hook(Box::new(|e| {
+            tracing::error!(?e, "a panic occurred");
+        }));
+
+        let channel = conn.create_channel().await?;
+        channel
+            .confirm_select(lapin::options::ConfirmSelectOptions::default())
+            .await?;
+        channel
+            .basic_qos(1, lapin::options::BasicQosOptions::default())
+            .await?;
+        let _ = init(&channel).await?;
+
+        let rule_engine_config = std::sync::Arc::new(
             RuleEngineConfigBuilder::default()
                 .with_configuration(&config)?
                 .with_default_module_resolvers(config.scripts.path.parent().ok_or_else(|| {
@@ -145,115 +198,93 @@ async fn smtp_main(
                 .build(),
         );
 
-    let sockets = bind(SocketsConfig::from_iter([
-        (ConnectionKind::Relay, config.interfaces.addr.clone()),
-        (
-            ConnectionKind::Submission,
-            config.interfaces.addr_submission.clone(),
-        ),
-        (
-            ConnectionKind::Tunneled,
-            config.interfaces.addr_submissions.clone(),
-        ),
-    ]))
-    .await?;
-
-    let config = std::sync::Arc::new(config);
-    let config_clone = config.clone();
-    let rustls_config = if let Some(tls) = &config.tls {
-        Some(std::sync::Arc::new(vsmtp_common::tls::get_rustls_config(
-            &tls.protocol_version,
-            &tls.cipher_suite,
-            tls.preempt_cipherlist,
-            &config.name,
-            tls.root.as_ref(),
-            &tls.r#virtual,
-        )?))
-    } else {
-        None
-    };
-
-    let on_accept = move |args| async move {
-        let channel = conn.create_channel().await.unwrap();
-        channel
-            .confirm_select(lapin::options::ConfirmSelectOptions::default())
-            .await
-            .unwrap();
-        channel
-            .basic_qos(1, lapin::options::BasicQosOptions::default())
-            .await
-            .unwrap();
-        Handler::on_accept(
-            args,
-            rule_engine_config.clone(),
+        Ok(Self {
+            config,
+            conn,
             channel,
-            config_clone,
-            rustls_config,
-        )
-    };
+            rule_engine_config,
+        })
+    }
 
-    let server = Server {
-        socket: sockets,
-        config,
-    };
+    /// Run the service.
+    async fn run(self) -> Result<(), Box<dyn std::error::Error>> {
+        let Self {
+            config,
+            conn,
+            rule_engine_config,
+            ..
+        } = self;
 
-    tracing::info!("SMTP server is listening");
-    server.listen(on_accept).await;
-    tracing::info!("SMTP server has stop");
-
-    Ok(())
-}
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    use tracing_subscriber::prelude::*;
-    let args = <Args as clap::Parser>::parse();
-
-    let config = SMTPReceiverConfig::from_rhai_file(&args.config).map_err(|error| {
-        eprintln!("Failed to boot SMTP Receiver service: {error}");
-        error
-    })?;
-
-    let conn = lapin::Connection::connect_with_config(
-        &config.broker().uri,
-        lapin::ConnectionProperties::default(),
-        lapin::tcp::OwnedTLSConfig {
-            identity: None,
-            cert_chain: config.broker.certificate_chain.clone(),
-        },
-    )
-    .await?;
-    let conn = std::sync::Arc::new(conn);
-
-    let (layer, task) = tracing_amqp::layer(&conn).await;
-    let filter = tracing_subscriber::filter::Targets::new()
-        .with_targets(config.logs.levels.clone())
-        .with_default(config.logs().default_level);
-
-    tracing_subscriber::registry()
-        .with(layer.with_filter(filter))
-        .try_init()
-        .expect("failed to initialize tracing");
-
-    tokio::spawn(task);
-
-    std::panic::set_hook(Box::new(|e| {
-        tracing::error!(?e, "a panic occurred");
-    }));
-
-    let channel = conn.create_channel().await?;
-    channel
-        .confirm_select(lapin::options::ConfirmSelectOptions::default())
+        let sockets = bind(SocketsConfig::from_iter([
+            (ConnectionKind::Relay, config.interfaces.addr.clone()),
+            (
+                ConnectionKind::Submission,
+                config.interfaces.addr_submission.clone(),
+            ),
+            (
+                ConnectionKind::Tunneled,
+                config.interfaces.addr_submissions.clone(),
+            ),
+        ]))
         .await?;
-    channel
-        .basic_qos(1, lapin::options::BasicQosOptions::default())
-        .await?;
-    let _ = init(&channel).await?;
 
-    if let Err(e) = smtp_main(conn, config).await {
-        tracing::error!(?e, "Failed to run SMTP receiver");
-        Err(e)
-    } else {
+        let config = std::sync::Arc::new(config);
+        let config_clone = config.clone();
+        let rustls_config = if let Some(tls) = &config.tls {
+            Some(std::sync::Arc::new(vsmtp_common::tls::get_rustls_config(
+                &tls.protocol_version,
+                &tls.cipher_suite,
+                tls.preempt_cipherlist,
+                &config.name,
+                tls.root.as_ref(),
+                &tls.r#virtual,
+            )?))
+        } else {
+            None
+        };
+
+        let on_accept = move |args| async move {
+            let channel = conn.create_channel().await.unwrap();
+            channel
+                .confirm_select(lapin::options::ConfirmSelectOptions::default())
+                .await
+                .unwrap();
+            channel
+                .basic_qos(1, lapin::options::BasicQosOptions::default())
+                .await
+                .unwrap();
+            Handler::on_accept(
+                args,
+                rule_engine_config.clone(),
+                channel,
+                config_clone,
+                rustls_config,
+            )
+        };
+
+        let server = Server {
+            socket: sockets,
+            config,
+        };
+
+        tracing::info!("SMTP server is listening");
+        server.listen(on_accept).await;
+        tracing::info!("SMTP server has stop");
+
         Ok(())
+    }
+}
+#[tokio::main]
+async fn main() {
+    let receiver = match Receiver::build().await {
+        Ok(receiver) => receiver,
+        Err(error) => {
+            eprintln!("Failed to boot SMTP Receiver service: {error}");
+            return;
+        }
+    };
+
+    if let Err(e) = receiver.run().await {
+        tracing::error!(?e, "Failed to run SMTP receiver");
     }
 }

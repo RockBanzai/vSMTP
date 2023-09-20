@@ -74,10 +74,18 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     let Args { config } = <Args as clap::Parser>::parse();
 
-    let system = std::sync::Arc::from(Mbox::from_rhai_file(&config)?);
+    let system = match Mbox::from_rhai_file(&config) {
+        Ok(cfg) => std::sync::Arc::new(cfg),
+        Err(error) => {
+            eprintln!("Failed to initialize mbox delivery configuration: {error}");
+            return;
+        }
+    };
 
-    delivery_main(system).await
+    if let Err(error) = delivery_main(system).await {
+        tracing::error!("Failed to run mbox delivery: {error}");
+    }
 }
