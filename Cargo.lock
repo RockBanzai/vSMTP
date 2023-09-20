@@ -4712,9 +4712,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "viaspf"
-version = "0.6.0-alpha.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15ba499e45751c16cf8c6b580d5e4d9232d805a8c9731a7e7d2278aed1fc0be8"
+checksum = "674e7aefbe3329c871d7e256946c48bd5f57ed9bc1308a0efe5eeeed9c4c9ef6"
 dependencies = [
  "async-trait",
  "idna 0.4.0",
@@ -4723,9 +4723,9 @@ dependencies = [
 
 [[package]]
 name = "viaspf-record"
-version = "0.5.0-alpha.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d4e491cd772387346d2144fc41e35531e2dd53c20bd46d6e26ad92eb602905ff"
+checksum = "6849e7cfc50465f5db73459acd3ba4be09b2e87d07f32a040fded2b7b49c4f39"
 
 [[package]]
 name = "vsmtp-antivirus"
