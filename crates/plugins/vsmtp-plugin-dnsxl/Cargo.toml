@@ -7,7 +7,6 @@ documentation = "https://docs.rs/crate/vsmtp-plugin-dnsxl/"
 edition.workspace = true
 homepage = "https://github.com/viridIT/vsmtp-plugin-dnsxl"
 keywords = ["vsmtp", "dns"]
-license = "GPL-3.0-only"
 publish.workspace = true
 readme = "README.md"
 repository = "https://github.com/viridIT/vsmtp-plugin-dnsxl"
