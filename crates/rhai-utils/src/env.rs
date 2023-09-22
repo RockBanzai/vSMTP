@@ -15,6 +15,8 @@ use rhai::plugin::{
 };
 
 /// Utility functions to interact with the system.
+///
+/// This modules is accessible in filtering AND configuration scripts.
 #[rhai::plugin::export_module]
 pub mod api {
     /// Fetch an environment variable from the current process.

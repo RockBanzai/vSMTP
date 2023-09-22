@@ -9,12 +9,12 @@
  *
  */
 
-use super::{Result, State};
+use super::Result;
+use crate::api::docs::Ctx;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
-use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
 
 pub use fs::*;
 
@@ -67,7 +67,7 @@ mod fs {
     ///
     /// # rhai-autodocs:index:1
     #[rhai_fn(return_raw)]
-    pub fn write(ctx: &mut State<StatefulCtxReceived>, dir: &str) -> Result<()> {
+    pub fn write(ctx: &mut Ctx, dir: &str) -> Result<()> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| {
                 let mut dir = std::path::PathBuf::from(dir);
@@ -137,7 +137,7 @@ mod fs {
     ///
     /// # rhai-autodocs:index:2
     #[rhai_fn(return_raw)]
-    pub fn dump(ctx: &mut State<StatefulCtxReceived>, dir: &str) -> Result<()> {
+    pub fn dump(ctx: &mut Ctx, dir: &str) -> Result<()> {
         ctx.read(|ctx| {
             let mut dir = std::path::PathBuf::from(dir);
             let message_id = ctx.get_mail_from().map(|mf| mf.message_uuid)?;

@@ -9,7 +9,7 @@
  *
  */
 
-use crate::api::State;
+use crate::api::docs::Ctx;
 use crate::block_on;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
@@ -19,8 +19,6 @@ use trust_dns_resolver::{error::ResolveErrorKind, proto::xfer::retry_dns_handle:
 use vsmtp_common::{
     dns_resolver::DnsResolver,
     iprev::IpRevResult,
-    iprev::Value,
-    stateful_ctx_received::StatefulCtxReceived,
     trust_dns_resolver::{self, proto::op::ResponseCode},
 };
 
@@ -35,40 +33,11 @@ struct IpRevParams {
     dns_resolver: std::sync::Arc<DnsResolver>,
 }
 
+type IpRevValue = vsmtp_common::iprev::Value;
+
 #[rhai::plugin::export_module]
 mod iprev {
-
     /// # rhai-autodocs:index:1
-    #[rhai_fn(global, pure)]
-    pub fn to_debug(res: &mut IpRevResult) -> String {
-        format!("{res:?}")
-    }
-
-    /// # rhai-autodocs:index:2
-    #[rhai_fn(global, name = "==", pure)]
-    pub fn equal_to_str(lhs: &mut Value, rhs: &str) -> bool {
-        matches!(
-            (lhs, rhs),
-            (Value::Pass, "pass")
-                | (Value::Fail, "fail")
-                | (Value::TempError, "temperror")
-                | (Value::PermError, "permerror")
-        )
-    }
-
-    /// # rhai-autodocs:index:3
-    #[rhai_fn(global, name = "!=", pure)]
-    pub fn not_equal_to_str(lhs: &mut Value, rhs: &str) -> bool {
-        !equal_to_str(lhs, rhs)
-    }
-
-    /// # rhai-autodocs:index:4
-    #[rhai_fn(global, get = "value", pure)]
-    pub fn get_value(res: &mut IpRevResult) -> Value {
-        res.value
-    }
-
-    /// # rhai-autodocs:index:5
     #[tracing::instrument(skip(params), level = "debug", fields(ip), ret)]
     pub fn check(params: rhai::Dynamic) -> IpRevResult {
         let IpRevParams { ip, dns_resolver } =
@@ -89,7 +58,7 @@ mod iprev {
             {
                 tracing::debug!(?error, "DNS error");
                 return IpRevResult {
-                    value: Value::TempError,
+                    value: IpRevValue::TempError,
                     ip,
                     fqdn: None,
                 };
@@ -97,7 +66,7 @@ mod iprev {
             Err(error) => {
                 tracing::debug!(?error, "DNS error");
                 return IpRevResult {
-                    value: Value::PermError,
+                    value: IpRevValue::PermError,
                     ip,
                     fqdn: None,
                 };
@@ -111,7 +80,7 @@ mod iprev {
             if ips.iter().any(|ip_discovered| ip_discovered == ip) {
                 tracing::debug!("Iprev checked");
                 return IpRevResult {
-                    value: Value::Pass,
+                    value: IpRevValue::Pass,
                     ip,
                     fqdn: Some(record.0),
                 };
@@ -119,15 +88,47 @@ mod iprev {
         }
 
         IpRevResult {
-            value: Value::Fail,
+            value: IpRevValue::Fail,
             ip,
             fqdn: None,
         }
     }
 
-    /// # rhai-autodocs:index:6
+    /// # rhai-autodocs:index:2
     #[rhai_fn(global, pure)]
-    pub fn store(ctx: &mut State<StatefulCtxReceived>, iprev: IpRevResult) {
+    pub fn store(ctx: &mut Ctx, iprev: IpRevResult) {
         ctx.write(|ctx| ctx.mut_connect().iprev = Some(iprev));
+    }
+
+    /// # rhai-autodocs:index:3
+    #[rhai_fn(global, get = "value", pure)]
+    pub fn get_value(res: &mut IpRevResult) -> IpRevValue {
+        res.value
+    }
+
+    /// Transform a Iprev result value to a debug string.
+    ///
+    /// # rhai-autodocs:index:4
+    #[rhai_fn(global, pure)]
+    pub fn to_debug(res: &mut IpRevResult) -> String {
+        format!("{res:?}")
+    }
+
+    /// # rhai-autodocs:index:5
+    #[rhai_fn(global, name = "==", pure)]
+    pub fn equal_to_str(lhs: &mut IpRevValue, rhs: &str) -> bool {
+        matches!(
+            (lhs, rhs),
+            (IpRevValue::Pass, "pass")
+                | (IpRevValue::Fail, "fail")
+                | (IpRevValue::TempError, "temperror")
+                | (IpRevValue::PermError, "permerror")
+        )
+    }
+
+    /// # rhai-autodocs:index:6
+    #[rhai_fn(global, name = "!=", pure)]
+    pub fn not_equal_to_str(lhs: &mut IpRevValue, rhs: &str) -> bool {
+        !equal_to_str(lhs, rhs)
     }
 }

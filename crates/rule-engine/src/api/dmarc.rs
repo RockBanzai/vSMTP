@@ -9,15 +9,13 @@
  *
  */
 
-use super::State;
+use crate::api::docs::Ctx;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
 use vsmtp_auth::dmarc as backend;
-use vsmtp_common::{
-    dkim, dmarc, dns_resolver::DnsResolver, spf, stateful_ctx_received::StatefulCtxReceived,
-};
+use vsmtp_common::{dkim, dmarc, dns_resolver::DnsResolver, spf};
 use vsmtp_mail_parser::{mail::headers::Header, Mail};
 
 pub use rhai_dmarc::*;
@@ -82,51 +80,20 @@ async fn get_dmarc_record(
     }
 }
 
+type DmarcResult = rhai::Shared<dmarc::Dmarc>;
+type DmarcValue = dmarc::Value;
+
 /// Domain-based message authentication, reporting and conformance implementation
 /// specified by RFC 7489. (<https://www.rfc-editor.org/rfc/rfc7489>)
 #[rhai::plugin::export_module]
 mod rhai_dmarc {
 
     /// # rhai-autodocs:index:1
-    #[rhai_fn(global, name = "==", pure)]
-    pub fn equal_to_str(lhs: &mut dmarc::Value, rhs: &str) -> bool {
-        matches!(
-            (lhs, rhs),
-            (dmarc::Value::Pass, "pass")
-                | (dmarc::Value::Fail, "fail")
-                | (dmarc::Value::None, "none")
-                | (dmarc::Value::TempError, "temperror")
-                | (dmarc::Value::PermError, "permerror")
-        )
-    }
-
-    /// # rhai-autodocs:index:2
-    #[rhai_fn(global, name = "!=", pure)]
-    pub fn not_equal_to_str(lhs: &mut dmarc::Value, rhs: &str) -> bool {
-        !equal_to_str(lhs, rhs)
-    }
-
-    /// # rhai-autodocs:index:3
-    #[rhai_fn(global, get = "value", pure)]
-    pub fn get_value(res: &mut rhai::Shared<dmarc::Dmarc>) -> dmarc::Value {
-        res.value
-    }
-
-    // TODO: if the RFC5322's domain is a subdomain of of the Organizational Domain AND, then record's subdomain policy must be used
-    /// # rhai-autodocs:index:4
-    #[rhai_fn(global, get = "policy", pure)]
-    pub fn get_policy(res: &mut rhai::Shared<dmarc::Dmarc>) -> String {
-        res.record
-            .as_ref()
-            .map_or_else(|| "none".to_string(), backend::Record::get_policy)
-    }
-
-    /// # rhai-autodocs:index:5
     #[rhai_fn(pure, return_raw)]
     pub fn check(
-        ctx: &mut State<StatefulCtxReceived>,
+        ctx: &mut Ctx,
         params: rhai::Dynamic,
-    ) -> Result<rhai::Shared<dmarc::Dmarc>, Box<rhai::EvalAltResult>> {
+    ) -> Result<DmarcResult, Box<rhai::EvalAltResult>> {
         let Params { dns_resolver } = rhai::serde::from_dynamic(&params)?;
 
         let (rfc5322_from_domain, spf, dkim) =
@@ -198,15 +165,46 @@ mod rhai_dmarc {
         .into())
     }
 
-    /// # rhai-autodocs:index:6
+    /// # rhai-autodocs:index:2
     #[rhai_fn(global, pure, return_raw)]
-    pub fn store(
-        ctx: &mut State<StatefulCtxReceived>,
-        dmarc_result: rhai::Shared<dmarc::Dmarc>,
-    ) -> Result<(), Box<rhai::EvalAltResult>> {
+    pub fn store(ctx: &mut Ctx, dmarc_result: DmarcResult) -> Result<(), Box<rhai::EvalAltResult>> {
         ctx.write(|ctx| {
             ctx.mut_complete()?.dmarc = Some(dmarc_result);
             Ok(())
         })
+    }
+
+    /// # rhai-autodocs:index:3
+    #[rhai_fn(global, get = "value", pure)]
+    pub fn get_value(res: &mut DmarcResult) -> DmarcValue {
+        res.value
+    }
+
+    // TODO: if the RFC5322's domain is a subdomain of of the Organizational Domain AND, then record's subdomain policy must be used
+    /// # rhai-autodocs:index:4
+    #[rhai_fn(global, get = "policy", pure)]
+    pub fn get_policy(res: &mut DmarcResult) -> String {
+        res.record
+            .as_ref()
+            .map_or_else(|| "none".to_string(), backend::Record::get_policy)
+    }
+
+    /// # rhai-autodocs:index:5
+    #[rhai_fn(global, name = "==", pure)]
+    pub fn equal_to_str(lhs: &mut DmarcValue, rhs: &str) -> bool {
+        matches!(
+            (lhs, rhs),
+            (DmarcValue::Pass, "pass")
+                | (DmarcValue::Fail, "fail")
+                | (DmarcValue::None, "none")
+                | (DmarcValue::TempError, "temperror")
+                | (DmarcValue::PermError, "permerror")
+        )
+    }
+
+    /// # rhai-autodocs:index:6
+    #[rhai_fn(global, name = "!=", pure)]
+    pub fn not_equal_to_str(lhs: &mut DmarcValue, rhs: &str) -> bool {
+        !equal_to_str(lhs, rhs)
     }
 }

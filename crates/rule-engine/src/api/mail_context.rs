@@ -9,12 +9,12 @@
  *
  */
 
-use super::{Result, State};
+use super::Result;
+use crate::api::docs::Ctx;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
-use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
 
 pub use mail_context::*;
 
@@ -25,7 +25,7 @@ pub use mail_context::*;
 mod mail_context {
     /// # rhai-autodocs:index:1
     #[rhai_fn(global, name = "to_debug", pure)]
-    pub fn to_debug(ctx: &mut State<StatefulCtxReceived>) -> String {
+    pub fn to_debug(ctx: &mut Ctx) -> String {
         format!("{ctx:?}")
     }
 
@@ -33,7 +33,7 @@ mod mail_context {
     #[rhai_fn(global, return_raw, pure)]
     #[tracing::instrument(skip(rcpt), fields(rcpt = %rcpt.forward_path))]
     pub fn set_routing_path(
-        ctx: &mut State<StatefulCtxReceived>,
+        ctx: &mut Ctx,
         rcpt: rhai::Shared<vsmtp_common::Recipient>,
         path: &str,
     ) -> Result<()> {
@@ -92,7 +92,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, get = "client_address")]
-    pub fn client_address(ctx: &mut State<StatefulCtxReceived>) -> String {
+    pub fn client_address(ctx: &mut Ctx) -> String {
         ctx.read(|ctx| ctx.get_connect().client_addr.to_string())
     }
 
@@ -123,7 +123,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, get = "client_ip")]
-    pub fn client_ip(ctx: &mut State<StatefulCtxReceived>) -> String {
+    pub fn client_ip(ctx: &mut Ctx) -> String {
         ctx.read(|ctx| ctx.get_connect().client_addr.ip().to_string())
     }
 
@@ -154,7 +154,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, get = "client_port")]
-    pub fn client_port(ctx: &mut State<StatefulCtxReceived>) -> rhai::INT {
+    pub fn client_port(ctx: &mut Ctx) -> rhai::INT {
         ctx.read(|ctx| ctx.get_connect().client_addr.port() as rhai::INT)
     }
 
@@ -185,7 +185,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:6
     #[rhai_fn(global, get = "server_address")]
-    pub fn server_address(ctx: &mut State<StatefulCtxReceived>) -> String {
+    pub fn server_address(ctx: &mut Ctx) -> String {
         ctx.read(|ctx| ctx.get_connect().server_addr.to_string())
     }
 
@@ -216,7 +216,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:7
     #[rhai_fn(global, get = "server_ip")]
-    pub fn server_ip(ctx: &mut State<StatefulCtxReceived>) -> String {
+    pub fn server_ip(ctx: &mut Ctx) -> String {
         ctx.read(|ctx| ctx.get_connect().server_addr.ip().to_string())
     }
 
@@ -247,7 +247,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:8
     #[rhai_fn(global, get = "server_port")]
-    pub fn server_port(ctx: &mut State<StatefulCtxReceived>) -> rhai::INT {
+    pub fn server_port(ctx: &mut Ctx) -> rhai::INT {
         ctx.read(|ctx| ctx.get_connect().server_addr.port() as rhai::INT)
     }
 
@@ -278,9 +278,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:9
     #[rhai_fn(global, get = "connection_timestamp")]
-    pub fn connection_timestamp(
-        ctx: &mut State<StatefulCtxReceived>,
-    ) -> vsmtp_common::time::OffsetDateTime {
+    pub fn connection_timestamp(ctx: &mut Ctx) -> vsmtp_common::time::OffsetDateTime {
         ctx.read(|ctx| ctx.get_connect().connect_timestamp)
     }
 
@@ -311,7 +309,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:10
     #[rhai_fn(global, get = "server_name")]
-    pub fn server_name(ctx: &mut State<StatefulCtxReceived>) -> String {
+    pub fn server_name(ctx: &mut Ctx) -> String {
         ctx.read(|ctx| ctx.get_connect().server_name.to_string())
     }
 
@@ -342,7 +340,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:11
     #[rhai_fn(global, name = "is_secured")]
-    pub fn is_secured(ctx: &mut State<StatefulCtxReceived>) -> bool {
+    pub fn is_secured(ctx: &mut Ctx) -> bool {
         ctx.read(|ctx| ctx.is_secured())
     }
 
@@ -371,7 +369,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:12
     #[rhai_fn(global, get = "helo", return_raw)]
-    pub fn helo(ctx: &mut State<StatefulCtxReceived>) -> Result<String> {
+    pub fn helo(ctx: &mut Ctx) -> Result<String> {
         ctx.read(|ctx| ctx.get_helo().map(|helo| helo.client_name.to_string()))
             .map_err(|e| e.to_string().into())
     }
@@ -401,7 +399,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:13
     #[rhai_fn(global, get = "sender", return_raw)]
-    pub fn sender(ctx: &mut State<StatefulCtxReceived>) -> Result<rhai::Dynamic> {
+    pub fn sender(ctx: &mut Ctx) -> Result<rhai::Dynamic> {
         ctx.read(|ctx| {
             Ok(ctx
                 .get_mail_from()
@@ -439,7 +437,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:14
     #[rhai_fn(global, return_raw, get = "recipients")]
-    pub fn recipients(ctx: &mut State<StatefulCtxReceived>) -> Result<rhai::Array> {
+    pub fn recipients(ctx: &mut Ctx) -> Result<rhai::Array> {
         ctx.read(|ctx| {
             Ok(ctx
                 .get_rcpt_to()
@@ -512,9 +510,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:19
     #[rhai_fn(global, get = "mail_timestamp", return_raw)]
-    pub fn mail_timestamp(
-        ctx: &mut State<StatefulCtxReceived>,
-    ) -> Result<vsmtp_common::time::OffsetDateTime> {
+    pub fn mail_timestamp(ctx: &mut Ctx) -> Result<vsmtp_common::time::OffsetDateTime> {
         ctx.read(|ctx| Ok(ctx.get_mail_from().unwrap().mail_timestamp))
     }
 
@@ -543,7 +539,7 @@ mod mail_context {
     ///
     /// # rhai-autodocs:index:20
     #[rhai_fn(global, get = "message_id", return_raw)]
-    pub fn message_id(ctx: &mut State<StatefulCtxReceived>) -> Result<String> {
+    pub fn message_id(ctx: &mut Ctx) -> Result<String> {
         ctx.read(|ctx| Ok(ctx.get_mail_from().unwrap().message_uuid.to_string()))
     }
 }

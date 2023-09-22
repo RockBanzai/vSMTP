@@ -9,7 +9,7 @@
  *
  */
 
-use crate::api::State;
+use crate::api::docs::Ctx;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult,
     TypeId,
@@ -178,7 +178,7 @@ mod auth {
     /// # rhai-autodocs:index:1
     #[rhai_fn(pure, return_raw)]
     pub fn create_header(
-        ctx: &mut State<StatefulCtxReceived>,
+        ctx: &mut Ctx,
         params: rhai::Dynamic,
     ) -> Result<String, Box<rhai::EvalAltResult>> {
         const AUTH_RES_VERSION: i32 = 1;
@@ -213,7 +213,7 @@ mod auth {
     /// # rhai-autodocs:index:2
     #[rhai_fn(pure, return_raw)]
     pub fn add_header(
-        ctx: &mut State<StatefulCtxReceived>,
+        ctx: &mut Ctx,
         params: rhai::Dynamic,
     ) -> Result<(), Box<rhai::EvalAltResult>> {
         let body = create_header(ctx, params)?;

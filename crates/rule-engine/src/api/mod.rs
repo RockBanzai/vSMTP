@@ -70,6 +70,12 @@ impl<T: std::fmt::Debug> State<T> {
     }
 }
 
+/// Type alias used to make the documentation easier to read.
+pub mod docs {
+    pub type Ctx = super::State<vsmtp_common::stateful_ctx_received::StatefulCtxReceived>;
+    pub type Mail = rhai::Shared<std::sync::RwLock<vsmtp_mail_parser::Mail>>;
+}
+
 // FIXME: This can lead to bugs if you try to replace the Arc within the state!
 //        Since the implementation of an arc/mutex for the context is only there because the
 //        Rhai engine needs it, a single rule engine is created per thread, so we don't

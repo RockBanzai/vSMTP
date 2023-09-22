@@ -28,16 +28,16 @@ fn on_post_queue(ctx) {
             status::next()
         },
         rule "double dkim signature" |ctx| {
-            // using `dkim::add_signature`
-            dkim::add_signature(ctx.mail, #{
+            // using `dkim::sign`
+            dkim::sign(ctx.mail, #{
                 sdid:           "mydomain.tld",
                 selector:       "rsa-dkim",
                 private_key:    dkim_private_key::rsa,
                 headers_field:  ["From", "To", "Date", "From", "Subject", "Message-Id"]
             });
 
-            // or using `dkim::create_sign` + `msg::prepend_header`
-            let ed_signature = dkim::create_sign(ctx.mail, #{
+            // or using `dkim::create_signature` + `msg::prepend_header`
+            let ed_signature = dkim::create_signature(ctx.mail, #{
                 sdid:           "mydomain.tld",
                 selector:       "ed-dkim",
                 private_key:    dkim_private_key::ed,

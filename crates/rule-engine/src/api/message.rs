@@ -9,15 +9,13 @@
  *
  */
 
+use super::Result;
+use crate::api::docs::{Ctx, Mail};
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
-
-use super::{Result, State};
-use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
 use vsmtp_mail_parser::mail::headers::Header;
-use vsmtp_mail_parser::Mail;
 
 pub use message::*;
 
@@ -47,7 +45,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:1
     #[rhai_fn(global, get = "mail_str", return_raw)]
-    pub fn mail_str(ctx: &mut State<StatefulCtxReceived>) -> Result<String> {
+    pub fn mail_str(ctx: &mut Ctx) -> Result<String> {
         ctx.read(|ctx| ctx.get_mail(ToString::to_string).map_err(StateError::into))
     }
 
@@ -55,9 +53,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, get = "mail", return_raw)]
-    pub fn mail_object(
-        ctx: &mut State<StatefulCtxReceived>,
-    ) -> Result<std::sync::Arc<std::sync::RwLock<Mail>>> {
+    pub fn mail_object(ctx: &mut Ctx) -> Result<Mail> {
         ctx.read(|ctx| ctx.get_mail_arc().map_err(StateError::into))
     }
 
@@ -65,7 +61,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, pure)]
-    pub fn to_debug(mail: &mut std::sync::Arc<std::sync::RwLock<Mail>>) -> String {
+    pub fn to_debug(mail: &mut Mail) -> String {
         format!("{mail:?}")
     }
 
@@ -117,7 +113,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "has_header", return_raw)]
-    pub fn has_header(ctx: &mut State<StatefulCtxReceived>, header: &str) -> Result<bool> {
+    pub fn has_header(ctx: &mut Ctx, header: &str) -> Result<bool> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| mail.get_header(header).is_some())
                 .map_err(StateError::into)
@@ -175,7 +171,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, name = "count_header", return_raw)]
-    pub fn count_header(ctx: &mut State<StatefulCtxReceived>, header: &str) -> Result<rhai::INT> {
+    pub fn count_header(ctx: &mut Ctx, header: &str) -> Result<rhai::INT> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| {
                 mail.count_header(header.as_ref())
@@ -244,7 +240,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:6
     #[rhai_fn(global, index_get, return_raw)]
-    pub fn get_header(ctx: &mut State<StatefulCtxReceived>, header: &str) -> Result<rhai::Dynamic> {
+    pub fn get_header(ctx: &mut Ctx, header: &str) -> Result<rhai::Dynamic> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| {
                 mail.get_header(header)
@@ -296,7 +292,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:7
     #[rhai_fn(global, get = "headers", return_raw)]
-    pub fn get_all_headers(ctx: &mut State<StatefulCtxReceived>) -> Result<rhai::Array> {
+    pub fn get_all_headers(ctx: &mut Ctx) -> Result<rhai::Array> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| {
                 mail.headers
@@ -310,10 +306,7 @@ mod message {
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "headers", return_raw)]
-    pub fn get_all_headers_str(
-        ctx: &mut State<StatefulCtxReceived>,
-        name: &str,
-    ) -> Result<rhai::Array> {
+    pub fn get_all_headers_str(ctx: &mut Ctx, name: &str) -> Result<rhai::Array> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| {
                 mail.get_headers(name)
@@ -367,10 +360,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:8
     #[rhai_fn(global, name = "header_untouched", return_raw)]
-    pub fn get_header_untouched(
-        ctx: &mut State<StatefulCtxReceived>,
-        name: &str,
-    ) -> Result<rhai::Array> {
+    pub fn get_header_untouched(ctx: &mut Ctx, name: &str) -> Result<rhai::Array> {
         ctx.read(|ctx| {
             ctx.get_mail(|mail| {
                 mail.headers
@@ -433,11 +423,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:9
     #[rhai_fn(global, name = "append_header", return_raw)]
-    pub fn append_header(
-        ctx: &mut State<StatefulCtxReceived>,
-        name: &str,
-        body: &str,
-    ) -> Result<()> {
+    pub fn append_header(ctx: &mut Ctx, name: &str, body: &str) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_mail(|mail| mail.append_headers([Header::new(name, body)]))
                 .map_err(StateError::into)
@@ -494,11 +480,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:10
     #[rhai_fn(global, name = "prepend_header", return_raw)]
-    pub fn prepend_header(
-        ctx: &mut State<StatefulCtxReceived>,
-        header: &str,
-        value: &str,
-    ) -> Result<()> {
+    pub fn prepend_header(ctx: &mut Ctx, header: &str, value: &str) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_mail(|mail| mail.prepend_headers([Header::new(header, value)]))
                 .map_err(StateError::into)
@@ -557,11 +539,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:11
     #[rhai_fn(global, index_set, return_raw)]
-    pub fn set_header(
-        ctx: &mut State<StatefulCtxReceived>,
-        header: &str,
-        value: &str,
-    ) -> Result<()> {
+    pub fn set_header(ctx: &mut Ctx, header: &str, value: &str) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_mail(|mail| mail.set_header(header.as_ref(), value.as_ref()))
                 .map_err(StateError::into)
@@ -572,8 +550,8 @@ mod message {
     ///
     /// # Args
     ///
-    /// * `old` - the name of the header to rename.
-    /// * `new` - the new new of the header.
+    /// * `old_name` - the name of the header to rename.
+    /// * `new_name` - the new name of the header.
     ///
     /// # Effective smtp stage
     ///
@@ -626,9 +604,9 @@ mod message {
     ///
     /// # rhai-autodocs:index:12
     #[rhai_fn(global, name = "rename_header", return_raw)]
-    pub fn rename_header(ctx: &mut State<StatefulCtxReceived>, old: &str, new: &str) -> Result<()> {
+    pub fn rename_header(ctx: &mut Ctx, old_name: &str, new_name: &str) -> Result<()> {
         ctx.write(|ctx| {
-            ctx.mut_mail(|mail| mail.rename_header(old.as_ref(), new.as_ref()))
+            ctx.mut_mail(|mail| mail.rename_header(old_name.as_ref(), new_name.as_ref()))
                 .map_err(StateError::into)
         })
     }
@@ -660,11 +638,11 @@ mod message {
     /// #{
     ///   preq: [
     ///     rule "remove_header" || {
-    ///       msg::rm_header("Subject");
+    ///       msg::remove_header("Subject");
     ///       if msg::has_header("Subject") { return state::deny(); }
     ///
     ///       msg::prepend_header("Subject-2", "Rust is good");
-    ///       msg::rm_header(identifier("Subject-2"));
+    ///       msg::remove_header(identifier("Subject-2"));
     ///
     ///       msg::prepend_header("Subject-3", "Rust is good !!!!!");
     ///
@@ -688,8 +666,8 @@ mod message {
     /// ```
     ///
     /// # rhai-autodocs:index:13
-    #[rhai_fn(global, name = "rm_header", return_raw)]
-    pub fn remove_header(ctx: &mut State<StatefulCtxReceived>, header: &str) -> Result<bool> {
+    #[rhai_fn(global, name = "remove_header", return_raw)]
+    pub fn remove_header(ctx: &mut Ctx, header: &str) -> Result<bool> {
         ctx.write(|ctx| {
             ctx.mut_mail(|mail| mail.remove_header(header.as_ref()))
                 .map_err(StateError::into)
@@ -713,18 +691,15 @@ mod message {
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
     ///     preq: [
-    ///        action "replace sender" || msg::rw_mail_from("john.server@example.com"),
+    ///        action "replace sender" || msg::rewrite_mail_from("john.server@example.com"),
     ///     ]
     /// }
     /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:14
-    #[rhai_fn(global, name = "rw_mail_from", return_raw)]
-    pub fn rewrite_mail_from_message_str(
-        ctx: &mut State<StatefulCtxReceived>,
-        new_addr: &str,
-    ) -> Result<()> {
+    #[rhai_fn(global, name = "rewrite_mail_from", return_raw)]
+    pub fn rewrite_mail_from_message_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_mail(|mail| {
                 mail.rewrite_mail_from(new_addr.as_ref());
@@ -751,16 +726,16 @@ mod message {
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
     ///     preq: [
-    ///        action "rewrite recipient" || msg::rw_rcpt("john.doe@example.com", "john-mta@example.com"),
+    ///        action "rewrite recipient" || msg::rewrite_rcpt("john.doe@example.com", "john-mta@example.com"),
     ///     ]
     /// }
     /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:15
-    #[rhai_fn(global, name = "rw_rcpt", return_raw)]
+    #[rhai_fn(global, name = "rewrite_rcpt", return_raw)]
     pub fn rewrite_rcpt_message_str_str(
-        ctx: &mut State<StatefulCtxReceived>,
+        ctx: &mut Ctx,
         old_addr: &str,
         new_addr: &str,
     ) -> Result<()> {
@@ -797,10 +772,7 @@ mod message {
     ///
     /// # rhai-autodocs:index:16
     #[rhai_fn(global, name = "add_rcpt", return_raw)]
-    pub fn add_rcpt_message_str(
-        ctx: &mut State<StatefulCtxReceived>,
-        new_addr: &str,
-    ) -> Result<()> {
+    pub fn add_rcpt_message_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_mail(|mail| {
                 mail.add_rcpt(new_addr);
@@ -826,15 +798,15 @@ mod message {
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
     ///     preq: [
-    ///        action "update recipients" || msg::rm_rcpt("john.doe@example.com"),
+    ///        action "update recipients" || msg::remove_rcpt("john.doe@example.com"),
     ///     ]
     /// }
     /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:17
-    #[rhai_fn(global, name = "rm_rcpt", return_raw)]
-    pub fn remove_rcpt_message_str(ctx: &mut State<StatefulCtxReceived>, addr: &str) -> Result<()> {
+    #[rhai_fn(global, name = "remove_rcpt", return_raw)]
+    pub fn remove_rcpt_message_str(ctx: &mut Ctx, addr: &str) -> Result<()> {
         ctx.write(|ctx| ctx.mut_mail(|mail| mail.remove_rcpt(addr)))
             .map_err(StateError::into)
     }
@@ -852,7 +824,7 @@ mod message {
     /// ```
     /// # rhai-autodocs:index:18
     #[rhai_fn(global, get = "body", return_raw)]
-    pub fn body_string(ctx: &mut State<StatefulCtxReceived>) -> Result<String> {
+    pub fn body_string(ctx: &mut Ctx) -> Result<String> {
         ctx.write(|ctx| ctx.get_mail(|mail| mail.body.to_string()))
             .map_err(StateError::into)
     }

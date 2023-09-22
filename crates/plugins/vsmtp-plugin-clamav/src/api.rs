@@ -18,8 +18,7 @@ use std::io::prelude::*;
 use thiserror::Error;
 use vsmtp_antivirus::Antivirus;
 use vsmtp_antivirus::RhaiAntivirus;
-use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
-use vsmtp_rule_engine::api::State;
+use vsmtp_rule_engine::api::docs::Ctx;
 
 /// Footer of a INSTREAM command
 const FOOTER: &[u8] = &[0; 4];
@@ -313,7 +312,7 @@ pub mod clamav {
         // NOTE(ltabis): Only the email is used in this method, but
         // I decided to pass the whole context anyways in case we need additional
         // data from it later.
-        ctx: State<StatefulCtxReceived>,
+        ctx: Ctx,
     ) -> Result<bool, Box<rhai::EvalAltResult>> {
         ctx.read(|ctx| {
             ctx.get_mail(ToString::to_string)

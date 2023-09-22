@@ -28,15 +28,15 @@ mod net {
     /// ```ignore
     /// #{
     ///     rcpt: [
-    ///         rule "anti relay" || { if ctx::client_ip() in net::rg_192() { state::next() } else { state::deny() } }
+    ///         rule "anti relay" || { if ctx::client_ip() in net::range_192() { state::next() } else { state::deny() } }
     ///     ]
     /// }
     /// ```
     ///
     /// # rhai-autodocs:index:1
     #[must_use]
-    #[rhai_fn(name = "rg_192")]
-    pub fn rg_192() -> RangeIPv4 {
+    #[rhai_fn(name = "range_192")]
+    pub fn range_192() -> RangeIPv4 {
         new_rg4("192.168.0.0/16").expect("valid range")
     }
 
@@ -47,15 +47,15 @@ mod net {
     /// ```ignore
     /// #{
     ///     rcpt: [
-    ///         rule "anti relay" || { if ctx::client_ip() in net::rg_172() { state::next() } else { state::deny() } }
+    ///         rule "anti relay" || { if ctx::client_ip() in net::range_172() { state::next() } else { state::deny() } }
     ///     ]
     /// }
     /// ```
     ///
     /// # rhai-autodocs:index:2
     #[must_use]
-    #[rhai_fn(name = "rg_172")]
-    pub fn rg_172() -> RangeIPv4 {
+    #[rhai_fn(name = "range_172")]
+    pub fn range_172() -> RangeIPv4 {
         new_rg4("172.16.0.0/12").expect("valid range")
     }
 
@@ -66,15 +66,15 @@ mod net {
     /// ```ignore
     /// #{
     ///     rcpt: [
-    ///         rule "anti relay" || { if ctx::client_ip() in net::rg_10() { state::next() } else { state::deny() } }
+    ///         rule "anti relay" || { if ctx::client_ip() in net::range_10() { state::next() } else { state::deny() } }
     ///     ]
     /// }
     /// ```
     ///
     /// # rhai-autodocs:index:3
     #[must_use]
-    #[rhai_fn(name = "rg_10")]
-    pub fn rg_10() -> RangeIPv4 {
+    #[rhai_fn(name = "range_10")]
+    pub fn range_10() -> RangeIPv4 {
         new_rg4("10.0.0.0/8").expect("valid range")
     }
 
@@ -85,9 +85,9 @@ mod net {
     #[rhai_fn(name = "non_routable")]
     pub fn non_routable() -> rhai::Array {
         rhai::Array::from_iter([
-            rhai::Dynamic::from(rg_192()),
-            rhai::Dynamic::from(rg_172()),
-            rhai::Dynamic::from(rg_10()),
+            rhai::Dynamic::from(range_192()),
+            rhai::Dynamic::from(range_172()),
+            rhai::Dynamic::from(range_10()),
         ])
     }
 }

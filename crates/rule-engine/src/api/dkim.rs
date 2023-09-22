@@ -9,15 +9,14 @@
  *
  */
 
-use crate::api::State;
+use crate::api::docs::{Ctx, Mail};
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult,
     TypeId,
 };
 use vsmtp_auth::dkim as backend;
-use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
-use vsmtp_common::{dkim::DkimVerificationResult, dns_resolver::DnsResolver};
-use vsmtp_mail_parser::{mail::headers::Header, Mail};
+use vsmtp_common::dns_resolver::DnsResolver;
+use vsmtp_mail_parser::mail::headers::Header;
 
 pub use dkim::*;
 
@@ -170,6 +169,8 @@ async fn get_public_key(
     }
 }
 
+type DkimVerificationResult = rhai::Shared<Vec<vsmtp_common::dkim::DkimVerificationResult>>;
+
 /// Implementation of:
 /// * [`RFC "DomainKeys Identified Mail (DKIM) Signatures"`](https://datatracker.ietf.org/doc/html/rfc8601)
 /// * [`RFC "Cryptographic Algorithm and Key Usage Update to DomainKeys Identified Mail (DKIM)"`](https://datatracker.ietf.org/doc/html/rfc8301)
@@ -201,10 +202,10 @@ mod dkim {
     ///
     ///```js
     /// rule "add dkim signature" |ctx| {
-    ///   let signature = dkim::create_sign(ctx.mail, #{
+    ///   let signature = dkim::sign(ctx.mail, #{
     ///     sdid: "mydomain.tld",
     ///     selector: "myselector",
-    ///     private_key: crypto::load_pem_rsa_pkcs8_file("/etc/vsmtp/keys/my_key.pem"),
+    ///     private_key: crypto::load_pem_rsa_pkcs8("/etc/vsmtp/keys/my_key.pem"),
     ///     headers_field: ["From", "To", "Date", "Subject", "From"],
     ///     canonicalization: "simple/relaxed",
     ///   });
@@ -216,10 +217,7 @@ mod dkim {
     ///
     /// # rhai-autodocs:index:1
     #[rhai_fn(return_raw)]
-    pub fn create_sign(
-        mail: &mut rhai::Shared<std::sync::RwLock<Mail>>,
-        params: rhai::Dynamic,
-    ) -> Result<String> {
+    pub fn create_signature(mail: &mut Mail, params: rhai::Dynamic) -> Result<String> {
         let SignParams {
             sdid,
             selector,
@@ -280,10 +278,10 @@ mod dkim {
     ///
     ///```js
     /// rule "add dkim signature" |ctx| {
-    ///   dkim::add_signature(ctx.mail, #{
+    ///   dkim::sign(ctx.mail, #{
     ///     sdid: "mydomain.tld",
     ///     selector: "myselector",
-    ///     private_key: crypto::load_pem_rsa_pkcs8_file("/etc/vsmtp/keys/my_key.pem"),
+    ///     private_key: crypto::load_pem_rsa_pkcs8("/etc/vsmtp/keys/my_key.pem"),
     ///     headers_field: ["From", "To", "Date", "Subject", "From"],
     ///     canonicalization: "simple/relaxed",
     ///   });
@@ -293,21 +291,12 @@ mod dkim {
     ///
     /// # rhai-autodocs:index:2
     #[rhai_fn(return_raw)]
-    pub fn add_signature(
-        mail: &mut rhai::Shared<std::sync::RwLock<Mail>>,
-        params: rhai::Dynamic,
-    ) -> Result<()> {
-        let signature = create_sign(mail, params)?;
+    pub fn sign(mail: &mut Mail, params: rhai::Dynamic) -> Result<()> {
+        let signature = create_signature(mail, params)?;
         mail.write()
             .unwrap()
             .prepend_headers([Header::new("DKIM-Signature", signature)]);
         Ok(())
-    }
-
-    /// # rhai-autodocs:index:3
-    #[rhai_fn(global, pure)]
-    pub fn to_debug(v: &mut rhai::Shared<Vec<DkimVerificationResult>>) -> String {
-        format!("{v:?}")
     }
 
     /// Verify all the DKIM signature of the message. This method will return a list of
@@ -341,13 +330,10 @@ mod dkim {
     /// }
     /// ```
     ///
-    /// # rhai-autodocs:index:4
+    /// # rhai-autodocs:index:3
     #[allow(clippy::significant_drop_tightening)]
     #[rhai_fn(return_raw)]
-    pub fn verify(
-        ctx: &mut rhai::Shared<std::sync::RwLock<Mail>>,
-        params: rhai::Dynamic,
-    ) -> Result<rhai::Shared<Vec<DkimVerificationResult>>> {
+    pub fn verify(ctx: &mut Mail, params: rhai::Dynamic) -> Result<DkimVerificationResult> {
         let VerifyParams {
             header_limit_count,
             expiration_epsilon,
@@ -363,7 +349,7 @@ mod dkim {
             .collect::<Vec<_>>();
 
         if verifications.is_empty() {
-            Ok(vec![DkimVerificationResult {
+            Ok(vec![vsmtp_common::dkim::DkimVerificationResult {
                 value: vsmtp_common::dkim::Value::None,
                 signature: None,
             }]
@@ -374,30 +360,35 @@ mod dkim {
     }
 
     /// See the documentation of [verify](http://vsmtp.rs/docs/global/dkim#fn-verify).
-    /// # rhai-autodocs:index:5
+    /// # rhai-autodocs:index:4
     #[rhai_fn(global, pure, return_raw)]
-    pub fn store(
-        ctx: &mut State<StatefulCtxReceived>,
-        dkim_result: rhai::Shared<Vec<DkimVerificationResult>>,
-    ) -> Result<()> {
+    pub fn store(ctx: &mut Ctx, dkim_result: DkimVerificationResult) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_complete()?.dkim = Some(dkim_result);
             Ok(())
         })
+    }
+
+    /// Transform the given DKIM verification result into a debug string.
+    ///
+    /// # rhai-autodocs:index:5
+    #[rhai_fn(global, pure)]
+    pub fn to_debug(v: &mut DkimVerificationResult) -> String {
+        format!("{v:?}")
     }
 }
 
 async fn verify_one(
     header: String,
     expiration_epsilon: u64,
-    mail: &Mail,
+    mail: &vsmtp_mail_parser::Mail,
     dns_resolver: &DnsResolver,
-) -> DkimVerificationResult {
+) -> vsmtp_common::dkim::DkimVerificationResult {
     tracing::trace!(?header, "Verifying DKIM signature ...");
 
     let Ok(signature) = <backend::Signature as std::str::FromStr>::from_str(&header) else {
         tracing::debug!("error parsing the DKIM signature header");
-        return DkimVerificationResult {
+        return vsmtp_common::dkim::DkimVerificationResult {
             value: vsmtp_common::dkim::Value::PermFail,
             signature: None,
         };
@@ -405,7 +396,7 @@ async fn verify_one(
 
     if signature.has_expired(expiration_epsilon) {
         tracing::warn!("The DKIM signature has expired");
-        return DkimVerificationResult {
+        return vsmtp_common::dkim::DkimVerificationResult {
             value: vsmtp_common::dkim::Value::PermFail,
             signature: Some(signature),
         };
@@ -418,7 +409,7 @@ async fn verify_one(
                 "Failed to retrieve the public key signature: {}",
                 value.to_string()
             );
-            return DkimVerificationResult {
+            return vsmtp_common::dkim::DkimVerificationResult {
                 value,
                 signature: Some(signature),
             };
@@ -427,7 +418,7 @@ async fn verify_one(
 
     if let Err(e) = backend::verify(&signature, &DkimMail { mail }, &public_key) {
         tracing::debug!("Failed to verify the DKIM signature: {:?}", e);
-        return DkimVerificationResult {
+        return vsmtp_common::dkim::DkimVerificationResult {
             value: vsmtp_common::dkim::Value::PermFail,
             signature: Some(signature),
         };
@@ -437,13 +428,13 @@ async fn verify_one(
 
     if public_key.has_debug_flag() {
         tracing::warn!("DKIM signature contains `debug_flag`");
-        return DkimVerificationResult {
+        return vsmtp_common::dkim::DkimVerificationResult {
             value: vsmtp_common::dkim::Value::Policy,
             signature: Some(signature),
         };
     }
 
-    DkimVerificationResult {
+    vsmtp_common::dkim::DkimVerificationResult {
         value: vsmtp_common::dkim::Value::Pass,
         signature: Some(signature),
     }

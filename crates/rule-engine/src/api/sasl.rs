@@ -9,12 +9,11 @@
  *
  */
 
-use super::State;
+use crate::api::docs::Ctx;
 use rhai::plugin::{
     Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult, TypeId,
 };
 use vsmtp_common::stateful_ctx_received::SaslAuthProps;
-use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
 use vsmtp_protocol::auth::Credentials;
 
 pub use sasl_rhai::*;
@@ -23,7 +22,7 @@ pub use sasl_rhai::*;
 mod sasl_rhai {
     /// # rhai-autodocs:index:1
     #[rhai_fn(global, get = "is_authenticated")]
-    pub fn is_authenticated(ctx: &mut State<StatefulCtxReceived>) -> bool {
+    pub fn is_authenticated(ctx: &mut Ctx) -> bool {
         ctx.read(|ctx| {
             ctx.get_connect()
                 .sasl
@@ -34,9 +33,7 @@ mod sasl_rhai {
 
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, get = "sasl", return_raw)]
-    pub fn get_sasl_props(
-        ctx: &mut State<StatefulCtxReceived>,
-    ) -> Result<SaslAuthProps, Box<rhai::EvalAltResult>> {
+    pub fn get_sasl_props(ctx: &mut Ctx) -> Result<SaslAuthProps, Box<rhai::EvalAltResult>> {
         ctx.read(|ctx| {
             ctx.get_connect().sasl.as_ref().map_or_else(
                 || Err("SASL not initialized".into()),

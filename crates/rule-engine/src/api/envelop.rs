@@ -9,13 +9,14 @@
  *
  */
 
-use super::{Result, State};
+use super::Result;
+use crate::api::docs::Ctx;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
 use vsmtp_common::delivery_route::DeliveryRoute;
-use vsmtp_common::{stateful_ctx_received::StatefulCtxReceived, Mailbox};
+use vsmtp_common::Mailbox;
 use vsmtp_protocol::Address;
 
 pub use envelop::*;
@@ -49,18 +50,15 @@ mod envelop {
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
     ///     preq: [
-    ///        action "rewrite envelop 1" || envelop::rw_mail_from("unknown@example.com"),
+    ///        action "rewrite envelop 1" || envelop::rewrite_mail_from("unknown@example.com"),
     ///     ]
     /// }
     /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:1
-    #[rhai_fn(name = "rw_mail_from", return_raw, pure)]
-    pub fn rewrite_mail_from_envelop_str(
-        ctx: &mut State<StatefulCtxReceived>,
-        new_addr: &str,
-    ) -> Result<()> {
+    #[rhai_fn(name = "rewrite_mail_from", return_raw, pure)]
+    pub fn rewrite_mail_from_envelop_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         let mailbox = mailbox(new_addr)?;
 
         ctx.write(|ctx| {
@@ -87,19 +85,15 @@ mod envelop {
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
     ///     preq: [
-    ///        action "rewrite envelop" || envelop::rw_rcpt("john.doe@example.com", "john.main@example.com"),
+    ///        action "rewrite envelop" || envelop::rewrite_rcpt("john.doe@example.com", "john.main@example.com"),
     ///     ]
     /// }
     /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:2
-    #[rhai_fn(name = "rw_rcpt", return_raw, pure)]
-    pub fn rewrite_rcpt_str_str(
-        ctx: &mut State<StatefulCtxReceived>,
-        old_addr: &str,
-        new_addr: &str,
-    ) -> Result<()> {
+    #[rhai_fn(name = "rewrite_rcpt", return_raw, pure)]
+    pub fn rewrite_rcpt_str_str(ctx: &mut Ctx, old_addr: &str, new_addr: &str) -> Result<()> {
         let old_addr = mailbox(old_addr)?;
         let new_addr = mailbox(new_addr)?;
 
@@ -136,10 +130,7 @@ mod envelop {
     ///
     /// # rhai-autodocs:index:3
     #[rhai_fn(name = "add_rcpt", return_raw, pure)]
-    pub fn add_rcpt_envelop_str(
-        ctx: &mut State<StatefulCtxReceived>,
-        new_addr: &str,
-    ) -> Result<()> {
+    pub fn add_rcpt_envelop_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         let new_addr = mailbox(new_addr)?;
 
         ctx.write(|ctx| {
@@ -153,12 +144,12 @@ mod envelop {
     ///
     /// # rhai-autodocs:index:4
     #[rhai_fn(name = "bcc", return_raw)]
-    pub fn bcc_str(ctx: &mut State<StatefulCtxReceived>, new_addr: &str) -> Result<()> {
+    pub fn bcc_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         super::add_rcpt_envelop_str(ctx, new_addr)
     }
 
     /// Remove a recipient from the envelop. Note that this does not remove
-    /// the recipient from the `To` header. Use `msg::rm_rcpt` for that.
+    /// the recipient from the `To` header. Use `msg::remove_rcpt` for that.
     ///
     /// # Args
     ///
@@ -176,16 +167,16 @@ mod envelop {
     /// #{
     ///     preq: [
     ///        // never deliver to "john.doe@example.com".
-    ///        action "rewrite envelop 1" || envelop::rm_rcpt("john.doe@example.com"),
-    ///        action "rewrite envelop 2" || envelop::rm_rcpt(address("john.doe@example.com")),
+    ///        action "rewrite envelop 1" || envelop::remove_rcpt("john.doe@example.com"),
+    ///        action "rewrite envelop 2" || envelop::remove_rcpt(address("john.doe@example.com")),
     ///     ]
     /// }
     /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:5
-    #[rhai_fn(name = "rm_rcpt", return_raw)]
-    pub fn remove_rcpt_envelop_str(ctx: &mut State<StatefulCtxReceived>, addr: &str) -> Result<()> {
+    #[rhai_fn(name = "remove_rcpt", return_raw)]
+    pub fn remove_rcpt_envelop_str(ctx: &mut Ctx, addr: &str) -> Result<()> {
         let addr = mailbox(addr)?;
 
         ctx.write(|ctx| {
