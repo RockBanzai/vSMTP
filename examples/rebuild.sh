@@ -28,7 +28,7 @@ COPY --from=all-in-one /app/bin/$BIN /app/bin/$BIN
 COPY --from=all-in-one /usr/lib/vsmtp /usr/lib/vsmtp
 RUN mkdir -p /etc/vsmtp/plugins
 RUN ln -s /usr/lib/vsmtp/libvsmtp_plugin_mysql.so /etc/vsmtp/plugins/libvsmtp_plugin_mysql.so
-RUN ln -s /usr/lib/vsmtp/libvsmtp_clamav_plugin.so /etc/vsmtp/plugins/libvsmtp_clamav_plugin.so
+RUN ln -s /usr/lib/vsmtp/libvsmtp_plugin_clamav.so /etc/vsmtp/plugins/libvsmtp_plugin_clamav.so
 ENV PATH="$PATH:/app/bin"
 ENV BIN_=$BIN
 CMD $BIN_

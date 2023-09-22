@@ -4,13 +4,14 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 rust-version.workspace = true
+license = "Elastic-2.0"
+license-file.workspace = true
 
 [lints]
 workspace = true
 
 [dependencies]
 clap = { workspace = true }
-vsmtp-config = { workspace = true }
 lapin = { workspace = true }
 opentelemetry = { workspace = true }
 opentelemetry-jaeger = { workspace = true }
@@ -25,8 +26,9 @@ tracing = { workspace = true }
 tracing-amqp = { workspace = true }
 tracing-appender = { workspace = true }
 tracing-journald = { workspace = true }
-tracing-rfc-5424 = { workspace = true }
 tracing-loki = { workspace = true }
 tracing-opentelemetry = { workspace = true }
+tracing-rfc-5424 = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["json"] }
 url = { workspace = true }
+vsmtp-config = { workspace = true }

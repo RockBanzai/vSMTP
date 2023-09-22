@@ -352,7 +352,7 @@ impl<CONTEXT: 'static, STATUS: Status, STAGE: Stage + 'static>
 
         for directive in directives {
             tracing::trace!(rule = directive.name(), stage, "Executing directive");
-            let status = match directive.execute(&ncc, ctx.clone()) {
+            let status = match directive.execute::<STATUS, CONTEXT>(&ncc, ctx.clone()) {
                 Ok(status) => status,
                 Err(mut error) => {
                     error.stage = Some(stage);
@@ -360,7 +360,7 @@ impl<CONTEXT: 'static, STATUS: Status, STAGE: Stage + 'static>
                 }
             };
 
-            if status != STATUS::next() {
+            if !status.is_next() {
                 return status;
             }
         }

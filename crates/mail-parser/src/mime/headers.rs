@@ -51,11 +51,13 @@ impl Header {
     }
 
     /// Get the body of the trimmed header.
+    #[must_use]
     pub fn body(&self) -> &str {
         self.body.trim()
     }
 
     /// Find an argument in the current header.
+    #[must_use]
     pub fn arg(&self, needle: &str) -> Option<&Arg> {
         self.args
             .iter()
@@ -110,7 +112,7 @@ impl std::str::FromStr for Arg {
         };
 
         Ok(Self {
-            name: name.to_string(),
+            name,
             value,
             value_start,
             value_end,
@@ -120,16 +122,19 @@ impl std::str::FromStr for Arg {
 
 impl Arg {
     /// Get the trimmed name of the argument.
+    #[must_use]
     pub fn name(&self) -> &str {
         self.name.trim()
     }
 
     /// Get the trimmed value of the argument.
+    #[must_use]
     pub fn value(&self) -> &str {
         &self.value[self.value_start..self.value_end]
     }
 
     /// Get the full value of the argument, with quotes and other characters.
+    #[must_use]
     pub fn raw_value(&self) -> &str {
         &self.value
     }

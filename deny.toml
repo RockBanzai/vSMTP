@@ -147,6 +147,28 @@ exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
     #{ allow = ["Zlib"], name = "adler32", version = "*" },
+    { name = "vsmtp-receiver", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-working", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-delivery", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-log-dispatcher", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-common", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-config", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-mail-parser", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-rule-engine", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-rhai-utils", allow = ["Elastic-2.0"] },
+    { name = "tracing-amqp", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-auth", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-protocol", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-clamav", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-csv", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-dnsxl", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-ldap", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-memcached", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-mongodb", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-mysql", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-redis", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-plugin-sqlite", allow = ["Elastic-2.0"] },
+    { name = "vsmtp-antivirus", allow = ["Elastic-2.0"] },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,
@@ -179,7 +201,7 @@ license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
 # published to private registries.
 # To see how to mark a crate as unpublished (to the official registry),
 # visit https://doc.rust-lang.org/cargo/reference/manifest.html#the-publish-field.
-ignore = true
+ignore = false
 # One or more private registries that you might publish crates to, if a crate
 # is only published to private registries, and ignore is true, the crate will
 # not have its license(s) checked

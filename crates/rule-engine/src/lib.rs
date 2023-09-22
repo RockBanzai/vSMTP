@@ -68,7 +68,7 @@ where
     /// Use this field to customize the engine further. Although any change will be lost
     /// when this engine is dropped. Prefer using a [`RuleEngineConfig`] to configure
     /// a "template" for other engines.
-    pub rhai_engine: rhai::Engine,
+    rhai_engine: rhai::Engine,
     /// Rule engine configuration template used to the configure
     /// the Rhai engine.
     config: rhai::Shared<RuleEngineConfig<CONTEXT, STATUS, STAGE>>,

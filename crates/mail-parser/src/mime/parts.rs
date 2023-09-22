@@ -77,6 +77,7 @@ impl<'a> std::fmt::Display for MultipartDisplayable<'a> {
 }
 
 impl<'a> MultipartDisplayable<'a> {
+    #[must_use]
     pub fn to_string_without_attachments(&self) -> String {
         let mut f = String::new();
         if !self.inner.preamble.is_empty() {

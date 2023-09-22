@@ -12,9 +12,14 @@ readme = "../../../README.md"
 repository = "https://github.com/viridIT/vSMTP"
 rust-version.workspace = true
 description = "A plugin for vSMTP that enable support for memcached databases"
+license = "Elastic-2.0"
+license-file.workspace = true
 
 [package.metadata.release]
 pre-release-commit-message = "chore: Release {{crate_name}} version {{version}}"
+
+[lints]
+workspace = true
 
 [lib]
 # You could also use Rust's unstable ABI with "dylib".
@@ -26,7 +31,6 @@ memcache = { workspace = true }
 r2d2 = { workspace = true }
 rhai = { workspace = true }
 serde = { workspace = true }
-tracing = { workspace = true }
 
 [build-dependencies]
 humantime-serde = { workspace = true }

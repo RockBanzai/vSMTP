@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 rust-version.workspace = true
+license = "Elastic-2.0"
+license-file.workspace = true
 
 [lints]
 workspace = true
@@ -29,9 +31,9 @@ tokio-stream = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 tracing-amqp = { workspace = true }
 tracing-subscriber = { workspace = true }
-vsmtp-rhai-utils = { workspace = true }
 vsmtp-common = { workspace = true }
 vsmtp-config = { workspace = true }
 vsmtp-mail-parser = { workspace = true }
 vsmtp-protocol = { workspace = true }
+vsmtp-rhai-utils = { workspace = true }
 vsmtp-rule-engine = { workspace = true }

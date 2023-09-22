@@ -26,7 +26,6 @@ pub struct CtxDelivery {
     pub mail_from: MailFromProps,
     pub rcpt_to: Vec<Recipient>,
     #[dummy(faker = "MailFaker")]
-    #[serde(with = "crate::serde_helper::arc_rwlock")]
     pub mail: std::sync::Arc<std::sync::RwLock<Mail>>,
     pub attempt: Vec<DeliveryAttempt>,
 }

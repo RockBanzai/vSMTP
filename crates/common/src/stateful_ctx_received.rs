@@ -147,7 +147,7 @@ impl StatefulCtxReceived {
     /// Has the connection been encrypted using TLS ?
     #[inline]
     #[must_use]
-    pub fn is_secured(&self) -> bool {
+    pub const fn is_secured(&self) -> bool {
         match self {
             Self::Connect { connect }
             | Self::Helo { connect, .. }
@@ -478,7 +478,6 @@ pub struct HeloProps {
     #[dummy(faker = "ClientNameFaker")]
     pub client_name: ClientName,
     pub using_deprecated: bool,
-    #[serde(with = "crate::serde_helper::arc_option")]
     pub spf_helo_identity: Option<std::sync::Arc<SpfResult>>,
 }
 
@@ -502,7 +501,6 @@ pub struct MailFromProps {
     pub mail_timestamp: time::OffsetDateTime,
     pub message_uuid: uuid::Uuid,
     pub envelop_id: Option<String>,
-    #[serde(with = "crate::serde_helper::arc_option")]
     pub spf_mail_from_identity: Option<std::sync::Arc<SpfResult>>,
     #[dummy(faker = "DsnReturnFaker")]
     pub ret: Option<DsnReturn>,
@@ -564,8 +562,6 @@ impl RcptToProps {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct CompleteProps {
-    #[serde(with = "crate::serde_helper::arc_option")]
     pub dkim: Option<std::sync::Arc<Vec<dkim::DkimVerificationResult>>>,
-    #[serde(with = "crate::serde_helper::arc_option")]
     pub dmarc: Option<std::sync::Arc<dmarc::Dmarc>>,
 }

@@ -13,9 +13,14 @@ readme = "../../../README.md"
 repository = "https://github.com/viridIT/vSMTP"
 rust-version.workspace = true
 description = "A plugin for vSMTP that enable support for mysql databases"
+license = "Elastic-2.0"
+license-file.workspace = true
 
 [package.metadata.release]
 pre-release-commit-message = "chore: Release {{crate_name}} version {{version}}"
+
+[lints]
+workspace = true
 
 [lib]
 crate-type = ["cdylib"]
@@ -40,4 +45,3 @@ r2d2 = { workspace = true }
 rhai = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-tracing = { workspace = true }

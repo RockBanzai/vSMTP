@@ -9,7 +9,7 @@
  *
  */
 
-pub(crate) use vsmtp_config::Config;
+pub use vsmtp_config::Config;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "formatter", rename_all = "lowercase")]
@@ -103,22 +103,22 @@ impl LogDispatcherConfig {
     }
 
     #[allow(dead_code)]
-    fn default_syslog_protocol() -> SyslogProtocol {
+    const fn default_syslog_protocol() -> SyslogProtocol {
         SyslogProtocol::Udp
     }
 
     #[allow(dead_code)]
-    fn default_syslog_rfc() -> SyslogRfc {
+    const fn default_syslog_rfc() -> SyslogRfc {
         SyslogRfc::RFC5424
     }
 
     #[allow(dead_code)]
-    fn default_log_format() -> LogFormat {
+    const fn default_log_format() -> LogFormat {
         LogFormat::Compact
     }
 
     #[allow(dead_code)]
-    fn default_file_rotation() -> FileRotation {
+    const fn default_file_rotation() -> FileRotation {
         FileRotation::Never
     }
 
@@ -134,7 +134,7 @@ impl Config for LogDispatcherConfig {
     {
         Ok(Self {
             path: path.as_ref().into(),
-            name: LogDispatcherConfig::default_name(),
+            name: Self::default_name(),
             ..Default::default()
         })
     }

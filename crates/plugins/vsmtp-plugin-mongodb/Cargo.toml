@@ -12,6 +12,11 @@ readme = "../../../README.md"
 repository = "https://github.com/viridIT/vSMTP"
 rust-version.workspace = true
 description = "A plugin for vSMTP that enable support for mongodb databases"
+license = "Elastic-2.0"
+license-file.workspace = true
+
+[lints]
+workspace = true
 
 [lib]
 # You could also use Rust's unstable ABI with "dylib".

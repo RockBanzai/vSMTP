@@ -12,6 +12,11 @@ readme = "README.md"
 repository = "https://github.com/viridIT/vsmtp-plugin-redis"
 rust-version.workspace = true
 description = "A plugin for vSMTP that enable support for redis databases"
+license = "Elastic-2.0"
+license-file.workspace = true
+
+[lints]
+workspace = true
 
 [lib]
 crate-type = ["cdylib"]
@@ -32,4 +37,3 @@ redis = { workspace = true }
 rhai = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
-tracing = { workspace = true }

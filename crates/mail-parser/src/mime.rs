@@ -37,6 +37,7 @@ pub struct Mime {
 
 impl Mime {
     /// Get the given part as a string.
+    #[must_use]
     pub fn raw_part(&self) -> String {
         match &self.part {
             Part::Text(content) | Part::Html(content) | Part::Binary(content) => content.join(""),
@@ -55,6 +56,7 @@ impl Mime {
     }
 
     /// Check of the current mime part is an attachment.
+    #[must_use]
     pub fn is_attachment(&self) -> bool {
         match &self.part {
             Part::Text(_) | Part::Html(_) => self
@@ -69,6 +71,7 @@ impl Mime {
 
     /// Extract a boundary from the Content-Type header field
     /// if the current mime part is multipart.
+    #[must_use]
     pub fn boundary(&self) -> Option<&str> {
         self.headers.iter().find_map(|header| {
             if header.name.eq_ignore_ascii_case(CONTENT_TYPE_HEADER) {
@@ -155,6 +158,7 @@ impl std::fmt::Display for Mime {
 
 impl Mime {
     /// Return the Mime part without any attachments.
+    #[must_use]
     pub fn to_string_without_attachments(&self) -> String {
         let mut f = String::new();
 
@@ -176,14 +180,14 @@ impl Mime {
                         top_level: false,
                     }
                     .to_string_without_attachments(),
-                )
+                );
             }
             Part::Text(content) | Part::Html(content) if !is_attachment => {
-                f.push_str(&content.join(""))
+                f.push_str(&content.join(""));
             }
             _ => {
                 // Ignore text/html marked as attachments, binaries and embedded emails.
-                Default::default()
+                String::default();
             }
         };
 
@@ -191,6 +195,7 @@ impl Mime {
     }
 
     /// Return the Mime part without any attachments for the top level mime section.
+    #[must_use]
     pub fn to_string_without_attachments_top_level(&self) -> String {
         let mut f = String::new();
 
@@ -208,14 +213,14 @@ impl Mime {
                         top_level: true,
                     }
                     .to_string_without_attachments(),
-                )
+                );
             }
             Part::Text(content) | Part::Html(content) if !is_attachment => {
-                f.push_str(&content.join(""))
+                f.push_str(&content.join(""));
             }
             _ => {
                 // Ignore text/html marked as attachments, binaries and embedded emails.
-                Default::default()
+                String::default();
             }
         };
 
@@ -223,6 +228,7 @@ impl Mime {
     }
 
     /// Return the Mime part without headers.
+    #[must_use]
     pub fn to_string_top_level(&self) -> String {
         let mut f = String::new();
 

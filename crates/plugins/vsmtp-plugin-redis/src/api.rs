@@ -10,7 +10,10 @@
  */
 
 use redis::{Commands, ConnectionLike};
-use rhai::plugin::*;
+use rhai::plugin::{
+    mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
+    PluginFunction, RhaiResult, TypeId,
+};
 
 /// Parameters available for the redis service. Used
 /// with serde for easy parsing.
@@ -60,8 +63,8 @@ impl RedisManager {
     ///
     /// See `redis::Client::open` for a description of the parameter
     /// types.
-    pub fn new<T: redis::IntoConnectionInfo>(params: T) -> Result<RedisManager, redis::RedisError> {
-        Ok(RedisManager {
+    pub fn new<T: redis::IntoConnectionInfo>(params: T) -> Result<Self, redis::RedisError> {
+        Ok(Self {
             connection_info: params.into_connection_info()?,
         })
     }
@@ -102,23 +105,23 @@ impl redis::ToRedisArgs for Wrapper {
 impl redis::FromRedisValue for Wrapper {
     fn from_redis_value(v: &redis::Value) -> redis::RedisResult<Self> {
         match v {
-            redis::Value::Nil => Ok(Wrapper(rhai::Dynamic::UNIT)),
-            redis::Value::Int(v) => Ok(Wrapper(rhai::Dynamic::from_int(*v))),
-            redis::Value::Data(v) => Ok(Wrapper(rhai::Dynamic::from(
-                String::from_utf8(v.to_vec()).map_err(|_| {
+            redis::Value::Nil => Ok(Self(rhai::Dynamic::UNIT)),
+            redis::Value::Int(v) => Ok(Self(rhai::Dynamic::from_int(*v))),
+            redis::Value::Data(v) => Ok(Self(rhai::Dynamic::from(
+                String::from_utf8(v.clone()).map_err(|_| {
                     redis::RedisError::from((
                         redis::ErrorKind::TypeError,
                         "Could not convert data to string",
                     ))
                 })?,
             ))),
-            redis::Value::Bulk(v) => Ok(Wrapper(rhai::Dynamic::from_array(
+            redis::Value::Bulk(v) => Ok(Self(rhai::Dynamic::from_array(
                 v.iter()
                     .map(|value| Self::from_redis_value(value).map(|value| value.0))
                     .collect::<Result<rhai::Array, redis::RedisError>>()?,
             ))),
-            redis::Value::Status(v) => Ok(Wrapper(rhai::Dynamic::from(v.clone()))),
-            redis::Value::Okay => Ok(Wrapper(rhai::Dynamic::from_map(rhai::Map::from_iter([(
+            redis::Value::Status(v) => Ok(Self(rhai::Dynamic::from(v.clone()))),
+            redis::Value::Okay => Ok(Self(rhai::Dynamic::from_map(rhai::Map::from_iter([(
                 "okay".into(),
                 rhai::Dynamic::UNIT,
             )])))),

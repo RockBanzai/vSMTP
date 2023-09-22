@@ -4,7 +4,6 @@ members = [
     "crates/working",
     "crates/delivery",
     "crates/log-dispatcher",
-    "crates/receiver",
     "crates/common",
     "crates/config",
     "crates/mail-parser",
@@ -73,7 +72,7 @@ rustls = { version = "0.21.7", default-features = false, features = ["tls12", "l
 rustls-pemfile = { version = "1.0.3", default-features = false }
 mysql = { version = "24.0.0", default-features = false, features = ["rustls-tls", "buffer-pool"] }
 semver = { version = "1.0.18", default-features = false, features = ["std", "serde"] }
-serde = { version = "1.0.188", default-features = false, features = ["std", "derive"] }
+serde = { version = "1.0.188", default-features = false, features = ["std", "derive", "rc"] }
 serde_with = { version = "3.3.0", default-features = false, features = ["std", "macros", "base64"] }
 serde_json = { version = "1.0.107", default-features = false, features = ["std"] }
 serde_path_to_error = { version = "0.1.14", default-features = false }
@@ -200,3 +199,5 @@ edition = "2021"
 version = "3.0.0-rc.1"
 publish = false
 rust-version = "1.66.1"
+license-file = "LICENSE"
+license = "Elastic-2.0"

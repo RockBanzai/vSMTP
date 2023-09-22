@@ -11,9 +11,14 @@ readme = "README.md"
 repository = "https://github.com/viridIT/vsmtp-plugin-ldap"
 rust-version.workspace = true
 description = "A plugin for vSMTP that enable support for ldap databases"
+license = "Elastic-2.0"
+license-file.workspace = true
 
 [package.metadata.release]
 pre-release-commit-message = "chore: Release {{crate_name}} version {{version}}"
+
+[lints]
+workspace = true
 
 [lib]
 crate-type = ["cdylib"]

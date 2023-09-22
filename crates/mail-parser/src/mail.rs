@@ -67,7 +67,7 @@ impl Mail {
     // TODO: this is pretty much useless, see <https://github.com/viridIT/email/blob/main/src/basic.rs#L55> instead.
     /// Parses an email from a stream of bytes.
     ///
-    /// # Args`
+    /// # Args
     ///
     /// * `stream` - The stream to parse the email from.
     ///

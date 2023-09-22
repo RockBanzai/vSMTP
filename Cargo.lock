@@ -4760,22 +4760,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vsmtp-clamav-plugin"
-version = "3.0.0-rc.1"
-dependencies = [
- "r2d2",
- "rhai",
- "rhai-autodocs",
- "serde",
- "thiserror",
- "tracing",
- "url",
- "vsmtp-antivirus",
- "vsmtp-common",
- "vsmtp-rule-engine",
-]
-
-[[package]]
 name = "vsmtp-common"
 version = "3.0.0-rc.1"
 dependencies = [
@@ -4883,6 +4867,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "vsmtp-plugin-clamav"
+version = "3.0.0-rc.1"
+dependencies = [
+ "r2d2",
+ "rhai",
+ "rhai-autodocs",
+ "serde",
+ "thiserror",
+ "tracing",
+ "url",
+ "vsmtp-antivirus",
+ "vsmtp-common",
+ "vsmtp-rule-engine",
+]
+
+[[package]]
 name = "vsmtp-plugin-csv"
 version = "3.0.0-rc.1"
 dependencies = [
@@ -4893,7 +4893,6 @@ dependencies = [
  "serde_with 3.3.0",
  "strum",
  "thiserror",
- "tracing",
 ]
 
 [[package]]
@@ -4933,7 +4932,6 @@ dependencies = [
  "rhai",
  "rhai-autodocs",
  "serde",
- "tracing",
 ]
 
 [[package]]
@@ -4960,7 +4958,6 @@ dependencies = [
  "rhai-autodocs",
  "serde",
  "thiserror",
- "tracing",
 ]
 
 [[package]]
@@ -4974,7 +4971,6 @@ dependencies = [
  "rhai-autodocs",
  "serde",
  "thiserror",
- "tracing",
 ]
 
 [[package]]
@@ -4987,7 +4983,6 @@ dependencies = [
  "rhai-autodocs",
  "rusqlite",
  "serde",
- "tracing",
 ]
 
 [[package]]
@@ -5061,13 +5056,11 @@ dependencies = [
  "rhai",
  "ring-compat",
  "rsa",
- "rustls 0.21.7",
  "serde",
  "time 0.3.28",
  "tracing",
  "uzers",
  "vsmtp-auth",
- "vsmtp-common",
  "wait-timeout",
 ]
 

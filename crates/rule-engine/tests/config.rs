@@ -71,6 +71,10 @@ impl Status for MyStatus {
     fn next() -> Self {
         Self::Next("default next called".to_string())
     }
+
+    fn is_next(&self) -> bool {
+        matches!(self, Self::Next(_))
+    }
 }
 
 // Enable the user to access our statuses.
@@ -125,6 +129,7 @@ impl Config for MyConfig {
         unimplemented!()
     }
 }
+
 #[test]
 fn configuration() {
     let config = MyConfig {

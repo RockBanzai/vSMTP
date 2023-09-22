@@ -51,7 +51,7 @@ fn test_flush() {
     assert_eq!(
         memcached::get(&mut server, "flush").unwrap().type_name(),
         String::from("()")
-    )
+    );
 }
 
 #[ignore]
@@ -74,7 +74,7 @@ fn test_non_existing_get() {
             .unwrap()
             .type_name(),
         String::from("()")
-    )
+    );
 }
 
 #[ignore]
@@ -97,7 +97,7 @@ fn test_get_string() {
             .unwrap()
             .type_name(),
         String::from("string")
-    )
+    );
 }
 
 #[ignore]
@@ -118,7 +118,7 @@ fn test_get_bool() {
     assert_eq!(
         memcached::get(&mut server, "get_bool").unwrap().type_name(),
         String::from("bool")
-    )
+    );
 }
 
 #[ignore]
@@ -140,7 +140,7 @@ fn test_get_i64() {
     assert_eq!(
         memcached::get(&mut server, "get_i64").unwrap().type_name(),
         String::from("i64")
-    )
+    );
 }
 
 // #[ignore]#[test]
@@ -184,7 +184,7 @@ fn test_get_f64() {
     assert_eq!(
         memcached::get(&mut server, "get_f64").unwrap().type_name(),
         String::from("f64")
-    )
+    );
 }
 
 #[ignore]
@@ -243,7 +243,7 @@ fn test_gets() {
         .unwrap()
         .type_name(),
         String::from("map")
-    )
+    );
 }
 
 #[ignore]

@@ -1,4 +1,4 @@
-import "/etc/vsmtp/plugins/libvsmtp_clamav_plugin" as clamav;
+import "/etc/vsmtp/plugins/libvsmtp_plugin_clamav" as clamav;
 
 const bridge = clamav::connect(#{
     url: "tcp://clamav:3310",

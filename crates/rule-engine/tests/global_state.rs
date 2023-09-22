@@ -82,6 +82,10 @@ impl Status for MyStatus {
     fn next() -> Self {
         Self::Next("default next called".to_string())
     }
+
+    fn is_next(&self) -> bool {
+        matches!(self, Self::Next(s) if s == "default next called")
+    }
 }
 
 // Enable the user to access our statuses.

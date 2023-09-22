@@ -43,6 +43,10 @@ impl Status for ReceiverStatus {
     fn next() -> Self {
         Self::Next
     }
+
+    fn is_next(&self) -> bool {
+        matches!(self, Self::Next)
+    }
 }
 
 impl std::fmt::Display for ReceiverStatus {

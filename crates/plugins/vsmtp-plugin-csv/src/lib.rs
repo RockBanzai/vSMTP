@@ -9,17 +9,12 @@
  *
  */
 
-//! # vSMTP CSV plugin
+//! # `vSMTP` CSV plugin
 
 #![doc(html_no_source)]
 #![deny(missing_docs)]
-#![deny(unsafe_code)]
+
 //
-#![warn(rust_2018_idioms)]
-#![warn(clippy::all)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
-#![warn(clippy::cargo)]
 
 mod api;
 

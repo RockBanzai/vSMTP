@@ -12,6 +12,11 @@ readme = "README.md"
 repository = "https://github.com/viridIT/vsmtp-plugin-sqlite"
 rust-version.workspace = true
 description = "A plugin for vSMTP that enable support for sqlite databases"
+license = "Elastic-2.0"
+license-file.workspace = true
+
+[lints]
+workspace = true
 
 [lib]
 crate-type = ["cdylib"]
@@ -30,4 +35,3 @@ r2d2 = { workspace = true }
 rhai = { workspace = true }
 rusqlite = { workspace = true }
 serde = { workspace = true }
-tracing = { workspace = true }

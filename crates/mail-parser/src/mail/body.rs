@@ -38,9 +38,10 @@ pub enum ParsedBody {
 
 impl ParsedBody {
     /// Get references on all attachments marked as binary or embedded.
+    #[must_use]
     pub fn attachments(&self) -> Vec<&mime::Mime> {
         match self {
-            ParsedBody::Mime(mime) => Self::get_attachment_from_mime(mime),
+            Self::Mime(mime) => Self::get_attachment_from_mime(mime),
             _ => vec![],
         }
     }
@@ -66,8 +67,8 @@ impl ParsedBody {
 impl std::fmt::Display for Body {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Body::Raw(raw) => write!(f, "{}", raw.join("")),
-            Body::Parsed(parsed) => match parsed {
+            Self::Raw(raw) => write!(f, "{}", raw.join("")),
+            Self::Parsed(parsed) => match parsed {
                 ParsedBody::Text(content) => {
                     for i in content {
                         if i.starts_with('.') {
@@ -90,22 +91,23 @@ impl std::fmt::Display for Body {
                 }
                 ParsedBody::Empty => Ok(()),
             },
-            Body::Empty => Ok(()),
+            Self::Empty => Ok(()),
         }
     }
 }
 
 impl Body {
     /// Return the body without any attachments.
+    #[must_use]
     pub fn to_string_without_attachments(&self) -> String {
         match self {
-            Body::Raw(raw) => raw.join(""),
-            Body::Parsed(parsed) => match parsed {
+            Self::Raw(raw) => raw.join(""),
+            Self::Parsed(parsed) => match parsed {
                 ParsedBody::Text(content) => content.join(""),
                 ParsedBody::Mime(content) => content.to_string_without_attachments_top_level(),
-                ParsedBody::Empty => Default::default(),
+                ParsedBody::Empty => String::default(),
             },
-            Body::Empty => Default::default(),
+            Self::Empty => String::default(),
         }
     }
 }

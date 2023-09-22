@@ -40,4 +40,8 @@ impl Status for WorkingStatus {
     fn next() -> Self {
         Self::Next
     }
+
+    fn is_next(&self) -> bool {
+        matches!(self, Self::Next)
+    }
 }

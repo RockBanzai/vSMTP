@@ -12,16 +12,15 @@
 use crate::{DirectiveError, Stage};
 
 /// "Hooks" used to identify when to run a batch of [`crate::Directives`].
-pub trait Status: std::fmt::Debug + Clone + PartialEq + Send + Sync + 'static {
-    /// The status to return when no rules are found
-    /// for a given stage.
+pub trait Status: std::fmt::Debug + Clone + Send + Sync + 'static {
+    /// The status to return when no rules are found for a given stage.
     fn no_rules(stage: impl Stage) -> Self;
 
-    /// The status to return when the Rhai engine
-    /// emits an error.
+    /// The status to return when the Rhai engine emits an error.
     fn error(context: DirectiveError) -> Self;
 
-    /// The status to return when the rule engine jumps
-    /// to the next directive.
+    /// The status to return when the rule engine jumps to the next directive.
     fn next() -> Self;
+
+    fn is_next(&self) -> bool;
 }

@@ -23,6 +23,8 @@ pub use mail_context::*;
 /// Inspect the transaction context.
 #[rhai::plugin::export_module]
 mod mail_context {
+    use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
+
     /// # rhai-autodocs:index:1
     #[rhai_fn(global, name = "to_debug", pure)]
     pub fn to_debug(ctx: &mut Ctx) -> String {
@@ -341,7 +343,7 @@ mod mail_context {
     /// # rhai-autodocs:index:11
     #[rhai_fn(global, name = "is_secured")]
     pub fn is_secured(ctx: &mut Ctx) -> bool {
-        ctx.read(|ctx| ctx.is_secured())
+        ctx.read(StatefulCtxReceived::is_secured)
     }
 
     /// Get the value of the `HELO/EHLO` command sent by the client.

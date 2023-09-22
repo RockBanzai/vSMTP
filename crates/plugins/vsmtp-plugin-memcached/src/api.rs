@@ -9,7 +9,10 @@
  *
  */
 
-use rhai::plugin::*;
+use rhai::plugin::{
+    mem, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext, PluginFunction,
+    RhaiResult, TypeId,
+};
 use rhai::Dynamic;
 use std::collections::HashMap;
 
@@ -19,8 +22,8 @@ pub struct MemcacheConnectionManager {
 }
 
 impl MemcacheConnectionManager {
-    pub fn new<C: memcache::Connectable>(target: C) -> MemcacheConnectionManager {
-        MemcacheConnectionManager {
+    pub fn new<C: memcache::Connectable>(target: C) -> Self {
+        Self {
             urls: target.get_urls(),
         }
     }
@@ -88,34 +91,34 @@ impl memcache::FromMemcacheValueExt for DbValue {
         let buffer = String::from_utf8(value)?;
 
         if let Ok(boolean) = buffer.parse::<bool>() {
-            return Ok(DbValue {
+            return Ok(Self {
                 value: Dynamic::from(boolean),
                 expiration: duration as rhai::INT,
                 cas_id: cas.map(|v| v as rhai::INT),
             });
         }
         if let Ok(integer) = buffer.parse::<i64>() {
-            return Ok(DbValue {
+            return Ok(Self {
                 value: Dynamic::from(integer),
                 expiration: duration as rhai::INT,
                 cas_id: cas.map(|v| v as rhai::INT),
             });
         }
         if let Ok(floating_point) = buffer.parse::<f64>() {
-            return Ok(DbValue {
+            return Ok(Self {
                 value: Dynamic::from(floating_point),
                 expiration: duration as rhai::INT,
                 cas_id: cas.map(|v| v as rhai::INT),
             });
         }
         if let Ok(unsigned_integer) = buffer.parse::<u64>() {
-            return Ok(DbValue {
+            return Ok(Self {
                 value: Dynamic::from(unsigned_integer),
                 expiration: duration as rhai::INT,
                 cas_id: cas.map(|v| v as rhai::INT),
             });
         }
-        Ok(DbValue {
+        Ok(Self {
             value: Dynamic::from(buffer),
             expiration: duration as rhai::INT,
             cas_id: cas.map(|v| v as rhai::INT),
@@ -149,18 +152,18 @@ impl memcache::FromMemcacheValueExt for Wrapper {
         let buffer = String::from_utf8(value)?;
 
         if let Ok(boolean) = buffer.parse::<bool>() {
-            return Ok(Wrapper(Dynamic::from(boolean)));
+            return Ok(Self(Dynamic::from(boolean)));
         }
         if let Ok(integer) = buffer.parse::<i64>() {
-            return Ok(Wrapper(Dynamic::from(integer)));
+            return Ok(Self(Dynamic::from(integer)));
         }
         if let Ok(floating_point) = buffer.parse::<f64>() {
-            return Ok(Wrapper(Dynamic::from(floating_point)));
+            return Ok(Self(Dynamic::from(floating_point)));
         }
         if let Ok(unsigned_integer) = buffer.parse::<u64>() {
-            return Ok(Wrapper(Dynamic::from(unsigned_integer)));
+            return Ok(Self(Dynamic::from(unsigned_integer)));
         }
-        Ok(Wrapper(Dynamic::from(buffer)))
+        Ok(Self(Dynamic::from(buffer)))
     }
 }
 
@@ -205,14 +208,16 @@ impl CacheConnector {
                 let result = client
                     .get::<DbValue>(key)
                     .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?;
-                match result {
-                    Some(result) => Ok(result),
-                    None => Ok(DbValue {
-                        value: Dynamic::UNIT,
-                        expiration: 0,
-                        cas_id: Some(0),
-                    }),
-                }
+                result.map_or_else(
+                    || {
+                        Ok(DbValue {
+                            value: Dynamic::UNIT,
+                            expiration: 0,
+                            cas_id: Some(0),
+                        })
+                    },
+                    Ok,
+                )
             }
             Err(e) => {
                 Err(e).map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?

@@ -1,4 +1,4 @@
-import "/etc/vsmtp/plugins/libvsmtp_clamav_plugin" as clamav;
+import "/etc/vsmtp/plugins/libvsmtp_plugin_clamav" as clamav;
 import "dkim-private-key" as dkim_private_key;
 
 const bridge = clamav::connect(#{

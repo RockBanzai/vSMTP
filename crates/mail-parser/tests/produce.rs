@@ -46,7 +46,7 @@ fn exclude_attachments() {
         raw.replace(
             "SUQsRmlyc3ROYW1lLExhc3ROYW1lLENvdW50cnkKMzQ4LEpvaG4sU3RpbGVzLENhbmFkYQo5MjM4\r\nOSxKaWUsTGl1LENoaW5hCjczNCxTaGlybGV5LFJvZHJpZ3VleixVbml0ZWQgU3RhdGVzCjI4OTMs\r\nQW5heWEsSXllbmdhcixJbmRpYQ==\r\n\r\n", ""
         )
-    )
+    );
 }
 
 #[test]

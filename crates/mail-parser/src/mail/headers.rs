@@ -41,6 +41,7 @@ impl Header {
     }
 
     /// Return the header as a string "name: body" without the CRLF bit.
+    #[must_use]
     pub fn to_string_without_crlf(&self) -> String {
         format!(
             "{}:{}",
@@ -85,7 +86,7 @@ impl DerefMut for Headers {
 
 impl std::fmt::Display for Headers {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for h in self.0.iter() {
+        for h in &self.0 {
             write!(f, "{}:{}", h.name, h.body)?;
         }
         Ok(())

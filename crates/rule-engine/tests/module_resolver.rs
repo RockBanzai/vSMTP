@@ -96,6 +96,10 @@ impl Status for MyStatus {
     fn next() -> Self {
         Self::Ok(None)
     }
+
+    fn is_next(&self) -> bool {
+        matches!(self, Self::Ok(None))
+    }
 }
 
 // Enable the user to access our statuses.

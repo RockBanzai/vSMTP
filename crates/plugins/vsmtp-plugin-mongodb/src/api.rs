@@ -10,7 +10,10 @@
  */
 
 use mongodb::{bson::Document, sync::Client};
-use rhai::plugin::*;
+use rhai::plugin::{
+    mem, Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult,
+    TypeId,
+};
 
 #[derive(Clone)]
 /// A mongodb connector.
@@ -59,7 +62,7 @@ impl MongodbCollection {
         let object_id = result.inserted_id.as_object_id();
         match object_id {
             Some(obj_id) => Ok(obj_id.to_hex()),
-            None => Ok(String::from("")),
+            None => Ok(String::new()),
         }
     }
 
@@ -67,7 +70,7 @@ impl MongodbCollection {
         &self,
         documents: rhai::Array,
     ) -> Result<Vec<String>, Box<rhai::EvalAltResult>> {
-        let v = documents.to_vec();
+        let v = documents;
         let v: Vec<Document> = v
             .iter()
             .map(|x| rhai::serde::from_dynamic::<Document>(x).unwrap_or_default())
@@ -97,7 +100,7 @@ impl MongodbCollection {
         &self,
         indexes: rhai::Array,
     ) -> Result<Vec<String>, Box<rhai::EvalAltResult>> {
-        let v = indexes.to_vec();
+        let v = indexes;
         let v: Vec<mongodb::IndexModel> = v
             .iter()
             .map(|x| rhai::serde::from_dynamic::<mongodb::IndexModel>(x).unwrap_or_default())

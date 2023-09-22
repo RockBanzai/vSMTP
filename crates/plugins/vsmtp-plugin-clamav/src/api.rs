@@ -230,7 +230,7 @@ pub mod clamav {
     ///
     /// ```js
     /// // Import the plugin.
-    /// import "plugins/libvsmtp_clamav_plugin" as clamav;
+    /// import "plugins/libvsmtp_plugin_clamav" as clamav;
     ///
     /// // Create a connection to clamd.
     /// export const bridge = clamav::connect(#{

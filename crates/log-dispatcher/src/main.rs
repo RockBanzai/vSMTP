@@ -266,7 +266,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .unwrap();
 
                 let level = event.level;
-                let target = event.target.clone();
+                let target = event.target;
                 let msg = get_msg(event);
                 match msg {
                     Ok(msg) => log(level, target, &msg),

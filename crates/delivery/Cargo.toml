@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 rust-version.workspace = true
+license = "Elastic-2.0"
+license-file.workspace = true
 
 [lints]
 workspace = true
@@ -47,10 +49,10 @@ path = "src/bin/mbox.rs"
 
 [[bin]]
 name = "vsmtp-forward"
-required-features = ["trust-dns-resolver"]
 path = "src/bin/forward.rs"
+required-features = ["trust-dns-resolver"]
 
 [[bin]]
 name = "vsmtp-basic"
-required-features = ["trust-dns-resolver"]
 path = "src/bin/basic.rs"
+required-features = ["trust-dns-resolver"]

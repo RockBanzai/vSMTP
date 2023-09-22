@@ -77,16 +77,14 @@ pub trait Config: serde::Serialize + serde::de::DeserializeOwned + Sized {
             );
         }
 
-        vec![
+        for (name, module) in [
             vsmtp_rhai_utils::crypto(),
             vsmtp_rhai_utils::env(),
             vsmtp_rhai_utils::process(),
             vsmtp_rhai_utils::time(),
-        ]
-        .into_iter()
-        .for_each(|(name, module)| {
+        ] {
             engine.register_static_module(name, module);
-        });
+        }
 
         let ast = engine.compile_into_self_contained(&rhai::Scope::new(), script)?;
 

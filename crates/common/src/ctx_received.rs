@@ -26,7 +26,6 @@ pub struct CtxReceived {
     pub rcpt_to: RcptToProps,
     pub complete: CompleteProps,
     #[dummy(faker = "MailFaker")]
-    #[serde(with = "crate::serde_helper::arc_rwlock")]
     pub mail: std::sync::Arc<std::sync::RwLock<Mail>>,
 }
 

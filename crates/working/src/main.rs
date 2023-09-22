@@ -183,9 +183,9 @@ impl Working {
         Ok(Self {
             config,
             conn,
+            channel,
             from_receiver,
             rule_engine_config,
-            channel,
         })
     }
 

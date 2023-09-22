@@ -38,7 +38,7 @@ impl Logs {
         "log".to_string()
     }
 
-    fn default_log_level() -> tracing_subscriber::filter::LevelFilter {
+    const fn default_log_level() -> tracing_subscriber::filter::LevelFilter {
         tracing_subscriber::filter::LevelFilter::WARN
     }
 
