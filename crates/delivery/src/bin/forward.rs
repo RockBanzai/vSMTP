@@ -14,7 +14,7 @@ use vsmtp_common::{
     ctx_delivery::CtxDelivery, delivery_attempt::DeliveryAttempt, delivery_route::DeliveryRoute,
 };
 use vsmtp_config::Config;
-use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, ShouldNotify};
+use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -40,14 +40,6 @@ impl DeliverySystem for Forward {
         }
     }
 
-    fn get_notification_supported() -> ShouldNotify {
-        ShouldNotify {
-            on_success: false,
-            on_failure: true,
-            on_delay: true,
-        }
-    }
-
     async fn deliver(
         self: Arc<Self>,
         CtxDelivery {
@@ -56,6 +48,7 @@ impl DeliverySystem for Forward {
             mail_from,
             rcpt_to,
             mail,
+            last_deliveries: _,
             attempt: _,
         }: &CtxDelivery,
     ) -> Vec<DeliveryAttempt> {

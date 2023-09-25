@@ -9,7 +9,6 @@
  *
  */
 
-use crate::delivery_attempt::Action;
 use crate::faker::MailFaker;
 use crate::{
     delivery_attempt::DeliveryAttempt, delivery_route::DeliveryRoute, faker::DeliveryRouteFaker,
@@ -27,6 +26,7 @@ pub struct CtxDelivery {
     pub rcpt_to: Vec<Recipient>,
     #[dummy(faker = "MailFaker")]
     pub mail: std::sync::Arc<std::sync::RwLock<Mail>>,
+    pub last_deliveries: Vec<DeliveryAttempt>,
     pub attempt: Vec<DeliveryAttempt>,
 }
 
@@ -43,6 +43,7 @@ impl CtxDelivery {
             mail_from,
             rcpt_to,
             mail,
+            last_deliveries: vec![],
             attempt: vec![],
         }
     }
@@ -53,25 +54,36 @@ impl CtxDelivery {
         std::time::Duration::from_secs((self.attempt.len() * 10).try_into().unwrap())
     }
 
+    pub fn get_undelivered_rcpt(&self) -> impl Iterator<Item = &Recipient> {
+        fn recipient_attempt_is_successful(attempt: &DeliveryAttempt, rcpt: &Recipient) -> bool {
+            attempt
+                .get_rcpt_index(rcpt)
+                .is_some_and(|rcpt_idx| attempt.get_action(rcpt_idx).is_successful())
+        }
+
+        self.rcpt_to.iter().filter(|rcpt| {
+            !self
+                .attempt
+                .iter()
+                .rev()
+                .any(|attempt| recipient_attempt_is_successful(attempt, rcpt))
+        })
+    }
+
     #[must_use]
     pub fn get_last_delivery_attempt_of_rcpt(
         &self,
         recipient: &Recipient,
     ) -> Option<(&DeliveryAttempt, usize)> {
-        self.attempt
+        self.last_deliveries
             .iter()
-            .rev()
             .find_map(|attempt| attempt.get_rcpt_index(recipient).map(|idx| (attempt, idx)))
     }
 
     /// A message is fully delivered if all recipients have been delivered successfully
     #[must_use]
     pub fn is_fully_delivered(&self) -> bool {
-        !self.rcpt_to.iter().any(|rcpt| {
-            self.get_last_delivery_attempt_of_rcpt(rcpt)
-                .map(|(attempt, idx)| attempt.get_action(idx))
-                .is_some_and(|outcome| !matches!(outcome, Action::Delivered | Action::Relayed))
-        })
+        self.get_undelivered_rcpt().count() == 0
     }
 
     pub fn to_json(&self) -> Result<Vec<u8>, DeserializeError> {

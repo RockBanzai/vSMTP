@@ -25,7 +25,7 @@ use vsmtp_common::{
     api::{write_to_dead, write_to_deferred, write_to_report_dsn},
     broker::{Exchange, Queue},
     ctx_delivery::CtxDelivery,
-    delivery_attempt::{Action, DeliveryAttempt},
+    delivery_attempt::{Action, DeliveryAttempt, ShouldNotify},
     delivery_route::DeliveryRoute,
 };
 use vsmtp_config::Config;
@@ -40,27 +40,13 @@ pub enum DeliveryOutcome {
     Dead,
 }
 
-#[derive(Clone, Copy)]
-pub struct ShouldNotify {
-    pub on_success: bool,
-    pub on_failure: bool,
-    pub on_delay: bool,
-}
-
 /// Quick check to determine if the delivery method should produce a DSN,
 /// based on the delivery attempts, the notification supported by the delivery method and the
 /// notification parameters requested for each recipients.
 ///
 /// Return true if only one recipient should produce a DSN.
 #[allow(clippy::cognitive_complexity)] // tracing
-fn should_produce_dsn(
-    attempts: &[DeliveryAttempt],
-    ShouldNotify {
-        on_success,
-        on_failure,
-        on_delay,
-    }: ShouldNotify,
-) -> bool {
+fn should_produce_dsn(attempts: &[DeliveryAttempt]) -> bool {
     for attempt in attempts {
         for (idx, rcpt) in attempt.recipients().enumerate() {
             match rcpt.notify_on {
@@ -70,9 +56,15 @@ fn should_produce_dsn(
                     failure,
                     delay,
                 } => match attempt.get_action(idx) {
-                    Action::Failed { .. } if failure && on_failure => return true,
-                    Action::Delayed { .. } if delay && on_delay => return true,
-                    Action::Delivered if success && on_success => return true,
+                    Action::Failed { .. } if failure && attempt.should_notify.on_failure => {
+                        return true
+                    }
+                    Action::Delayed { .. } if delay && attempt.should_notify.on_delay => {
+                        return true
+                    }
+                    Action::Delivered if success && attempt.should_notify.on_success => {
+                        return true
+                    }
                     // TODO:
                     Action::Relayed => todo!(),
                     Action::Expanded => todo!(),
@@ -95,22 +87,26 @@ pub trait DeliverySystem: Send + Sync {
         std::time::Duration::ZERO
     }
 
-    #[must_use]
-    fn get_notification_supported() -> ShouldNotify;
-
     #[tracing::instrument(skip_all, fields(
         uuid = ?ctx.uuid.to_string()[0..8],
         retry = ctx.attempt.len()),
     )]
     async fn do_delivery(self: Arc<Self>, channel: &lapin::Channel, mut ctx: CtxDelivery) {
         let attempts = self.deliver(&ctx).await;
+        ctx.last_deliveries = attempts;
 
-        let should_produce_dsn = should_produce_dsn(&attempts, Self::get_notification_supported());
+        let should_produce_dsn = should_produce_dsn(&ctx.last_deliveries);
+        if should_produce_dsn {
+            tracing::debug!("Message should produce DSN, emitting a report request");
+            write_to_report_dsn(channel, &ctx).await;
+        } else {
+            tracing::debug!("Message should not produce DSN");
+        }
+        let last_deliveries = std::mem::take(&mut ctx.last_deliveries);
+        ctx.attempt.extend(last_deliveries);
 
-        ctx.attempt.extend(attempts);
         // FIXME: how to determine the correct threshold?
         // one domain will produce one attempt, meaning mails with multiple domains will inevitably reach this threshold
-
         let status = if ctx.is_fully_delivered() {
             DeliveryOutcome::Success
         } else if ctx.attempt.len() > 10 {
@@ -118,13 +114,6 @@ pub trait DeliverySystem: Send + Sync {
         } else {
             DeliveryOutcome::Delayed
         };
-
-        if should_produce_dsn {
-            tracing::debug!("Message should produce DSN, emitting a report query");
-            write_to_report_dsn(channel, ctx.to_json().unwrap()).await;
-        } else {
-            tracing::debug!("Message should not produce DSN");
-        }
 
         match status {
             DeliveryOutcome::Success => {

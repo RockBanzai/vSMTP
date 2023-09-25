@@ -10,11 +10,11 @@
  */
 
 use std::sync::Arc;
-use vsmtp_common::delivery_attempt::{DeliveryAttempt, LocalInformation};
+use vsmtp_common::delivery_attempt::{DeliveryAttempt, LocalInformation, ShouldNotify};
 use vsmtp_common::libc::{chown, getpwuid};
 use vsmtp_common::{ctx_delivery::CtxDelivery, delivery_route::DeliveryRoute, uuid};
 use vsmtp_config::Config;
-use vsmtp_delivery::{delivery_main, DeliverySystem, ShouldNotify};
+use vsmtp_delivery::{delivery_main, DeliverySystem};
 use vsmtp_protocol::Address;
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
@@ -132,18 +132,20 @@ impl Maildir {
     }
 }
 
+const fn get_notification_supported() -> ShouldNotify {
+    ShouldNotify {
+        on_success: true,
+        on_failure: true,
+        on_delay: true,
+        on_expanded: false,
+        on_relayed: false,
+    }
+}
+
 #[async_trait::async_trait]
 impl DeliverySystem for Maildir {
     fn routing_key(&self) -> DeliveryRoute {
         DeliveryRoute::Maildir
-    }
-
-    fn get_notification_supported() -> ShouldNotify {
-        ShouldNotify {
-            on_success: true,
-            on_failure: true,
-            on_delay: true,
-        }
     }
 
     async fn deliver(self: Arc<Self>, ctx: &CtxDelivery) -> Vec<DeliveryAttempt> {
@@ -164,17 +166,23 @@ impl DeliverySystem for Maildir {
                     attempt.push(DeliveryAttempt::new_local(
                         i.clone(),
                         LocalInformation::NotFound,
+                        get_notification_supported(),
                     ));
                 }
                 Some(Err(e)) => {
                     tracing::error!(user, "Error while writing maildir: {}", e);
-                    attempt.push(DeliveryAttempt::new_local(i.clone(), e.into()));
+                    attempt.push(DeliveryAttempt::new_local(
+                        i.clone(),
+                        e.into(),
+                        get_notification_supported(),
+                    ));
                 }
                 Some(Ok(())) => {
                     tracing::info!(user, "Message written to maildir successfully");
                     attempt.push(DeliveryAttempt::new_local(
                         i.clone(),
                         LocalInformation::Success,
+                        get_notification_supported(),
                     ));
                 }
             };

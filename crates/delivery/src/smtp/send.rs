@@ -12,7 +12,9 @@
 use super::{Context, SenderHandler};
 use crate::smtp::Sender;
 use vsmtp_common::{
-    delivery_attempt::{DeliveryAttempt, RemoteInformation, RemoteMailExchange, RemoteServer},
+    delivery_attempt::{
+        DeliveryAttempt, RemoteInformation, RemoteMailExchange, RemoteServer, ShouldNotify,
+    },
     extensions::Extension,
     response,
     stateful_ctx_received::MailFromProps,
@@ -27,6 +29,7 @@ struct Handler {
     mail_from: MailFromProps,
     rcpt_to: Vec<Recipient>,
     remote_output: RemoteInformation,
+    should_notify: ShouldNotify,
 }
 
 #[async_trait::async_trait]
@@ -100,7 +103,11 @@ impl SenderHandler for Handler {
     }
 
     fn get_result(&mut self) -> DeliveryAttempt {
-        DeliveryAttempt::new_smtp(self.rcpt_to.clone(), self.remote_output.finalize())
+        DeliveryAttempt::new_smtp(
+            self.rcpt_to.clone(),
+            self.remote_output.finalize(),
+            self.should_notify.clone(),
+        )
     }
 }
 
@@ -141,6 +148,14 @@ pub async fn send(
                 target: RemoteServer {
                     ip_addr: remote_addr,
                 },
+            },
+            should_notify: ShouldNotify {
+                // false only if the DSN has been transferred to the next hop
+                on_success: false,
+                on_failure: true,
+                on_delay: true,
+                on_expanded: false,
+                on_relayed: false,
             },
         },
     );

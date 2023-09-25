@@ -19,28 +19,50 @@ pub use self::remote_information::{RemoteInformation, RemoteMailExchange, Remote
 
 pub struct Status(pub String);
 
+// NOTE: should be implemented as a bitmask
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
+pub struct ShouldNotify {
+    pub on_success: bool,
+    pub on_failure: bool,
+    pub on_delay: bool,
+    pub on_expanded: bool,
+    pub on_relayed: bool,
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct DeliveryAttempt {
     // a list a rcpt which this delivery concerns,
     // NOTE: could be Vec<&>, but it is annoying to handle the lifetime
     rcpt_to: Vec<Recipient>,
     delivery_type: DeliveryType,
+    pub should_notify: ShouldNotify,
 }
 
 impl DeliveryAttempt {
     #[must_use]
-    pub fn new_smtp(rcpt_to: Vec<Recipient>, remote_info: RemoteInformation) -> Self {
+    pub fn new_smtp(
+        rcpt_to: Vec<Recipient>,
+        remote_info: RemoteInformation,
+        should_notify: ShouldNotify,
+    ) -> Self {
         Self {
             rcpt_to,
             delivery_type: DeliveryType::RemoteSmtp(Box::new(remote_info)),
+            should_notify,
         }
     }
 
     #[must_use]
-    pub fn new_local(rcpt_to: Recipient, local_info: LocalInformation) -> Self {
+    pub fn new_local(
+        rcpt_to: Recipient,
+        local_info: LocalInformation,
+        should_notify: ShouldNotify,
+    ) -> Self {
         Self {
             rcpt_to: vec![rcpt_to],
             delivery_type: DeliveryType::Local(local_info),
+            should_notify,
         }
     }
 
@@ -92,6 +114,13 @@ pub enum Action {
     Delivered,
     Relayed,
     Expanded,
+}
+
+impl Action {
+    #[must_use]
+    pub const fn is_successful(&self) -> bool {
+        matches!(self, Self::Delivered | Self::Relayed | Self::Expanded)
+    }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, fake::Dummy)]

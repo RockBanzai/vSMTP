@@ -11,14 +11,14 @@
 
 use vsmtp_common::{
     ctx_delivery::CtxDelivery,
-    delivery_attempt::{DeliveryAttempt, RemoteInformation, RemoteMailExchange},
+    delivery_attempt::{DeliveryAttempt, RemoteInformation, RemoteMailExchange, ShouldNotify},
     delivery_route::DeliveryRoute,
     dns_resolver::DnsResolver,
     stateful_ctx_received::MailFromProps,
     Recipient,
 };
 use vsmtp_config::Config;
-use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, ShouldNotify};
+use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem};
 use vsmtp_protocol::Domain;
 
 /// The [`Basic`] implementation of the delivery system.
@@ -40,6 +40,17 @@ struct Basic {
     logs: vsmtp_config::Logs,
     #[serde(skip)]
     path: std::path::PathBuf,
+}
+
+const fn get_notification_supported() -> ShouldNotify {
+    ShouldNotify {
+        // false only if the DSN has been transferred to the next hop
+        on_success: false,
+        on_failure: true,
+        on_delay: true,
+        on_expanded: false,
+        on_relayed: false,
+    }
 }
 
 impl Basic {
@@ -68,6 +79,7 @@ impl Basic {
                 return DeliveryAttempt::new_smtp(
                     rcpt_to.into_iter().cloned().collect::<Vec<_>>(),
                     RemoteInformation::MxLookupError { error: e.into() },
+                    get_notification_supported(),
                 );
             }
             // TODO: handle other dns errors
@@ -94,6 +106,7 @@ impl Basic {
                         },
                         error: e.into(),
                     },
+                    get_notification_supported(),
                 );
             }
         };
@@ -119,26 +132,9 @@ impl DeliverySystem for Basic {
         DeliveryRoute::Basic
     }
 
-    fn get_notification_supported() -> ShouldNotify {
-        ShouldNotify {
-            // false only if the DSN has been transferred to the next hop
-            on_success: false,
-            on_failure: true,
-            on_delay: true,
-        }
-    }
+    async fn deliver(self: std::sync::Arc<Self>, ctx: &CtxDelivery) -> Vec<DeliveryAttempt> {
+        let rcpt_to = ctx.get_undelivered_rcpt();
 
-    async fn deliver(
-        self: std::sync::Arc<Self>,
-        CtxDelivery {
-            uuid: _,
-            routing_key: _,
-            mail_from,
-            rcpt_to,
-            mail,
-            attempt: _,
-        }: &CtxDelivery,
-    ) -> Vec<DeliveryAttempt> {
         let mut rcpt_by_domain = std::collections::HashMap::<Domain, Vec<&Recipient>>::new();
         for i in rcpt_to {
             #[allow(clippy::option_if_let_else)]
@@ -149,10 +145,10 @@ impl DeliverySystem for Basic {
             }
         }
 
-        let mail = mail.read().unwrap().to_string();
+        let mail = ctx.mail.read().unwrap().to_string();
 
         let deliveries = rcpt_by_domain.into_iter().map(|(domain, rcpt_to)| {
-            self.send_to_one_domain(domain, mail_from.clone(), rcpt_to, mail.as_bytes())
+            self.send_to_one_domain(domain, ctx.mail_from.clone(), rcpt_to, mail.as_bytes())
         });
 
         futures_util::future::join_all(deliveries).await

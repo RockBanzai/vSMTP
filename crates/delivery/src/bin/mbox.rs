@@ -14,7 +14,7 @@ use vsmtp_common::{
     ctx_delivery::CtxDelivery, delivery_attempt::DeliveryAttempt, delivery_route::DeliveryRoute,
 };
 use vsmtp_config::Config;
-use vsmtp_delivery::{delivery_main, DeliverySystem, ShouldNotify};
+use vsmtp_delivery::{delivery_main, DeliverySystem};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -24,14 +24,6 @@ struct Mbox {}
 impl DeliverySystem for Mbox {
     fn routing_key(&self) -> DeliveryRoute {
         DeliveryRoute::Mbox
-    }
-
-    fn get_notification_supported() -> ShouldNotify {
-        ShouldNotify {
-            on_success: true,
-            on_failure: true,
-            on_delay: true,
-        }
     }
 
     async fn deliver(self: Arc<Self>, _: &CtxDelivery) -> Vec<DeliveryAttempt> {
