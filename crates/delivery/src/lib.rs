@@ -25,7 +25,7 @@ use vsmtp_common::{
     api::{write_to_dead, write_to_deferred, write_to_report_dsn},
     broker::{Exchange, Queue},
     ctx_delivery::CtxDelivery,
-    delivery_attempt::{Action, DeliveryAttempt, ShouldNotify},
+    delivery_attempt::{Action, DeliveryAttempt},
     delivery_route::DeliveryRoute,
 };
 use vsmtp_config::Config;

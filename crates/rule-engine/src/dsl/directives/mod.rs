@@ -124,8 +124,16 @@ pub fn directives_try_from(value: rhai::Dynamic, stage: Option<&impl Stage>) -> 
 
 impl From<DirectiveError> for Box<rhai::EvalAltResult> {
     fn from(value: DirectiveError) -> Self {
-        Self::new(rhai::EvalAltResult::ErrorParsing(
-            rhai::ParseErrorType::MalformedInExpr(value.kind.to_string()),
+        Self::new(rhai::EvalAltResult::ErrorInFunctionCall(
+            value.directive.unwrap_or("unknown directive".to_string()),
+            String::default(),
+            match value.kind {
+                error::DirectiveErrorKind::Compile(r)
+                | error::DirectiveErrorKind::GetRulesRuntime(r)
+                | error::DirectiveErrorKind::Runtime(r) => r,
+                error::DirectiveErrorKind::Read(error) => error.to_string().into(),
+                error::DirectiveErrorKind::Parse(error) => error.to_string().into(),
+            },
             rhai::Position::NONE,
         ))
     }
