@@ -223,7 +223,7 @@ dependencies = [
  "num-traits",
  "rusticata-macros",
  "thiserror",
- "time 0.3.28",
+ "time 0.3.29",
 ]
 
 [[package]]
@@ -587,7 +587,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "time 0.3.28",
+ "time 0.3.29",
  "uuid",
 ]
 
@@ -1336,7 +1336,7 @@ checksum = "9af7b0c58ac9d03169e27f080616ce9f64004edca3d2ef4147a811c21b23b319"
 dependencies = [
  "dummy",
  "rand",
- "time 0.3.28",
+ "time 0.3.29",
  "unidecode",
  "uuid",
 ]
@@ -2439,7 +2439,7 @@ dependencies = [
  "smallvec",
  "subprocess",
  "thiserror",
- "time 0.3.28",
+ "time 0.3.29",
  "uuid",
 ]
 
@@ -3769,7 +3769,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with_macros 3.3.0",
- "time 0.3.28",
+ "time 0.3.29",
 ]
 
 [[package]]
@@ -4159,9 +4159,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.28"
+version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17f6bb557fd245c28e6411aa56b6403c689ad95061f50e4be16c274e70a17e48"
+checksum = "426f806f4089c493dcac0d24c29c01e2c38baf8e30f1b716ee37e83d200b18fe"
 dependencies = [
  "deranged",
  "itoa",
@@ -4172,15 +4172,15 @@ dependencies = [
 
 [[package]]
 name = "time-core"
-version = "0.1.1"
+version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7300fbefb4dadc1af235a9cef3737cea692a9d97e1b9cbcd4ebdae6f8868e6fb"
+checksum = "ef927ca75afb808a4d64dd374f00a2adf8d0fcff8e7b184af886c3c87ec4a3f3"
 
 [[package]]
 name = "time-macros"
-version = "0.2.14"
+version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a942f44339478ef67935ab2bbaec2fb0322496cf3cbe84b261e06ac3814c572"
+checksum = "4ad70d68dba9e1f8aceda7aa6711965dfec1cac869f311a51bd08b3a2ccbce20"
 dependencies = [
  "time-core",
 ]
@@ -4336,7 +4336,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09d48f71a791638519505cefafe162606f706c25592e4bde4d97600c0195312e"
 dependencies = [
  "crossbeam-channel",
- "time 0.3.28",
+ "time 0.3.29",
  "tracing-subscriber",
 ]
 
@@ -4775,7 +4775,7 @@ dependencies = [
  "serde_with 3.3.0",
  "strum",
  "thiserror",
- "time 0.3.28",
+ "time 0.3.29",
  "tracing",
  "trust-dns-resolver 0.23.0",
  "uuid",
@@ -5006,7 +5006,7 @@ dependencies = [
  "serde_with 3.3.0",
  "strum",
  "thiserror",
- "time 0.3.28",
+ "time 0.3.29",
  "tokio",
  "tokio-rustls 0.24.1",
  "tokio-stream",
@@ -5033,7 +5033,7 @@ dependencies = [
  "serde_json",
  "serde_with 3.3.0",
  "thiserror",
- "time 0.3.28",
+ "time 0.3.29",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -5058,7 +5058,7 @@ dependencies = [
  "ring-compat",
  "rsa",
  "serde",
- "time 0.3.28",
+ "time 0.3.29",
  "tracing",
  "uzers",
  "vsmtp-auth",
@@ -5084,7 +5084,7 @@ dependencies = [
  "serde_with 3.3.0",
  "strum",
  "thiserror",
- "time 0.3.28",
+ "time 0.3.29",
  "tokio",
  "tracing",
  "uuid",
@@ -5519,7 +5519,7 @@ dependencies = [
  "oid-registry",
  "rusticata-macros",
  "thiserror",
- "time 0.3.28",
+ "time 0.3.29",
 ]
 
 [[package]]
