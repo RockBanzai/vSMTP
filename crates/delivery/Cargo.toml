@@ -38,6 +38,7 @@ vsmtp-common = { workspace = true }
 vsmtp-config = { workspace = true }
 vsmtp-mail-parser = { workspace = true }
 vsmtp-protocol = { workspace = true }
+webpki-roots = { workspace = true }
 
 [[bin]]
 name = "vsmtp-maildir"

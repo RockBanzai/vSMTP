@@ -30,6 +30,7 @@ tokio-stream = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 trust-dns-proto = { workspace = true }
 uuid = { workspace = true }
+fake = { workspace = true }
 
 [dependencies.tokio]
 workspace = true

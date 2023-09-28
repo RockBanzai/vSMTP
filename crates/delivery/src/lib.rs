@@ -14,7 +14,6 @@ pub mod smtp {
     mod handler;
     mod send;
 
-    pub use exchange::Sender;
     pub use handler::{Context, SenderHandler};
     pub use send::send;
 }
@@ -33,6 +32,8 @@ use vsmtp_protocol::NotifyOn;
 
 mod frequency;
 pub use frequency::Frequency;
+mod tls;
+pub use tls::{Requirement, Tls};
 
 pub enum DeliveryOutcome {
     Success,

@@ -669,7 +669,7 @@ impl Handler {
                     if self.config.tls.is_some() {
                         Some(format!("250-{}\r\n", Extension::StartTls))
                     } else {
-                        tracing::warn!("STARTTLS is enabled but, TLS is not configured");
+                        tracing::warn!("STARTTLS is enabled but TLS is not configured");
                         None
                     }
                 } else {

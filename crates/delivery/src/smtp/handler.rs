@@ -24,6 +24,11 @@ impl Context {
     }
 }
 
+pub enum UpgradeTls {
+    Yes,
+    No,
+}
+
 #[async_trait::async_trait]
 pub trait SenderHandler {
     // NOTE: noop response could be parsed by the sender, so ill-formed response are not a problem
@@ -53,15 +58,17 @@ pub trait SenderHandler {
     async fn on_greetings(&mut self, reply: Reply) -> Result<(), Delivery>;
 
     fn get_client_name(&self) -> ClientName;
+    fn get_sni(&self) -> vsmtp_protocol::rustls::ServerName;
     fn get_message(&self) -> Vec<u8>;
     fn get_mail_from(&self) -> MailFromProps;
     fn get_rcpt_to(&self) -> Vec<Recipient>;
+    fn get_tls_connector(&self) -> &vsmtp_protocol::tokio_rustls::TlsConnector;
 
     async fn on_ehlo(
         &mut self,
         response: response::Ehlo,
         context: &mut Context,
-    ) -> Result<(), Delivery>;
+    ) -> Result<UpgradeTls, Delivery>;
 
     fn has_extension(&self, extension: Extension) -> bool;
 

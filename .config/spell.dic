@@ -88,6 +88,7 @@ Mbox
 memcached
 memchr
 metadata
+Modzilla
 mongodb
 multipart
 Multipart
@@ -143,6 +144,7 @@ servername
 sharable
 smallvec
 smtp
+spki
 splitn
 sqlite
 SQLite
@@ -173,6 +175,7 @@ viaspf
 vsmtp
 vSMTP
 walkdir
+webpki
 whitelist
 whitelisted
 whitelists

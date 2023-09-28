@@ -99,7 +99,7 @@ pub enum Queuer {
 }
 
 /// Errors produced by a SMTP exchange
-#[derive(Debug, Clone, thiserror::Error, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, thiserror::Error, serde::Serialize, serde::Deserialize, fake::Dummy)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "testing", derive(PartialEq, Eq))]
 pub enum Delivery {
@@ -140,16 +140,17 @@ pub enum Delivery {
         with_source: Option<String>,
     },
 
-    /// Error caused by the TLS
+    /// Error caused by STARTTLS.
+    #[error("starttls was required but the server does not provide this extension")]
+    StartTls,
+
+    /// Error caused by TLS.
     #[error("tls: {}",
         with_source
             .as_ref()
             .map_or("null", String::as_str)
     )]
-    Tls {
-        /// The source of the error
-        with_source: Option<String>,
-    },
+    Tls { with_source: Option<String> },
 
     /// Internal error of the client
     #[error("client: {}",

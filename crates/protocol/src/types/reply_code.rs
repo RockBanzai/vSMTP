@@ -10,7 +10,7 @@
  */
 
 /// Codes as the start of each lines of a reply
-#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Deserialize, serde::Serialize, fake::Dummy)]
 #[serde(untagged)]
 pub enum ReplyCode {
     /// simple Reply Code as defined in RFC5321

@@ -14,14 +14,15 @@ use vsmtp_common::{
     ctx_delivery::CtxDelivery, delivery_attempt::DeliveryAttempt, delivery_route::DeliveryRoute,
 };
 use vsmtp_config::Config;
-use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem};
+use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, Tls};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Forward {
+    api_version: vsmtp_config::semver::VersionReq,
     service: String,
     target: url::Url,
-    api_version: vsmtp_config::semver::VersionReq,
+    tls: Tls,
     #[serde(default)]
     queues: vsmtp_config::Queues,
     #[serde(default)]
@@ -56,14 +57,27 @@ impl DeliverySystem for Forward {
 
         assert!(self.target.scheme() == "smtp");
 
+        let target = self.target.host_str().unwrap();
+        let sni = <trust_dns_resolver::Name as std::str::FromStr>::from_str(target).unwrap_or_else(
+            |_| {
+                rcpt_to
+                    .first()
+                    .expect("there is always at least one recipient")
+                    .forward_path
+                    .domain()
+            },
+        );
+
         vec![
             send(
-                self.target.host_str().unwrap(),
+                target,
+                sni,
                 self.target.port().unwrap_or(25),
                 &hostname::get().unwrap().to_string_lossy(),
                 mail_from.clone(),
                 rcpt_to.clone(),
                 message_str.as_bytes(),
+                &self.tls,
             )
             .await,
         ]
@@ -80,6 +94,7 @@ impl Config for Forward {
             broker: vsmtp_config::Broker::default(),
             logs: vsmtp_config::Logs::default(),
             path: std::path::PathBuf::default(),
+            tls: Tls::default(),
         })
     }
 

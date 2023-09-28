@@ -18,7 +18,7 @@ use vsmtp_common::{
     Recipient,
 };
 use vsmtp_config::Config;
-use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem};
+use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, Tls};
 use vsmtp_protocol::Domain;
 
 /// The [`Basic`] implementation of the delivery system.
@@ -30,8 +30,9 @@ use vsmtp_protocol::Domain;
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Basic {
-    dns: DnsResolver,
     api_version: vsmtp_config::semver::VersionReq,
+    dns: DnsResolver,
+    tls: Tls,
     #[serde(default)]
     queues: vsmtp_config::Queues,
     #[serde(default)]
@@ -68,7 +69,7 @@ impl Basic {
         rcpt_to: Vec<&Recipient>,
         mail: &[u8],
     ) -> DeliveryAttempt {
-        let mxs = match self.dns.resolver.mx_lookup(domain).await {
+        let mxs = match self.dns.resolver.mx_lookup(domain.clone()).await {
             Ok(records) => records,
             Err(e)
                 if matches!(
@@ -116,11 +117,13 @@ impl Basic {
 
         send(
             &ip.to_string(),
+            domain,
             25,
             &hostname::get().unwrap().to_string_lossy(),
             mail_from.clone(),
             rcpt_to.into_iter().cloned().collect::<Vec<_>>(),
             mail,
+            &self.tls,
         )
         .await
     }
@@ -164,6 +167,7 @@ impl Config for Basic {
             broker: vsmtp_config::Broker::default(),
             logs: vsmtp_config::Logs::default(),
             path: std::path::PathBuf::default(),
+            tls: Tls::default(),
         })
     }
 

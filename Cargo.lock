@@ -4827,6 +4827,7 @@ dependencies = [
  "vsmtp-config",
  "vsmtp-mail-parser",
  "vsmtp-protocol",
+ "webpki-roots 0.25.2",
 ]
 
 [[package]]
@@ -4995,6 +4996,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.4",
  "bytes",
+ "fake",
  "humantime",
  "memchr",
  "pretty_assertions",

@@ -27,11 +27,11 @@ enum UserLookup {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 struct Maildir {
+    api_version: vsmtp_config::semver::VersionReq,
     #[serde(default, with = "option_group")]
     group_local: Option<uzers::Group>,
     #[serde(default)]
     user_lookup: UserLookup,
-    api_version: vsmtp_config::semver::VersionReq,
     #[serde(default)]
     queues: vsmtp_config::Queues,
     #[serde(default)]

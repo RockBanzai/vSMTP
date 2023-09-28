@@ -13,6 +13,7 @@ use super::{Action, DnsLookupError, Status};
 use crate::faker::IpFaker;
 use crate::faker::NameFaker;
 use crate::faker::ReplyFaker;
+use crate::transfer_error::Delivery;
 use crate::{extensions::Extension, response};
 use vsmtp_protocol::Domain;
 use vsmtp_protocol::Reply;
@@ -37,6 +38,15 @@ pub struct RemoteServer {
 /// These information are received step by step during the delivery, so it is represented as an enum.
 #[derive(Debug, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub enum RemoteInformation {
+    ConnectError {
+        error: String,
+    },
+    StartTlsError {
+        error: Delivery,
+    },
+    TlsError {
+        error: Delivery,
+    },
     MxLookupError {
         error: DnsLookupError,
     },
@@ -122,6 +132,9 @@ pub enum RemoteInformation {
 impl From<(&RemoteInformation, usize)> for Status {
     fn from((value, idx): (&RemoteInformation, usize)) -> Self {
         match value {
+            RemoteInformation::ConnectError { .. } => todo!(),
+            RemoteInformation::TlsError { .. } => todo!(),
+            RemoteInformation::StartTlsError { .. } => todo!(),
             RemoteInformation::MxLookup { mx: _, error }
             | RemoteInformation::MxLookupError { error } => error.into(),
             RemoteInformation::IpLookup { .. } => todo!(),
@@ -153,6 +166,8 @@ impl RemoteInformation {
     pub(super) fn get_action(&self, rcpt_idx: usize) -> Action {
         match self {
             Self::MxLookupError { .. }
+            | Self::ConnectError { .. }
+            | Self::TlsError { .. }
             | Self::MxLookup { .. }
             | Self::IpLookup { .. }
             | Self::Greetings { .. }
@@ -162,6 +177,11 @@ impl RemoteInformation {
             | Self::Data { .. } => Action::Delayed {
                 diagnostic_code: None,
                 will_retry_until: None,
+            },
+            // No need to retry, the server does not support starttls and it is required.
+            // FIXME: should have a "do not retry" action.
+            Self::StartTlsError { error } => Action::Failed {
+                diagnostic_code: Some(error.to_string()),
             },
             Self::DataEnd {
                 rcpt_to, data_end, ..
@@ -179,7 +199,7 @@ impl RemoteInformation {
                 }
 
                 // NOTE: the other reply of the transaction are not checked, because a non 2xx reply code
-                // would have been handled by the elsewhere
+                // would have been handled elsewhere.
                 match data_end.code().value() / 100 {
                     2 => Action::Delivered,
                     4 => Action::Delayed {
@@ -229,6 +249,9 @@ impl RemoteInformation {
     const fn get_ehlo(&self) -> Option<&response::Ehlo> {
         match self {
             Self::IpLookup { .. }
+            | Self::ConnectError { .. }
+            | Self::StartTlsError { .. }
+            | Self::TlsError { .. }
             | Self::MxLookup { .. }
             | Self::MxLookupError { .. }
             | Self::Greetings { .. } => None,
