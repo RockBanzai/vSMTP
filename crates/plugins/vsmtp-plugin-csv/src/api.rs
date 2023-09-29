@@ -157,7 +157,7 @@ impl Csv {
 #[derive(Debug, serde::Deserialize)]
 pub struct CsvDatabaseParameters {
     /// Path to the csv file.
-    pub connector: std::path::PathBuf,
+    pub path: std::path::PathBuf,
     /// Write & read access modes.
     #[serde(default)]
     pub access: AccessMode,
@@ -178,6 +178,47 @@ pub mod csv_api {
 
     type CsvFile = rhai::Shared<Csv>;
 
+    /// Open a CSV file.
+    ///
+    /// # Parameters
+    ///
+    /// a map composed of the following parameters:
+    /// - `path` (default):                 Path to the CSV file.
+    /// - `access` (default: "O_RDWR"):     Access mode to the file. ("O_RDONLY", "O_WRONLY" or "O_RDWR")
+    /// - `refresh` (default: "always"):    Refresh policy of the file. ("always" or "no")
+    ///                                     Always means that the contents of the file are refreshed every time a
+    ///                                     query is issued.
+    /// - `delimiter` (default: ','):       Delimiter used to separated fields in the file.
+    ///
+    /// # SMTP stages
+    ///
+    /// from any stage.
+    ///
+    /// # Return
+    ///
+    /// A CSV file handle.
+    ///
+    /// # Errors
+    ///
+    /// * Parameters are incorrect.
+    /// * Failed to open the file.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// // Import the plugin.
+    /// import "plugins/libvsmtp_plugin_csv" as csv;
+    ///
+    /// // Create a connection to clamd.
+    /// export const bridge = csv::file(#{
+    ///     path:      "/var/db/clients.csv",
+    ///     access:    "O_RDONLY",
+    ///     refresh:   "always",
+    ///     // The delimiter is a character, so use Rhai single-quotes here.
+    ///     delimiter: '|',
+    /// });
+    /// ```
+    ///
     /// # rhai-autodocs:index:1
     #[rhai_fn(global, return_raw)]
     pub fn file(parameters: rhai::Map) -> Result<CsvFile, Box<rhai::EvalAltResult>> {
@@ -195,12 +236,12 @@ pub mod csv_api {
                     AccessMode::ReadWrite | AccessMode::Write => true,
                     AccessMode::Read => false,
                 })
-                .open(&parameters.connector)
+                .open(&parameters.path)
                 .map_err::<rhai::EvalAltResult, _>(|err| err.to_string().into())?,
         );
 
         Ok(rhai::Shared::new(Csv {
-            path: parameters.connector,
+            path: parameters.path,
             delimiter: parameters.delimiter,
             access: parameters.access,
             refresh: parameters.refresh,
@@ -208,25 +249,40 @@ pub mod csv_api {
         }))
     }
 
+    /// Add a record to a file content.
+    ///
+    /// # Parameters
+    ///
+    /// - `file`   - A valid csv file handle. (see csv::file to obtain one)
+    /// - `record` - The record to add to the file.
+    ///
+    /// # SMTP stages
+    ///
+    /// from any stage.
+    ///
+    /// # Errors
+    ///
+    /// * Failed to write to the file.
+    /// * The file was not opened with write access.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// // Import the plugin.
+    /// import "plugins/libvsmtp_plugin_csv" as csv;
+    ///
+    /// // Create a connection to clamd.
+    /// export const database = csv::file(#{
+    ///     path:      "/var/db/clients.csv",
+    ///     refresh:   "always",
+    ///     delimiter: '|',
+    /// });
+    ///
+    /// database.add(["key", "value"]);
+    /// ```
     /// # rhai-autodocs:index:2
-    #[rhai_fn(global, pure)]
-    pub fn to_string(database: &mut CsvFile) -> String {
-        database.to_string()
-    }
-
-    /// # rhai-autodocs:index:3
-    #[rhai_fn(global, pure)]
-    pub fn to_debug(database: &mut CsvFile) -> String {
-        format!("{database:#?}")
-    }
-
-    /// Add a record.
-    /// # rhai-autodocs:index:4
-    #[rhai_fn(global, name = "set", return_raw, pure)]
-    pub fn database_add(
-        database: &mut CsvFile,
-        record: rhai::Array,
-    ) -> Result<(), Box<rhai::EvalAltResult>> {
+    #[rhai_fn(global, name = "add", return_raw, pure)]
+    pub fn add(file: &mut CsvFile, record: rhai::Array) -> Result<(), Box<rhai::EvalAltResult>> {
         let record = record
             .into_iter()
             .map(rhai::Dynamic::try_cast)
@@ -235,29 +291,92 @@ pub mod csv_api {
                 "all fields in a record must be strings".into()
             })?;
 
-        database
-            .add_record(&record)
+        file.add_record(&record)
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())
     }
 
-    /// Remove a record.
-    /// # rhai-autodocs:index:5
-    #[rhai_fn(global, name = "rm", return_raw, pure)]
-    pub fn remove_str(database: &mut CsvFile, key: &str) -> Result<(), Box<rhai::EvalAltResult>> {
-        database
-            .remove_record(key)
+    /// Remove a record from a file.
+    ///
+    /// # Parameters
+    ///
+    /// - `file` - A valid csv file handle. (see csv::file to obtain one)
+    /// - `key`  - The first element of a csv row.
+    ///
+    /// # SMTP stages
+    ///
+    /// from any stage.
+    ///
+    /// # Errors
+    ///
+    /// * Failed to write to the file.
+    /// * The file was not opened with write access.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// // Import the plugin.
+    /// import "plugins/libvsmtp_plugin_csv" as csv;
+    ///
+    /// // Create a connection to clamd.
+    /// export const database = csv::file(#{
+    ///     path:      "/var/db/clients.csv",
+    ///     refresh:   "always",
+    ///     // The delimiter is a character, so use Rhai single-quotes here.
+    /// });
+    ///
+    /// // If the file contains a row with `x, value1, value2`, for example:
+    /// database.remove("x");
+    /// ```
+    ///
+    /// # rhai-autodocs:index:3
+    #[rhai_fn(global, name = "remove", return_raw, pure)]
+    pub fn remove(file: &mut CsvFile, key: &str) -> Result<(), Box<rhai::EvalAltResult>> {
+        file.remove_record(key)
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())
     }
 
-    /// Query the database.
-    /// # rhai-autodocs:index:6
+    /// Query a csv record from a file.
+    ///
+    /// # Parameters
+    ///
+    /// - `file` - A valid csv file handle. (see csv::file to obtain one)
+    /// - `key`  - The first element of a csv row.
+    ///
+    /// # SMTP stages
+    ///
+    /// from any stage.
+    ///
+    /// # Return
+    ///
+    /// An array of values, if the record exists.
+    ///
+    /// # Errors
+    ///
+    /// * Failed to read the file.
+    /// * The file was not opened with read access.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// // Import the plugin.
+    /// import "plugins/libvsmtp_plugin_csv" as csv;
+    ///
+    /// // Create a connection to clamd.
+    /// export const database = csv::file(#{
+    ///     path:      "/var/db/clients.csv",
+    ///     access:    "O_RDONLY",
+    ///     refresh:   "always",
+    ///     // The delimiter is a character, so use Rhai single-quotes here.
+    ///     delimiter: '|',
+    /// });
+    ///
+    /// // If the file contains a row with `x, value1, value2`, for example:
+    /// database.get("x") == ["value1", "value2"];
+    /// ```        
+    /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "get", return_raw, pure)]
-    pub fn query(
-        database: &mut CsvFile,
-        key: &str,
-    ) -> Result<rhai::Array, Box<rhai::EvalAltResult>> {
-        database
-            .query(key)
+    pub fn query(file: &mut CsvFile, key: &str) -> Result<rhai::Array, Box<rhai::EvalAltResult>> {
+        file.query(key)
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
             .map_or_else(
                 || Ok(rhai::Array::default()),
@@ -268,6 +387,13 @@ pub mod csv_api {
                         .collect())
                 },
             )
+    }
+
+    /// Transform the file handle to a debug string.
+    /// # rhai-autodocs:index:5
+    #[rhai_fn(global, pure)]
+    pub fn to_debug(file: &mut CsvFile) -> String {
+        format!("{file:#?}")
     }
 }
 

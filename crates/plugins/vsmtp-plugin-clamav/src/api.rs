@@ -205,15 +205,15 @@ fn read_all_buffer(
 pub mod clamav {
     use vsmtp_common::stateful_ctx_received::StateError;
 
-    /// Connect to clamd.
+    /// Connect to the clamd daemon.
     ///
     /// # Parameters
     ///
     /// a map composed of the following parameters:
-    /// `url`         (default: 4)     - url to the clamd instance.
-    /// `max_connections` (default: 4) - Number of simultaneous opened connections to clamd. (default: 4)
+    /// - `url` (default: 4):              Url to the clamd instance.
+    /// - `max_connections` (default: 4):  Number of simultaneous opened connections to clamd.
     ///
-    /// # Effective SMTP stages
+    /// # SMTP stages
     ///
     /// from `pre_queue`.
     ///
@@ -272,9 +272,10 @@ pub mod clamav {
     ///
     /// # Parameters
     ///
-    /// `mail` - The mail to scan.
+    /// - `antivirus`: The antivirus to use (see clamav::connect to obtain one).
+    /// - `ctx`:       The mail context.
     ///
-    /// # Effective SMTP stages
+    /// # SMTP stages
     ///
     /// from `pre_queue`.
     ///
@@ -308,7 +309,7 @@ pub mod clamav {
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, pure, return_raw)]
     pub fn scan(
-        plugin: &mut RhaiAntivirus,
+        antivirus: &mut RhaiAntivirus,
         // NOTE(ltabis): Only the email is used in this method, but
         // I decided to pass the whole context anyways in case we need additional
         // data from it later.
@@ -316,7 +317,7 @@ pub mod clamav {
     ) -> Result<bool, Box<rhai::EvalAltResult>> {
         ctx.read(|ctx| {
             ctx.get_mail(ToString::to_string)
-                .map(|mail| plugin.0.scan(mail.as_bytes()))
+                .map(|mail| antivirus.0.scan(mail.as_bytes()))
         })
         .map_err::<Box<rhai::EvalAltResult>, _>(StateError::into)?
         .map_err(|err| err.to_string().into())
