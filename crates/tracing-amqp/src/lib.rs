@@ -62,6 +62,7 @@ impl tracing::field::Visit for Fields {
 }
 
 pub const QUEUE_NAME: &str = "log";
+pub const LOG_EXCHANGER_NAME: &str = "log";
 
 #[serde_with::serde_as]
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -75,7 +76,9 @@ pub struct Event<'a> {
     pub module_path: Option<&'a str>,
     pub file: Option<&'a str>,
     pub line: Option<u32>,
-    // TODO: kind: Kind,
+    pub kind: u8,
+    pub topic: String,
+    pub hostname: Option<String>,
     #[serde(flatten)]
     pub fields: serde_json::Map<String, serde_json::Value>,
     pub spans: Vec<&'a str>,
@@ -131,10 +134,34 @@ where
             })
             .unwrap_or_default();
 
-        let fields = serde_json::json!(event.as_serde())
+        let json_event = serde_json::json!(event.as_serde())
             .as_object()
             .unwrap()
             .clone();
+
+        let mut fields: serde_json::Map<String, serde_json::Value> =
+            serde_json::Map::<String, serde_json::Value>::new();
+        for field_name in event.metadata().fields() {
+            let filed_value = json_event.get(field_name.name());
+            if let Some(value) = filed_value {
+                fields.insert(field_name.name().to_string(), value.clone());
+            }
+        }
+        if let Some(topic) = fields.remove("target_topic") {
+            fields.insert("topic".to_string(), topic);
+        }
+        if !fields.contains_key("topic") {
+            fields.insert("topic".to_string(), serde_json::json!("system"));
+        }
+
+        // unfortunately, there is no kind getter
+        let kind: u8 = if event.metadata().is_event() {
+            1 // tracing::metadata::Kind::EVENT
+        } else if event.metadata().is_span() {
+            2 // tracing::metadata::Kind::SPAN
+        } else {
+            4 // tracing::metadata::Kind::HINT
+        };
 
         let event = Event {
             timestamp,
@@ -144,6 +171,19 @@ where
             module_path: event.metadata().module_path(),
             file: event.metadata().file(),
             line: event.metadata().line(),
+            kind,
+            topic: "system".to_string(), // this string will be replaced on serialization if needed
+            hostname: {
+                if let Ok(hostname) = hostname::get() {
+                    if let Ok(hostname) = hostname.into_string() {
+                        Some(hostname)
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            },
             fields,
             spans,
         };
@@ -174,10 +214,17 @@ impl std::future::Future for BackgroundTask {
     ) -> std::task::Poll<Self::Output> {
         let mut receiver_done = false;
 
+        // the topic the event will be send on
+        let mut topic = "system".to_string();
         while let std::task::Poll::Ready(maybe_item) =
             std::pin::Pin::new(&mut self.receiver).poll_next(cx)
         {
             if let Some(item) = maybe_item {
+                if let Some(event_topic) = item.get("topic") {
+                    if let Some(event_topic_str) = event_topic.as_str() {
+                        topic = event_topic_str.to_string();
+                    }
+                }
                 self.queue.push(item);
             } else {
                 receiver_done = true;
@@ -186,6 +233,7 @@ impl std::future::Future for BackgroundTask {
 
         let mut send_task_done;
         loop {
+            let cloned_topic = topic.clone();
             send_task_done = false;
 
             if let Some(send_task) = &mut self.send_task {
@@ -214,8 +262,8 @@ impl std::future::Future for BackgroundTask {
                 self.send_task = Some(Box::pin(async move {
                     let publishes = queue.iter().map(|payload| {
                         channel.basic_publish(
-                            "",
-                            QUEUE_NAME,
+                            LOG_EXCHANGER_NAME,
+                            &cloned_topic,
                             lapin::options::BasicPublishOptions::default(),
                             payload,
                             lapin::BasicProperties::default().with_content_type(
@@ -246,6 +294,13 @@ impl std::future::Future for BackgroundTask {
     }
 }
 
+/// Instantiate a amqp tracing layer.
+/// This layer send received log events to a "log" exchanger
+/// The returns values are the Layer in itself and a background task to run in a tokio::spawn
+///
+/// # Arguments
+///
+/// * 'conn' - a connection to the server broker
 pub async fn layer(conn: &lapin::Connection) -> (Layer, BackgroundTask) {
     let (tx, rx) = tokio::sync::mpsc::channel(512);
 
@@ -256,9 +311,10 @@ pub async fn layer(conn: &lapin::Connection) -> (Layer, BackgroundTask) {
         .await
         .unwrap();
     channel
-        .queue_declare(
-            QUEUE_NAME,
-            lapin::options::QueueDeclareOptions {
+        .exchange_declare(
+            LOG_EXCHANGER_NAME,
+            lapin::ExchangeKind::Topic,
+            lapin::options::ExchangeDeclareOptions {
                 durable: true,
                 ..Default::default()
             },

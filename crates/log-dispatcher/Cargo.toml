@@ -11,7 +11,9 @@ license-file.workspace = true
 workspace = true
 
 [dependencies]
+chrono = { workspace = true }
 clap = { workspace = true }
+colored = { workspace = true }
 lapin = { workspace = true }
 opentelemetry = { workspace = true }
 opentelemetry-jaeger = { workspace = true }

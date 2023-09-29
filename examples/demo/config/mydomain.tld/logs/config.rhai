@@ -11,8 +11,13 @@ fn on_config(config) {
 
     config.topics = [
         #{
+            name: "system",
             type: "console",
-            formatter: "compact",
+            formatter: "rfc5424",
+        },
+        #{
+            name: "journald",
+            type: "journald",
         },
     ];
 

@@ -24,4 +24,8 @@
     "custom": true,
     "internal-terms": false
   },
+  "cSpell.ignoreWords": [
+    "DGRAM",
+    "INET"
+  ],
 }

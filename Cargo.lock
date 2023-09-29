@@ -223,7 +223,7 @@ dependencies = [
  "num-traits",
  "rusticata-macros",
  "thiserror",
- "time 0.3.29",
+ "time",
 ]
 
 [[package]]
@@ -587,7 +587,7 @@ dependencies = [
  "serde",
  "serde_bytes",
  "serde_json",
- "time 0.3.29",
+ "time",
  "uuid",
 ]
 
@@ -672,16 +672,15 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
 name = "chrono"
-version = "0.4.28"
+version = "0.4.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95ed24df0632f708f5f6d8082675bef2596f7084dee3dd55f632290bf35bfe0f"
+checksum = "7f2c685bad3eb3d45a01354cedb7d5faa66194d1d58ba6e267a8de788f79db38"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
  "js-sys",
  "num-traits",
  "serde",
- "time 0.1.45",
  "wasm-bindgen",
  "windows-targets",
 ]
@@ -761,6 +760,17 @@ name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
+
+[[package]]
+name = "colored"
+version = "2.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2674ec482fbc38012cf31e6c42ba0177b431a0cb6f15fe40efa5aab1bda516f6"
+dependencies = [
+ "is-terminal",
+ "lazy_static",
+ "windows-sys 0.48.0",
+]
 
 [[package]]
 name = "combine"
@@ -1336,7 +1346,7 @@ checksum = "9af7b0c58ac9d03169e27f080616ce9f64004edca3d2ef4147a811c21b23b319"
 dependencies = [
  "dummy",
  "rand",
- "time 0.3.29",
+ "time",
  "unidecode",
  "uuid",
 ]
@@ -1591,7 +1601,7 @@ checksum = "be4136b2a15dd319360be1c07d9933517ccf0be8f16bf62a3bee4f0d618df427"
 dependencies = [
  "cfg-if",
  "libc",
- "wasi 0.11.0+wasi-snapshot-preview1",
+ "wasi",
 ]
 
 [[package]]
@@ -2326,7 +2336,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "927a765cd3fc26206e66b296465fa9d3e5ab003e651c1b3c060e7956d96b19d2"
 dependencies = [
  "libc",
- "wasi 0.11.0+wasi-snapshot-preview1",
+ "wasi",
  "windows-sys 0.48.0",
 ]
 
@@ -2439,7 +2449,7 @@ dependencies = [
  "smallvec",
  "subprocess",
  "thiserror",
- "time 0.3.29",
+ "time",
  "uuid",
 ]
 
@@ -3769,7 +3779,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with_macros 3.3.0",
- "time 0.3.29",
+ "time",
 ]
 
 [[package]]
@@ -4148,17 +4158,6 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.1.45"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b797afad3f312d1c66a56d11d0316f916356d11bd158fbc6ca6389ff6bf805a"
-dependencies = [
- "libc",
- "wasi 0.10.0+wasi-snapshot-preview1",
- "winapi",
-]
-
-[[package]]
-name = "time"
 version = "0.3.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "426f806f4089c493dcac0d24c29c01e2c38baf8e30f1b716ee37e83d200b18fe"
@@ -4317,6 +4316,7 @@ name = "tracing-amqp"
 version = "3.0.0-rc.1"
 dependencies = [
  "futures-util",
+ "hostname",
  "humantime-serde",
  "lapin",
  "serde",
@@ -4336,7 +4336,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09d48f71a791638519505cefafe162606f706c25592e4bde4d97600c0195312e"
 dependencies = [
  "crossbeam-channel",
- "time 0.3.29",
+ "time",
  "tracing-subscriber",
 ]
 
@@ -4775,7 +4775,7 @@ dependencies = [
  "serde_with 3.3.0",
  "strum",
  "thiserror",
- "time 0.3.29",
+ "time",
  "tracing",
  "trust-dns-resolver 0.23.0",
  "uuid",
@@ -4834,7 +4834,9 @@ dependencies = [
 name = "vsmtp-log-dispatcher"
 version = "3.0.0-rc.1"
 dependencies = [
+ "chrono",
  "clap",
+ "colored",
  "lapin",
  "opentelemetry",
  "opentelemetry-jaeger",
@@ -5008,7 +5010,7 @@ dependencies = [
  "serde_with 3.3.0",
  "strum",
  "thiserror",
- "time 0.3.29",
+ "time",
  "tokio",
  "tokio-rustls 0.24.1",
  "tokio-stream",
@@ -5035,7 +5037,7 @@ dependencies = [
  "serde_json",
  "serde_with 3.3.0",
  "thiserror",
- "time 0.3.29",
+ "time",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -5060,7 +5062,7 @@ dependencies = [
  "ring-compat",
  "rsa",
  "serde",
- "time 0.3.29",
+ "time",
  "tracing",
  "uzers",
  "vsmtp-auth",
@@ -5086,7 +5088,7 @@ dependencies = [
  "serde_with 3.3.0",
  "strum",
  "thiserror",
- "time 0.3.29",
+ "time",
  "tokio",
  "tracing",
  "uuid",
@@ -5153,12 +5155,6 @@ checksum = "bfa7760aed19e106de2c7c0b581b509f2f25d3dacaf737cb82ac61bc6d760b0e"
 dependencies = [
  "try-lock",
 ]
-
-[[package]]
-name = "wasi"
-version = "0.10.0+wasi-snapshot-preview1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
 
 [[package]]
 name = "wasi"
@@ -5521,7 +5517,7 @@ dependencies = [
  "oid-registry",
  "rusticata-macros",
  "thiserror",
- "time 0.3.29",
+ "time",
 ]
 
 [[package]]

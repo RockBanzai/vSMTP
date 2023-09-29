@@ -11,65 +11,94 @@
 
 pub use vsmtp_config::Config;
 
+/// Available formatters for logs
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "formatter", rename_all = "lowercase")]
 pub enum LogFormat {
-    Full,
-    Compact,
-    Pretty,
-    Json,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "formatter", rename_all = "lowercase")]
-pub enum SyslogRfc {
+    /// syslog formatter https://www.rfc-editor.org/rfc/rfc3164
+    Rfc3164,
+    /// syslog formatter https://www.rfc-editor.org/rfc/rfc5424
     RFC5424,
-    RFC3164,
 }
 
+/// Available protocol for syslog logger
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "protocol")]
 pub enum SyslogProtocol {
+    /// Connect to syslog via Udp
     #[serde(rename = "INET_STREAM")]
     Udp,
+    /// Connect to syslog via Tcp
     #[serde(rename = "INET_DGRAM")]
     Tcp,
+    /// Connect to syslog via Unix socket (datagram)
     #[serde(rename = "UNIX_DGRAM")]
     UnixSocket,
+    /// Connect to syslog via Unix stream
     #[serde(rename = "UNIX_STREAM")]
     UnixSocketStream,
 }
 
+/// Rotation available for a log file
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "rotation", rename_all = "lowercase")]
 pub enum FileRotation {
+    /// Rotate every minutes
     Minutely,
+    /// Rotate every hours
     Hourly,
+    /// Rotate every days
     Daily,
+    /// Never rotate the file
     Never,
 }
 
+/// Type of logger available
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
-pub enum LogTopic {
+pub enum LogInstanceType {
+    /// Send logs to console
     Console {
+        /// Formatter used, none by default
         #[serde(default = "LogDispatcherConfig::default_log_format", flatten)]
-        formatter: LogFormat,
+        formatter: Option<LogFormat>,
     },
+    /// Send logs to log files
     File {
+        /// Folder in which log files are created.
         folder: String,
-        #[serde(default = "LogDispatcherConfig::default_file_rotation", flatten)]
+        /// Prefix used in front of the file, "vsmtp-log" by default.
+        #[serde(default = "LogDispatcherConfig::default_file_prefix")]
+        file_prefix: String,
+        /// Rotation of logs in the files, no rotation by default.
+        #[serde(default = "LogDispatcherConfig::default_file_rotation")]
         rotation: FileRotation,
     },
+    /// Send logs to a syslog service
     Syslog {
+        /// Formatter used, rfc 5424 by default.
         #[serde(default = "LogDispatcherConfig::default_syslog_rfc", flatten)]
-        formatter: SyslogRfc,
+        formatter: Option<LogFormat>,
+        /// Protocol used, udp by default.
         #[serde(default = "LogDispatcherConfig::default_syslog_protocol", flatten)]
         protocol: SyslogProtocol,
+        /// Address of the syslog service.
         #[serde(default = "LogDispatcherConfig::default_syslog_address")]
         address: String,
     },
+    /// Send logs to journald
     Journald,
+}
+
+/// Configuration of a logger
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub struct LogInstance {
+    /// Name of the topic on which the logger will listen.
+    pub name: String,
+    /// Details of the logger which listen to the topic.
+    #[serde(flatten)]
+    pub logger: LogInstanceType,
 }
 
 /// Configuration for log dispatcher service.
@@ -94,7 +123,7 @@ pub struct LogDispatcherConfig {
     pub path: std::path::PathBuf,
     #[serde(default)] // FIXME: should be deserialized from "type" field
     /// topics on which logs are written.
-    pub topics: Vec<LogTopic>,
+    pub topics: Vec<LogInstance>,
 }
 
 impl LogDispatcherConfig {
@@ -108,13 +137,13 @@ impl LogDispatcherConfig {
     }
 
     #[allow(dead_code)]
-    const fn default_syslog_rfc() -> SyslogRfc {
-        SyslogRfc::RFC5424
+    const fn default_syslog_rfc() -> Option<LogFormat> {
+        Some(LogFormat::RFC5424)
     }
 
     #[allow(dead_code)]
-    const fn default_log_format() -> LogFormat {
-        LogFormat::Compact
+    const fn default_log_format() -> Option<LogFormat> {
+        None
     }
 
     #[allow(dead_code)]
@@ -124,6 +153,10 @@ impl LogDispatcherConfig {
 
     fn default_syslog_address() -> String {
         "udp://localhost:514".to_string()
+    }
+
+    fn default_file_prefix() -> String {
+        "vsmtp-log".to_string()
     }
 }
 
