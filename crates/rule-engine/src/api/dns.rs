@@ -31,7 +31,7 @@ mod dns {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```js
     ///  // using a build-in dns server config among:
     ///  // * `google`      / `google_tls`
     ///  // * `cloudflare`  / `cloudflare_tls`
@@ -49,7 +49,7 @@ mod dns {
     ///
     /// or, with a custom config:
     ///
-    /// ```
+    /// ```js
     /// const custom_dns = dns::resolver(#{
     ///   config: #{
     ///     nameservers: [
@@ -95,7 +95,7 @@ mod dns {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -145,7 +145,7 @@ mod dns {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let states = vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{

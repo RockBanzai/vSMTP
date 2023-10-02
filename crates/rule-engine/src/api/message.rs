@@ -32,7 +32,7 @@ mod message {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -78,7 +78,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// // Message example.
     /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
     /// "X-My-Header: foo\r\n",
@@ -137,7 +137,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
     /// "X-My-Header: foo\r\n",
     /// "X-My-Header: bar\r\n",
@@ -200,7 +200,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = r#"
     /// X-My-Header: 250 foo
     /// Subject: Unit test are cool
@@ -267,7 +267,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = r#"
     /// X-My-Header: 250 foo
     /// Subject: Unit test are cool
@@ -335,7 +335,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = r#"
     /// X-My-Header: 250 foo
     /// Subject: Unit test are cool
@@ -388,7 +388,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
     /// "X-My-Header: 250 foo\r\n",
     /// "Subject: Unit test are cool\r\n",
@@ -445,7 +445,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
     /// "X-My-Header: 250 foo\r\n",
     /// "Subject: Unit test are cool\r\n",
@@ -506,7 +506,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
     /// "Subject: The initial header value\r\n",
     /// "\r\n",
@@ -560,7 +560,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
     /// "Subject: The initial header value\r\n",
     /// "\r\n",
@@ -628,7 +628,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
     /// "Subject: The initial header value\r\n",
     /// "\r\n",
@@ -686,7 +686,7 @@ mod message {
     ///
     /// # Examples
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -721,7 +721,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -759,7 +759,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -793,7 +793,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -819,7 +819,7 @@ mod message {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// TODO:
     /// ```
     /// # rhai-autodocs:index:18

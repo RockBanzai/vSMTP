@@ -39,7 +39,7 @@ mod fs {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let dir = tempfile::tempdir().expect("fs api: failed to create tmpdir");
     /// # let mut config = vsmtp_test::config::local_test();
     /// # config.app.dirpath = dir.path().into();
@@ -108,7 +108,7 @@ mod fs {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # let dir = tempfile::tempdir().expect("fs api: failed to create tmpdir");
     /// # let mut config = vsmtp_test::config::local_test();
     /// # config.app.dirpath = dir.path().into();

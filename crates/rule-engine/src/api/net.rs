@@ -25,7 +25,7 @@ mod net {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```js
     /// #{
     ///     rcpt: [
     ///         rule "anti relay" || { if ctx::client_ip() in net::range_192() { state::next() } else { state::deny() } }
@@ -44,7 +44,7 @@ mod net {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```js
     /// #{
     ///     rcpt: [
     ///         rule "anti relay" || { if ctx::client_ip() in net::range_172() { state::next() } else { state::deny() } }
@@ -63,7 +63,7 @@ mod net {
     ///
     /// # Example
     ///
-    /// ```ignore
+    /// ```js
     /// #{
     ///     rcpt: [
     ///         rule "anti relay" || { if ctx::client_ip() in net::range_10() { state::next() } else { state::deny() } }

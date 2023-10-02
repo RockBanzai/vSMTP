@@ -79,7 +79,7 @@ mod mail_context {
     ///
     /// # Examples
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -110,7 +110,7 @@ mod mail_context {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -141,7 +141,7 @@ mod mail_context {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -172,7 +172,7 @@ mod mail_context {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -203,7 +203,7 @@ mod mail_context {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -234,7 +234,7 @@ mod mail_context {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -265,7 +265,7 @@ mod mail_context {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -296,7 +296,7 @@ mod mail_context {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -327,7 +327,7 @@ mod mail_context {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -358,7 +358,7 @@ mod mail_context {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -388,7 +388,7 @@ mod mail_context {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -426,7 +426,7 @@ mod mail_context {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -499,7 +499,7 @@ mod mail_context {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -528,7 +528,7 @@ mod mail_context {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{

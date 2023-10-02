@@ -45,7 +45,7 @@ mod envelop {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -80,7 +80,7 @@ mod envelop {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -116,7 +116,7 @@ mod envelop {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{
@@ -161,7 +161,7 @@ mod envelop {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```js
     /// # vsmtp_test::rhai::run(
     /// # |builder| Ok(builder.add_root_filter_rules(r#"
     /// #{

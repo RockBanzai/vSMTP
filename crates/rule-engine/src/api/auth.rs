@@ -164,7 +164,7 @@ mod auth {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// rule "add authentication results header" |ctx| {
     ///   let header = auth::create_header(ctx, #{
     ///     auth_serv_id: "mydomain.tld" // The domain name of the authentication server
@@ -202,7 +202,7 @@ mod auth {
     ///
     /// # Example
     ///
-    ///```
+    ///```js
     /// rule "add authentication results header" |ctx| {
     ///   auth::add_header(ctx, #{
     ///     auth_serv_id: "mydomain.tld" // The domain name of the authentication server
