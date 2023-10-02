@@ -32,7 +32,7 @@ pub fn get_message(event: &Event) -> Option<String> {
         extended_msg.push_str(format!("{}: {}", name, field).as_str());
         extended_msg.push(' ');
     }
-    extended_msg.replace_range(extended_msg.len()..extended_msg.len() + 1, "}");
+    extended_msg.replace_range(extended_msg.len() - 1..extended_msg.len(), "}");
     if extended_msg.len() > 2 {
         Some(extended_msg)
     } else {
