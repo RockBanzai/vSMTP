@@ -252,42 +252,22 @@ mod message {
 
     /// Get a list of all headers.
     ///
-    /// # Args
-    ///
-    /// * `header` - the name of the header to search. (optional, if not set, returns every header)
-    ///
     /// # Return
     ///
     /// * `array` - all of the headers found in the message.
     ///
     /// # Effective smtp stage
     ///
-    /// All of them, although it is most useful in the `preq` stage because this
+    /// All of them, although it is most useful in the `pre_queue` stage because this
     /// is when the email body is received.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = r#"
-    /// X-My-Header: 250 foo
-    /// Subject: Unit test are cool
-    ///
-    /// Hello world!
-    /// # "#
-    /// ; // .eml ends here
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(msg[1..].replace("\n", "\r\n").as_str()).unwrap();
-    ///
-    /// # let states = vsmtp_test::rhai::run_with_msg(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///   preq: [
-    ///     rule "display headers" || {
-    ///         log("info", `all headers: ${msg::get_all_headers()}`);
-    ///         log("info", `all "Return-Path" headers: ${msg::get_all_headers("Return-Path")}`);
-    ///     }
-    ///   ]
+    /// fn on_pre_queue (ctx) {
+    ///     let headers = ctx.headers;
+    ///     // Explore the headers ...
     /// }
-    /// # "#)?.build()), Some(msg));
     /// ```
     ///
     /// # rhai-autodocs:index:7
@@ -304,7 +284,31 @@ mod message {
         })
     }
 
-    #[doc(hidden)]
+    /// Get a list of all headers that have the same name.
+    ///
+    /// # Args
+    ///
+    /// * `header` - the name of the header to search. (optional, if not set, returns every header)
+    ///
+    /// # Return
+    ///
+    /// * `array` - all of the headers found in the message that match the given name.
+    ///
+    /// # Effective smtp stage
+    ///
+    /// All of them, although it is most useful in the `pre_queue` stage because this
+    /// is when the email body is received.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// fn on_pre_queue (ctx) {
+    ///     let headers = ctx.headers("Received");
+    ///     // Explore the "Received" headers ...
+    /// }
+    /// ```
+    ///
+    /// # rhai-autodocs:index:8
     #[rhai_fn(global, name = "headers", return_raw)]
     pub fn get_all_headers_str(ctx: &mut Ctx, name: &str) -> Result<rhai::Array> {
         ctx.read(|ctx| {
@@ -358,7 +362,7 @@ mod message {
     /// # "#)?.build()), Some(msg));
     /// ```
     ///
-    /// # rhai-autodocs:index:8
+    /// # rhai-autodocs:index:9
     #[rhai_fn(global, name = "header_untouched", return_raw)]
     pub fn get_header_untouched(ctx: &mut Ctx, name: &str) -> Result<rhai::Array> {
         ctx.read(|ctx| {
@@ -421,7 +425,7 @@ mod message {
     /// # ]);
     /// ```
     ///
-    /// # rhai-autodocs:index:9
+    /// # rhai-autodocs:index:10
     #[rhai_fn(global, name = "append_header", return_raw)]
     pub fn append_header(ctx: &mut Ctx, name: &str, body: &str) -> Result<()> {
         ctx.write(|ctx| {
@@ -478,7 +482,7 @@ mod message {
     /// # ]);
     /// ```
     ///
-    /// # rhai-autodocs:index:10
+    /// # rhai-autodocs:index:11
     #[rhai_fn(global, name = "prepend_header", return_raw)]
     pub fn prepend_header(ctx: &mut Ctx, header: &str, value: &str) -> Result<()> {
         ctx.write(|ctx| {
@@ -537,7 +541,7 @@ mod message {
     /// # ));
     /// ```
     ///
-    /// # rhai-autodocs:index:11
+    /// # rhai-autodocs:index:12
     #[rhai_fn(global, index_set, return_raw)]
     pub fn set_header(ctx: &mut Ctx, header: &str, value: &str) -> Result<()> {
         ctx.write(|ctx| {
@@ -602,7 +606,7 @@ mod message {
     /// # ));
     /// ```
     ///
-    /// # rhai-autodocs:index:12
+    /// # rhai-autodocs:index:13
     #[rhai_fn(global, name = "rename_header", return_raw)]
     pub fn rename_header(ctx: &mut Ctx, old_name: &str, new_name: &str) -> Result<()> {
         ctx.write(|ctx| {
@@ -665,7 +669,7 @@ mod message {
     /// # ));
     /// ```
     ///
-    /// # rhai-autodocs:index:13
+    /// # rhai-autodocs:index:14
     #[rhai_fn(global, name = "remove_header", return_raw)]
     pub fn remove_header(ctx: &mut Ctx, header: &str) -> Result<bool> {
         ctx.write(|ctx| {
@@ -697,7 +701,7 @@ mod message {
     /// # "#)?.build()));
     /// ```
     ///
-    /// # rhai-autodocs:index:14
+    /// # rhai-autodocs:index:15
     #[rhai_fn(global, name = "rewrite_mail_from", return_raw)]
     pub fn rewrite_mail_from_message_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         ctx.write(|ctx| {
@@ -732,7 +736,7 @@ mod message {
     /// # "#)?.build()));
     /// ```
     ///
-    /// # rhai-autodocs:index:15
+    /// # rhai-autodocs:index:16
     #[rhai_fn(global, name = "rewrite_rcpt", return_raw)]
     pub fn rewrite_rcpt_message_str_str(
         ctx: &mut Ctx,
@@ -770,7 +774,7 @@ mod message {
     /// # "#)?.build()));
     /// ```
     ///
-    /// # rhai-autodocs:index:16
+    /// # rhai-autodocs:index:17
     #[rhai_fn(global, name = "add_rcpt", return_raw)]
     pub fn add_rcpt_message_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         ctx.write(|ctx| {
@@ -804,7 +808,7 @@ mod message {
     /// # "#)?.build()));
     /// ```
     ///
-    /// # rhai-autodocs:index:17
+    /// # rhai-autodocs:index:18
     #[rhai_fn(global, name = "remove_rcpt", return_raw)]
     pub fn remove_rcpt_message_str(ctx: &mut Ctx, addr: &str) -> Result<()> {
         ctx.write(|ctx| ctx.mut_mail(|mail| mail.remove_rcpt(addr)))
@@ -822,7 +826,7 @@ mod message {
     /// ```js
     /// TODO:
     /// ```
-    /// # rhai-autodocs:index:18
+    /// # rhai-autodocs:index:19
     #[rhai_fn(global, get = "body", return_raw)]
     pub fn body_string(ctx: &mut Ctx) -> Result<String> {
         ctx.write(|ctx| ctx.get_mail(|mail| mail.body.to_string()))
