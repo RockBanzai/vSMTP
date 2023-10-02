@@ -8,7 +8,6 @@ use crate::{
     config,
     formatter::{self, Formatter},
 };
-use chrono::{Datelike, Timelike};
 use colored::Colorize;
 use tracing_amqp::Event;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
@@ -25,33 +24,18 @@ pub struct Console {
 }
 
 impl Console {
-    /// Format a timestamp for the console
-    ///
-    /// # Arguments:
-    /// * `timestamp` timestamp to format
-    fn format_timestamp(timestamp: &chrono::DateTime<chrono::Utc>) -> String {
-        format!(
-            "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
-            timestamp.year(),
-            timestamp.month(),
-            timestamp.day(),
-            timestamp.hour(),
-            timestamp.minute(),
-            timestamp.second()
-        )
-    }
-
     /// Format a level for the console
     ///
     /// # Arguments:
     /// * `level` level to format
     fn format_level(level: tracing::Level) -> String {
+        let text_level = vsmtp_log_dispatcher::format_level(level);
         match level {
-            tracing::Level::ERROR => "ERROR".red(),
-            tracing::Level::WARN => "WARN".yellow(),
-            tracing::Level::INFO => "INFO".green(),
-            tracing::Level::DEBUG => "DEBUG".blue(),
-            tracing::Level::TRACE => "TRACE".purple(),
+            tracing::Level::ERROR => text_level.red(),
+            tracing::Level::WARN => text_level.yellow(),
+            tracing::Level::INFO => text_level.green(),
+            tracing::Level::DEBUG => text_level.blue(),
+            tracing::Level::TRACE => text_level.purple(),
         }
         .to_string()
     }
@@ -76,7 +60,7 @@ impl Logger for Console {
             match vsmtp_log_dispatcher::get_message(event) {
                 Some(msg) => println!(
                     "{} {} {}",
-                    Console::format_timestamp(&event.timestamp.into()),
+                    vsmtp_log_dispatcher::format_timestamp(&event.timestamp.into()),
                     Console::format_level(event.level),
                     msg
                 ),
@@ -110,11 +94,23 @@ impl File {
             file_appender: RollingFileAppender::new(rotation, folder, file_prefix),
         }
     }
+
+    fn format(event: &Event) -> Option<String> {
+        vsmtp_log_dispatcher::get_message(event).map(|msg| {
+            format!(
+                "{} {} {}",
+                vsmtp_log_dispatcher::format_timestamp(&event.timestamp.into()),
+                vsmtp_log_dispatcher::format_level(event.level),
+                msg,
+            )
+        })
+    }
 }
 
 impl Logger for File {
     fn log(&mut self, event: &Event) {
-        if let Some(msg) = vsmtp_log_dispatcher::get_message(event) {
+        if let Some(mut msg) = File::format(event) {
+            msg.push('\n');
             if let Err(err) = self.file_appender.write(msg.as_bytes()) {
                 tracing::warn!("Cannot write log to log file: {}", err)
             }

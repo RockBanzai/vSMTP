@@ -67,20 +67,32 @@ pub const LOG_EXCHANGER_NAME: &str = "log";
 #[serde_with::serde_as]
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct Event<'a> {
+    /// Timestamp of the event
     #[serde(with = "humantime_serde")]
     pub timestamp: std::time::SystemTime,
+    /// Name of the event
     pub name: &'a str,
+    /// Where the log come from
     pub target: &'a str,
+    /// Level of the event (from error to trace)
     #[serde_as(as = "serde_with::DisplayFromStr")]
     pub level: tracing::Level,
+    /// Path of where the log come from
     pub module_path: Option<&'a str>,
+    /// File of where the log come from
     pub file: Option<&'a str>,
+    /// Line of where the log come from
     pub line: Option<u32>,
+    /// Kind of event following tracing kind (1 = event, 2 = span, 4 = hint)
     pub kind: u8,
+    /// Which topic the event will be stored / can be retrieve from on the logging queue
     pub topic: String,
+    /// hostname of the machine emitting the log
     pub hostname: Option<String>,
+    /// list of custom fields in the event
     #[serde(flatten)]
     pub fields: serde_json::Map<String, serde_json::Value>,
+    /// span(s) from which the event come from
     pub spans: Vec<&'a str>,
 }
 
