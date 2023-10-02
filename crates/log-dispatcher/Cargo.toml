@@ -27,10 +27,8 @@ tokio-stream = { workspace = true }
 tracing = { workspace = true }
 tracing-amqp = { workspace = true }
 tracing-appender = { workspace = true }
-tracing-journald = { workspace = true }
 tracing-loki = { workspace = true }
 tracing-opentelemetry = { workspace = true }
-tracing-rfc-5424 = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["json"] }
 url = { workspace = true }
 vsmtp-config = { workspace = true }
