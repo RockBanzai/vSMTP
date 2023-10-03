@@ -84,7 +84,7 @@ mod dns {
     ///
     /// * `array` - an array of IPs. The array is empty if no IPs were found for the host.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     ///
@@ -96,27 +96,19 @@ mod dns {
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///   preq: [
-    ///     action "lookup recipients" || {
-    ///       let domain = "gmail.com";
-    ///       let ips = dns::lookup(domain);
+    /// const google_dns = dns::resolver(#{
+    ///    config: "google_tls",
+    /// });
     ///
-    ///       print(`ips found for ${domain}`);
-    ///       for ip in ips { print(`- ${ip}`); }
-    ///     },
-    ///   ],
+    /// // Logging all ip attached to the `google.com` domain.
+    /// for ip in google_dns.lookup("google.com") {
+    ///     log("my_topic", "debug", ip);
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:2
     #[rhai_fn(name = "lookup", return_raw)]
     pub fn lookup(dns: &mut DnsResolver, host: &str) -> Result<rhai::Array> {
-        // NOTE: should lookup & rlookup return an error if no record was found ?
-
         Ok(crate::block_on(dns.resolver.lookup_ip(host))
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
             .into_iter()
@@ -134,7 +126,7 @@ mod dns {
     ///
     /// * `array` - an array of FQDNs. The array is empty if nothing was found.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     ///
@@ -146,20 +138,14 @@ mod dns {
     /// # Examples
     ///
     /// ```js
-    /// # let states = vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///   connect: [
-    ///     rule "rlookup" || {
-    ///       state::accept(`250 client ip: ${"127.0.0.1"} -> ${dns::rlookup("127.0.0.1")}`);
-    ///     }
-    ///   ],
+    /// const google_dns = dns::resolver(#{
+    ///    config: "google_tls",
+    /// });
+    ///
+    /// // Logging all domain attached to the `x.x.x.x` ip address.
+    /// for domain in google_dns.rlookup("x.x.x.x") {
+    ///     log("my_topic", "debug", domain);
     /// }
-    /// # "#)?.build()));
-    /// # use vsmtp_common::{status::Status, Reply, ReplyCode::Code};
-    /// # assert_eq!(states[&vsmtp_rule_engine::ExecutionStage::Connect].2, Status::Accept(
-    /// #  r#"250 client ip: 127.0.0.1 -> ["localhost."]"#.parse().unwrap(),
-    /// # ));
     /// ```
     ///
     /// # rhai-autodocs:index:3

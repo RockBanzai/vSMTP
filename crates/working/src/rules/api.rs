@@ -24,7 +24,7 @@ pub mod status {
     /// Tell the rule engine that a rule succeeded. Following rules
     /// in the current stage will be executed.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// ```post_queue```
     ///
@@ -47,7 +47,7 @@ pub mod status {
     /// This means that all rules following the `success` call
     /// will be ignored.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// ```post_queue```
     ///
@@ -70,7 +70,7 @@ pub mod status {
     /// The email will be stored in the `dead` queue, and all further rules
     /// are skipped.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// ```post_queue```
     ///
@@ -98,7 +98,7 @@ pub mod status {
     ///             This path will be concatenated to the `config.app.dirpath` field in
     ///             your root configuration.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// ```post_queue```
     ///
@@ -118,7 +118,7 @@ pub mod status {
 
     /// Check if two statuses are equal.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// ```post_queue```
     ///
@@ -130,7 +130,7 @@ pub mod status {
 
     /// Check if two statuses are not equal.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// ```post_queue```
     ///
@@ -143,7 +143,7 @@ pub mod status {
     /// Convert a status to a string.
     /// Enables string interpolation.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// ```post_queue```
     ///
@@ -156,7 +156,7 @@ pub mod status {
     /// Convert a status to a debug string
     /// Enables string interpolation.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// ```post_queue```
     ///

@@ -168,6 +168,38 @@ type SpfResult = rhai::Shared<spf::SpfResult>;
 #[rhai::plugin::export_module]
 mod rhai_spf {
 
+    /// Execute SPF (Sender Policy Framework) verification with check if the client is authorized to
+    /// send mail on behalf of the sender's domain.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - A map containing the following parameters:
+    ///   * `ip`           - The ip of the sender.
+    ///   * `helo`         - The HELO/EHLO command sent by the client.
+    ///   * `mail_from`    - The sender of the email.
+    ///   * `dns_resolver` - The DNS resolver to use for the verification, loaded with the [dns] module.
+    ///
+    /// [dns]: http://vsmtp.rs/docs/global/dns
+    ///
+    /// # Example
+    ///
+    /// ```js
+    /// fn on_pre_queue(ctx) {
+    ///     let helo_identity = spf::check_host(#{
+    ///         ip: ctx.client_ip,
+    ///         helo: ctx.helo,
+    ///         mail_from: ctx.sender,
+    ///         dns_resolver: global::dns_resolver
+    ///     });
+    ///     if helo_identity != "pass" {
+    ///         status::deny(`550 5.7.23 ${ctx.helo} is not allowed to send mail from ${ctx.client_ip}`)
+    ///     } else {
+    ///         ctx.store("helo", helo_identity);
+    ///         status::next()
+    ///     }
+    /// }
+    /// ```
+    ///
     /// # rhai-autodocs:index:1
     #[rhai_fn(return_raw)] // NOTE: should return a spf::tempfail to handle user's rules issues??
     #[tracing::instrument(skip(params), ret, err)]
@@ -250,6 +282,7 @@ mod rhai_spf {
         }
     }
 
+    /// Store the result of a previous `spf::check_host` function execution.
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, pure, return_raw)]
     pub fn store(
@@ -272,12 +305,34 @@ mod rhai_spf {
         }
     }
 
+    /// Transform the spf result as a debug string.
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, pure)]
     pub fn to_debug(v: &mut SpfResult) -> String {
         format!("{v:?}")
     }
 
+    /// Compare spf results returned by `spf::check_host` as equal to a string.
+    ///
+    /// ```js
+    /// fn on_pre_queue(ctx) {
+    ///     let result = spf::check_host(#{
+    ///         ip: ctx.client_ip,
+    ///         helo: ctx.helo,
+    ///         mail_from: ctx.sender,
+    ///         dns_resolver: global::dns_resolver
+    ///     });
+    ///
+    ///     if result == "pass" {
+    ///         status::next()
+    ///     } else if result = "softfail" {
+    ///         // Execute policy ...
+    ///     } else {
+    ///         // Execute another policy ...
+    ///     }
+    /// }
+    /// ```
+    ///
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "==", pure)]
     pub fn equal_to_str(lhs: &mut SpfResult, rhs: &str) -> bool {
@@ -293,6 +348,7 @@ mod rhai_spf {
         )
     }
 
+    /// Compare spf results returned by `spf::check_host` as not equal to a string.
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, name = "!=", pure)]
     pub fn not_equal_to_str(lhs: &mut SpfResult, rhs: &str) -> bool {

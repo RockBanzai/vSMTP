@@ -31,37 +31,22 @@ mod logging {
     /// * `level` - the level of the message, can be "trace", "debug", "info", "warn" or "error".
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///   connect: [
-    ///     action "log on connection (str/str)" || {
-    ///       log("my_queue", "info", `[${date()}/${time()}] client=${ctx::client_ip()}`);
-    ///     },
-    ///     action "log on connection (str/obj)" || {
-    ///       log("my_queue", "error", identifier("Hello world!"));
-    ///     },
-    ///     action "log on connection (obj/obj)" || {
-    ///       const level = "trace";
-    ///       const message = "connection established";
+    /// log("my_queue", "error", "Hello world!");
+    /// log("my_queue", "info", `[${date()}/${time()}] client=${ctx.client_ip}`);
     ///
-    ///       log("my_queue", identifier(level), identifier(message));
-    ///     },
-    ///     action "log on connection (obj/str)" || {
-    ///       const level = "warn";
+    /// const level = "trace";
+    /// const message = "connection established";
+    /// log("my_queue", level, message);
     ///
-    ///       log("my_queue", identifier(level), "I love rhai!");
-    ///     },
-    ///   ],
-    /// }
-    /// # "#)?.build()));
+    /// const level = "warn";
+    /// log("my_queue", level, "I love rhai!");
     /// ```
     ///
     /// # rhai-autodocs:index:1
@@ -96,9 +81,16 @@ mod logging {
     /// * `target_topic` - the queue on which the log is sent.
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// err("my_queue", "An error occurred");
+    /// ```
+    /// # rhai-autodocs:index:2
     #[rhai_fn(global, name = "err")]
     #[allow(clippy::cognitive_complexity)]
     pub fn err(target_topic: &str, message: &str) {
@@ -113,9 +105,16 @@ mod logging {
     /// * `target_topic` - the queue on which the log is sent.
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// warn("my_queue", "warning!");
+    /// ```
+    /// # rhai-autodocs:index:3
     #[rhai_fn(global, name = "warn")]
     #[allow(clippy::cognitive_complexity)]
     pub fn warn(target_topic: &str, message: &str) {
@@ -130,9 +129,16 @@ mod logging {
     /// * `target_topic` - the queue on which the log is sent.
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// info("my_queue", "New info just dropped");
+    /// ```
+    /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "info")]
     #[allow(clippy::cognitive_complexity)]
     pub fn info(target_topic: &str, message: &str) {
@@ -147,9 +153,16 @@ mod logging {
     /// * `target_topic` - the queue on which the log is sent.
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// debug("my_queue", "Debugging stuff");
+    /// ```
+    /// # rhai-autodocs:index:5
     #[rhai_fn(global, name = "debug")]
     #[allow(clippy::cognitive_complexity)]
     pub fn debug(target_topic: &str, message: &str) {
@@ -164,9 +177,16 @@ mod logging {
     /// * `target_topic` - the queue on which the log is sent.
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// trace("my_queue", `client_ip=${ctx.client_ip}`);
+    /// ```
+    /// # rhai-autodocs:index:6
     #[rhai_fn(global, name = "trace")]
     #[allow(clippy::cognitive_complexity)]
     pub fn trace(target_topic: &str, message: &str) {
@@ -180,7 +200,7 @@ mod logging {
     /// * `level` - the level of the message, can be "trace", "debug", "info", "warn" or "error".
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     #[rhai_fn(global, name = "log")]
@@ -223,7 +243,7 @@ mod logging {
     ///
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     #[rhai_fn(global, name = "err_default_target")]
@@ -239,7 +259,7 @@ mod logging {
     ///
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     #[rhai_fn(global, name = "warn_default_target")]
@@ -255,7 +275,7 @@ mod logging {
     ///
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     #[rhai_fn(global, name = "info_default_target")]
@@ -271,7 +291,7 @@ mod logging {
     ///
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     #[rhai_fn(global, name = "debug_default_target")]
@@ -287,7 +307,7 @@ mod logging {
     ///
     /// * `message` - the message to log.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     #[rhai_fn(global, name = "trace_default_target")]

@@ -39,21 +39,17 @@ mod envelop {
     ///
     /// * `new_addr` - the new string sender address to set.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// `mail` and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     preq: [
-    ///        action "rewrite envelop 1" || envelop::rewrite_mail_from("unknown@example.com"),
-    ///     ]
+    /// fn on_mail_from(ctx) {
+    ///     ctx.rewrite_mail_from("john.doe@example.com");
+    ///     // ...
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:1
@@ -74,21 +70,17 @@ mod envelop {
     /// * `old_addr` - the recipient to replace.
     /// * `new_addr` - the new address to use when replacing `old_addr`.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// `rcpt` and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     preq: [
-    ///        action "rewrite envelop" || envelop::rewrite_rcpt("john.doe@example.com", "john.main@example.com"),
-    ///     ]
+    /// fn on_pre_queue(ctx) {
+    ///     ctx.rewrite_rcpt("john.doe@example.com", "john.doe2@example.com");
+    ///     // ...
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:2
@@ -110,22 +102,17 @@ mod envelop {
     ///
     /// * `rcpt` - the new recipient to add.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     connect: [
-    ///        // always deliver a copy of the message to "john.doe@example.com".
-    ///        action "rewrite envelop" || envelop::add_rcpt("john.doe@example.com"),
-    ///     ]
+    /// fn on_pre_queue(ctx) {
+    ///     ctx.add_rcpt("me@example.com");
+    ///     // ...
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:3
@@ -155,23 +142,17 @@ mod envelop {
     ///
     /// * `rcpt` - the recipient to remove.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     preq: [
-    ///        // never deliver to "john.doe@example.com".
-    ///        action "rewrite envelop 1" || envelop::remove_rcpt("john.doe@example.com"),
-    ///        action "rewrite envelop 2" || envelop::remove_rcpt(address("john.doe@example.com")),
-    ///     ]
+    /// fn on_pre_queue(ctx) {
+    ///     ctx.remove_rcpt("satan@example.com");
+    ///     // ...
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:5

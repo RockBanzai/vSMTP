@@ -33,36 +33,20 @@ mod fs {
     /// * `dir` - the directory where to store the email. Relative to the
     /// application path.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// `preq` and onwards.
+    /// `pre_queue` and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let dir = tempfile::tempdir().expect("fs api: failed to create tmpdir");
-    /// # let mut config = vsmtp_test::config::local_test();
-    /// # config.app.dirpath = dir.path().into();
-    /// # let rules = r#"
-    /// #{
-    ///     preq: [
-    ///        action "write to file" || fs::write("archives"),
-    ///     ]
+    /// fn on_pre_queue(ctx) {
+    ///     // Store every email sent by "john.doe@example.com".
+    ///     if ctx.sender == "john.doe@example.com" {
+    ///         fs::write("analysis");
+    ///     }
+    ///     // ...
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg_and_config(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), None, config);
-    /// # eprintln!("{:?}", dir.path());
-    /// # assert!(std::path::PathBuf::from_iter([
-    /// #     dir.path(),
-    /// #     &std::path::Path::new("archives")
-    /// # ]).exists());
     /// ```
     ///
     /// # rhai-autodocs:index:1
@@ -102,37 +86,18 @@ mod fs {
     /// * `dir` - the directory where to store the email. Relative to the
     /// application path.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// `connect` and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let dir = tempfile::tempdir().expect("fs api: failed to create tmpdir");
-    /// # let mut config = vsmtp_test::config::local_test();
-    /// # config.app.dirpath = dir.path().into();
-    ///
-    /// # let rules = r#"
-    /// #{
-    ///     preq: [
-    ///        action "write to file" || fs::dump("metadata"),
-    ///     ]
+    /// fn on_pre_queue(ctx) {
+    ///     // Store the envelops in a directory before delivery.
+    ///     fs::dump("metadata-record");
+    ///     // ...
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg_and_config(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), None, config);
-    /// # eprintln!("{:?}", dir.path());
-    /// # assert!(std::path::PathBuf::from_iter([
-    /// #     dir.path(),
-    /// #     &std::path::Path::new("metadata")
-    /// # ]).exists());
     /// ```
     ///
     /// # rhai-autodocs:index:2

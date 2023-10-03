@@ -26,21 +26,14 @@ mod message {
 
     /// Get a copy of the whole email as a string.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// `preq` and onwards.
+    /// `pre_queue` and onwards.
     ///
     /// # Example
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     postq: [
-    ///        action "display email content" || log("trace", `email content: ${msg::mail()}`),
-    ///     ]
-    /// }
-    /// # "#)?.build()));
+    /// let mail = ctx.mail_str;
     /// ```
     ///
     /// # rhai-autodocs:index:1
@@ -51,6 +44,9 @@ mod message {
 
     /// Get a reference to the email.
     ///
+    /// ```js
+    /// let mail_ref = ctx.mail;
+    /// ```
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, get = "mail", return_raw)]
     pub fn mail_object(ctx: &mut Ctx) -> Result<Mail> {
@@ -71,44 +67,21 @@ mod message {
     ///
     /// * `header` - the name of the header to search.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// All of them, although it is most useful in the `preq` stage because the
+    /// All of them, although it is most useful in the `pre_queue` stage because the
     /// email is received at this point.
     ///
     /// # Examples
     ///
     /// ```js
-    /// // Message example.
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
-    /// "X-My-Header: foo\r\n",
-    /// "Subject: Unit test are cool\r\n",
-    /// "\r\n",
-    /// "Hello world!\r\n",
-    /// # )).unwrap();
-    /// # let rules = r#"
-    /// #{
-    ///   preq: [
-    ///     rule "check if header exists" || {
-    ///       if msg::has_header("X-My-Header") && msg::has_header(identifier("Subject")) {
-    ///         state::accept();
-    ///       } else {
-    ///         state::deny();
-    ///       }
+    /// fn on_post_queue(ctx) {
+    ///     if ctx.has_header("X-My-Header") {
+    ///       state::accept()
+    ///     } else {
+    ///       state::deny()
     ///     }
-    ///   ]
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), Some(msg));
-    /// # use vsmtp_common::{status::Status};
-    /// # assert_eq!(states[&vsmtp_rule_engine::ExecutionStage::PreQ].2, Status::Accept("250 Ok".parse::<vsmtp_common::Reply>().unwrap()));
     /// ```
     ///
     /// # rhai-autodocs:index:4
@@ -130,43 +103,18 @@ mod message {
     ///
     /// * `number` - the number headers with the same name.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// All of them, although it is most useful in the `preq` stage because this
+    /// All of them, although it is most useful in the `pre_queue` stage because this
     /// is when the email body is received.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
-    /// "X-My-Header: foo\r\n",
-    /// "X-My-Header: bar\r\n",
-    /// "X-My-Header: baz\r\n",
-    /// "Subject: Unit test are cool\r\n",
-    /// "\r\n",
-    /// "Hello world!\r\n",
-    /// # )).unwrap();
-    /// # let rules = r#"
-    /// #{
-    ///   preq: [
-    ///     rule "count_header" || {
-    ///       state::accept(`250 count is ${msg::count_header("X-My-Header")} and ${msg::count_header(identifier("Subject"))}`);
-    ///     }
-    ///   ]
+    /// fn on_post_queue(ctx) {
+    ///     log("my_queue", "info", `X-My-Header header count: ${ctx.count_header("X-My-Header")}`);
+    ///     // ...
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), Some(msg));
-    /// # use vsmtp_common::{status::Status, Reply, ReplyCode::Code};
-    /// # assert_eq!(states[&vsmtp_rule_engine::ExecutionStage::PreQ].2, Status::Accept(
-    /// #  "250 count is 3 and 1\r\n".parse().unwrap()
-    /// # ));
     /// ```
     ///
     /// # rhai-autodocs:index:5
@@ -193,49 +141,21 @@ mod message {
     /// * `string`  - the header value if the header was found.
     /// * `()`      - a rhai unit if the header was not found.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// All of them, although it is most useful in the `preq` stage because this
+    /// All of them, although it is most useful in the `pre_queue` stage because this
     /// is when the email body is received.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = r#"
-    /// X-My-Header: 250 foo
-    /// Subject: Unit test are cool
-    ///
-    /// Hello world!
-    /// # "#
-    /// ; // .eml ends here
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(msg[1..].replace("\n", "\r\n").as_str()).unwrap();
-    ///
-    /// let rules = r#"
-    /// #{
-    ///   preq: [
-    ///     rule "get_header" || {
-    ///       if msg::get_header("X-My-Header") != "250 foo"
-    ///         || msg::get_header(identifier("Subject")) != "Unit test are cool" {
-    ///         state::deny();
-    ///       } else {
-    ///         state::accept(`${msg::get_header("X-My-Header")} ${msg::get_header(identifier("Subject"))}`);
-    ///       }
+    /// fn on_post_queue(ctx) {
+    ///     if ctx["X-My-Header"] != "foo" {
+    ///       state::deny();
+    ///     } else {
+    ///       state::accept();
     ///     }
-    ///   ]
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), Some(msg));
-    /// # use vsmtp_common::{status::Status, Reply, ReplyCode::Code};
-    /// # assert_eq!(states[&vsmtp_rule_engine::ExecutionStage::PreQ].2, Status::Accept(
-    /// #  "250 foo Unit test are cool\r\n".parse().unwrap()
-    /// # ));
     /// ```
     ///
     /// # rhai-autodocs:index:6
@@ -256,7 +176,7 @@ mod message {
     ///
     /// * `array` - all of the headers found in the message.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them, although it is most useful in the `pre_queue` stage because this
     /// is when the email body is received.
@@ -294,7 +214,7 @@ mod message {
     ///
     /// * `array` - all of the headers found in the message that match the given name.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them, although it is most useful in the `pre_queue` stage because this
     /// is when the email body is received.
@@ -332,34 +252,19 @@ mod message {
     ///
     /// * `array` - all header values, or an empty array if the header was not found.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// All of them, although it is most useful in the `preq` stage because this
+    /// All of them, although it is most useful in the `pre_queue` stage because this
     /// is when the email body is received.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = r#"
-    /// X-My-Header: 250 foo
-    /// Subject: Unit test are cool
-    ///
-    /// Hello world!
-    /// # "#
-    /// ; // .eml ends here
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(msg[1..].replace("\n", "\r\n").as_str()).unwrap();
-    ///
-    /// # let states = vsmtp_test::rhai::run_with_msg(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     postq: [
-    ///         action "display return path" || {
-    ///             // Will display "Return-Path: value".
-    ///             log("info", msg::get_header_untouched("Return-Path"));
-    ///         }
-    ///     ],
+    /// fn on_post_queue(ctx) {
+    ///     // Will log "Return-Path: value".
+    ///     log("my_queue", "info", ctx.header_untouched("Return-Path"));
+    ///     // ...
     /// }
-    /// # "#)?.build()), Some(msg));
     /// ```
     ///
     /// # rhai-autodocs:index:9
@@ -384,45 +289,20 @@ mod message {
     /// * `header` - the name of the header to append.
     /// * `value` - the value of the header to append.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them. Even though the email is not received at the current stage,
     /// vsmtp stores new headers and will add them on top of the ones received once
-    /// the `preq` stage is reached.
+    /// the `pre_queue` stage is reached.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
-    /// "X-My-Header: 250 foo\r\n",
-    /// "Subject: Unit test are cool\r\n",
-    /// "\r\n",
-    /// "Hello world!\r\n",
-    /// # )).unwrap();
-    /// # let rules = r#"
-    /// #{
-    ///   preq: [
-    ///     rule "append_header" || {
-    ///       msg::append_header("X-My-Header-2", "bar");
-    ///       msg::append_header("X-My-Header-3", identifier("baz"));
-    ///     }
-    ///   ]
+    /// fn on_post_queue(ctx) {
+    ///     ctx.append_header("X-My-Header", "foo");
+    ///     ctx.append_header("X-My-Header-2", "bar");
+    ///     // ...
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), Some(msg));
-    /// # assert_eq!(*states[&vsmtp_rule_engine::ExecutionStage::PreQ].1.inner().raw_headers(), vec![
-    /// #   "X-My-Header: 250 foo\r\n".to_string(),
-    /// #   "Subject: Unit test are cool\r\n".to_string(),
-    /// #   "X-My-Header-2: bar\r\n".to_string(),
-    /// #   "X-My-Header-3: baz\r\n".to_string(),
-    /// # ]);
     /// ```
     ///
     /// # rhai-autodocs:index:10
@@ -441,45 +321,20 @@ mod message {
     /// * `header` - the name of the header to prepend.
     /// * `value` - the value of the header to prepend.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them. Even though the email is not received at the current stage,
     /// vsmtp stores new headers and will add them on top of the ones received once
-    /// the `preq` stage is reached.
+    /// the `pre_queue` stage is reached.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
-    /// "X-My-Header: 250 foo\r\n",
-    /// "Subject: Unit test are cool\r\n",
-    /// "\r\n",
-    /// "Hello world!\r\n",
-    /// # )).unwrap();
-    /// # let rules = r#"
-    /// #{
-    ///   preq: [
-    ///     rule "prepend_header" || {
-    ///       msg::prepend_header("X-My-Header-2", "bar");
-    ///       msg::prepend_header("X-My-Header-3", identifier("baz"));
-    ///     }
-    ///   ]
+    /// fn on_post_queue(ctx) {
+    ///     ctx.prepend_header("X-My-Header", "foo");
+    ///     ctx.prepend_header("X-My-Header-2", "bar");
+    ///     // ...
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), Some(msg));
-    /// # assert_eq!(*states[&vsmtp_rule_engine::ExecutionStage::PreQ].1.inner().raw_headers(), vec![
-    /// #   "X-My-Header-3: baz\r\n".to_string(),
-    /// #   "X-My-Header-2: bar\r\n".to_string(),
-    /// #   "X-My-Header: 250 foo\r\n".to_string(),
-    /// #   "Subject: Unit test are cool\r\n".to_string(),
-    /// # ]);
     /// ```
     ///
     /// # rhai-autodocs:index:11
@@ -499,46 +354,22 @@ mod message {
     /// * `header` - the name of the header to set or add.
     /// * `value` - the value of the header to set or add.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them. Even though the email is not received at the current stage,
     /// vsmtp stores new headers and will add them on top to the ones received once
-    /// the `preq` stage is reached.
+    /// the `pre_queue` stage is reached.
     ///
     /// Be aware that if you want to set a header value from the original message,
-    /// you must use `set_header` in the `preq` stage and onwards.
+    /// you must use `set_header` in the `pre_queue` stage and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
-    /// "Subject: The initial header value\r\n",
-    /// "\r\n",
-    /// "Hello world!\r\n",
-    /// # )).unwrap();
-    /// # let rules = r#"
-    /// #{
-    ///   preq: [
-    ///     rule "set_header" || {
-    ///       msg::set_header("Subject", "The header value has been updated");
-    ///       msg::set_header("Subject", identifier("The header value has been updated again"));
-    ///       state::accept(`250 ${msg::get_header("Subject")}`);
-    ///     }
-    ///   ]
+    /// fn on_post_queue(ctx) {
+    ///     ctx["X-My-Header"] = "foo";
+    ///     // ...
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), Some(msg));
-    /// # use vsmtp_common::{status::Status, Reply, ReplyCode::Code};
-    /// # assert_eq!(states[&vsmtp_rule_engine::ExecutionStage::PreQ].2, Status::Accept(
-    /// #  "250 The header value has been updated again\r\n".parse().unwrap()
-    /// # ));
     /// ```
     ///
     /// # rhai-autodocs:index:12
@@ -557,53 +388,18 @@ mod message {
     /// * `old_name` - the name of the header to rename.
     /// * `new_name` - the new name of the header.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// All of them, although it is most useful in the `preq` stage because this
+    /// All of them, although it is most useful in the `pre_queue` stage because this
     /// is when the email body is received.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
-    /// "Subject: The initial header value\r\n",
-    /// "\r\n",
-    /// "Hello world!\r\n",
-    /// # )).unwrap();
-    ///
-    /// # let rules = r#"
-    /// #{
-    ///   preq: [
-    ///     rule "rename_header" || {
-    ///       msg::rename_header("Subject", "bob");
-    ///       if msg::has_header("Subject") { return state::deny(); }
-    ///
-    ///       msg::rename_header("bob", identifier("Subject"));
-    ///       if msg::has_header("bob") { return state::deny(); }
-    ///
-    ///       msg::rename_header(identifier("Subject"), "foo");
-    ///       if msg::has_header("Subject") { return state::deny(); }
-    ///
-    ///       msg::rename_header(identifier("foo"), identifier("Subject"));
-    ///       if msg::has_header("foo") { return state::deny(); }
-    ///
-    ///       state::accept(`250 ${msg::get_header("Subject")}`);
-    ///     }
-    ///   ]
+    /// fn on_post_queue(ctx) {
+    ///     ctx.rename_header("X-Subject", "Subject");
+    ///     // ...
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), Some(msg));
-    /// # use vsmtp_common::{status::Status, Reply, ReplyCode::Code};
-    /// # assert_eq!(states[&vsmtp_rule_engine::ExecutionStage::PreQ].2, Status::Accept(
-    /// #  "250 The initial header value\r\n".parse().unwrap()
-    /// # ));
     /// ```
     ///
     /// # rhai-autodocs:index:13
@@ -625,48 +421,18 @@ mod message {
     ///
     /// * a boolean value, true if a header has been removed, false otherwise.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// All of them, although it is most useful in the `preq` stage because this
+    /// All of them, although it is most useful in the `pre_queue` stage because this
     /// is when the email body is received.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # let msg = vsmtp_mail_parser::MessageBody::try_from(concat!(
-    /// "Subject: The initial header value\r\n",
-    /// "\r\n",
-    /// "Hello world!\r\n",
-    /// # )).unwrap();
-    /// # let rules = r#"
-    /// #{
-    ///   preq: [
-    ///     rule "remove_header" || {
-    ///       msg::remove_header("Subject");
-    ///       if msg::has_header("Subject") { return state::deny(); }
-    ///
-    ///       msg::prepend_header("Subject-2", "Rust is good");
-    ///       msg::remove_header(identifier("Subject-2"));
-    ///
-    ///       msg::prepend_header("Subject-3", "Rust is good !!!!!");
-    ///
-    ///       state::accept(`250 ${msg::get_header("Subject-3")}`);
-    ///     }
-    ///   ]
+    /// fn on_post_queue(ctx) {
+    ///     ctx.remove_header("X-Subject");
+    ///     // ...
     /// }
-    /// # "#;
-    /// # let states = vsmtp_test::rhai::run_with_msg(|builder| Ok(builder
-    /// #   .add_root_filter_rules("#{}")?
-    /// #      .add_domain_rules("testserver.com".parse().unwrap())
-    /// #        .with_incoming(rules)?
-    /// #        .with_outgoing(rules)?
-    /// #        .with_internal(rules)?
-    /// #      .build()
-    /// #   .build()), Some(msg));
-    /// # use vsmtp_common::{status::Status, Reply, ReplyCode::Code};
-    /// # assert_eq!(states[&vsmtp_rule_engine::ExecutionStage::PreQ].2, Status::Accept(
-    /// #  "250 Rust is good !!!!!\r\n".parse().unwrap()
-    /// # ));
     /// ```
     ///
     /// # rhai-autodocs:index:14
@@ -684,21 +450,17 @@ mod message {
     ///
     /// * `new_addr` - the new sender address to set.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// `preq` and onwards.
+    /// `pre_queue` and onwards.
     ///
     /// # Examples
     ///
-    ///```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     preq: [
-    ///        action "replace sender" || msg::rewrite_mail_from("john.server@example.com"),
-    ///     ]
+    /// ```js
+    /// fn on_post_queue(ctx) {
+    ///     ctx.rewrite_mail_from("john.doe@example.com");
+    ///     // ...
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:15
@@ -719,21 +481,17 @@ mod message {
     /// * `old_addr` - the recipient to replace.
     /// * `new_addr` - the new address to use when replacing `old_addr`.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// `preq` and onwards.
+    /// `pre_queue` and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     preq: [
-    ///        action "rewrite recipient" || msg::rewrite_rcpt("john.doe@example.com", "john-mta@example.com"),
-    ///     ]
+    /// fn on_post_queue(ctx) {
+    ///     ctx.rewrite_rcpt("john.doe@example.com", "john.mta@example.com");
+    ///     // ...
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:16
@@ -757,21 +515,17 @@ mod message {
     ///
     /// * `addr` - the recipient address to add to the `To` header.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// `preq` and onwards.
+    /// `pre_queue` and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     preq: [
-    ///        action "update recipients" || msg::add_rcpt("john.doe@example.com"),
-    ///     ]
+    /// fn on_post_queue(ctx) {
+    ///     ctx.add_rcpt("john.doe@example.com", "john.mta@example.com");
+    ///     // ...
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:17
@@ -791,21 +545,17 @@ mod message {
     ///
     /// * `addr` - the recipient to remove to the `To` header.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// `preq` and onwards.
+    /// `pre_queue` and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// # vsmtp_test::rhai::run(
-    /// # |builder| Ok(builder.add_root_filter_rules(r#"
-    /// #{
-    ///     preq: [
-    ///        action "update recipients" || msg::remove_rcpt("john.doe@example.com"),
-    ///     ]
+    /// fn on_post_queue(ctx) {
+    ///     ctx.remove_rcpt("john.doe@example.com");
+    ///     // ...
     /// }
-    /// # "#)?.build()));
     /// ```
     ///
     /// # rhai-autodocs:index:18
@@ -817,15 +567,19 @@ mod message {
 
     /// Get the body of the email as a string.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
-    /// `preq` and onwards.
+    /// `pre_queue` and onwards.
     ///
     /// # Examples
     ///
     /// ```js
-    /// TODO:
+    /// fn on_post_queue(ctx) {
+    ///     let body = ctx.body;
+    ///     // ...
+    /// }
     /// ```
+    ///
     /// # rhai-autodocs:index:19
     #[rhai_fn(global, get = "body", return_raw)]
     pub fn body_string(ctx: &mut Ctx) -> Result<String> {

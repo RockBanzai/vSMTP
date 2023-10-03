@@ -165,13 +165,13 @@ mod auth {
     /// # Example
     ///
     ///```js
-    /// rule "add authentication results header" |ctx| {
+    /// fn on_pre_queue(ctx) {
     ///   let header = auth::create_header(ctx, #{
     ///     auth_serv_id: "mydomain.tld" // The domain name of the authentication server
     ///   });
     ///   log("info", header);
     ///   ctx.prepend_header("Authentication-Results", header);
-    ///   status::next();
+    ///   status::next()
     /// }
     /// ```
     ///
@@ -203,11 +203,11 @@ mod auth {
     /// # Example
     ///
     ///```js
-    /// rule "add authentication results header" |ctx| {
+    /// fn on_pre_queue(ctx) {
     ///   auth::add_header(ctx, #{
     ///     auth_serv_id: "mydomain.tld" // The domain name of the authentication server
     ///   });
-    ///   status::next();
+    ///   status::next()
     /// }
     /// ```
     /// # rhai-autodocs:index:2

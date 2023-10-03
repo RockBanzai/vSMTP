@@ -29,7 +29,7 @@ pub mod api {
     ///
     /// * `string` - the current time.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     ///
@@ -60,7 +60,7 @@ pub mod api {
     ///
     /// * `string` - the current date.
     ///
-    /// # Effective smtp stage
+    /// # SMTP stages
     ///
     /// All of them.
     ///

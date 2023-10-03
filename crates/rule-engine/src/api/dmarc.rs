@@ -88,6 +88,39 @@ type DmarcValue = dmarc::Value;
 #[rhai::plugin::export_module]
 mod rhai_dmarc {
 
+    /// Execute a DMARC policy check.
+    ///
+    /// # Parameters
+    ///
+    /// a map composed of the following parameters:
+    /// - `dns_resolver`: The DNS resolver to use when performing DMARC record lookup. (see the `dns` module)
+    ///
+    /// # Examples
+    ///
+    /// Here is a standard DMARC policy handling that you can setup using scripting.
+    ///
+    /// ```js
+    /// fn on_pre_queue(ctx) {
+    ///     let dmarc_result = dmarc::check(ctx, #{ dns_resolver: global::dns_resolver });
+    ///     ctx.store(dmarc_result);
+    ///
+    ///     if dmarc_result.value == "pass" {
+    ///         status::next()
+    ///     } else {
+    ///         // Decide what to do following the policy.
+    ///         let policy = dmarc_result.policy;
+    ///         switch policy {
+    ///             "none" => {
+    ///                 log("my_topic", "warn", "the message failed the DMARC check but DMARC policy is none, so ignoring");
+    ///                 status::next()
+    ///             }
+    ///             "quarantine" => status::quarantine("dmarc"),
+    ///             "reject" => status::deny(`550 5.7.25 DMARC policy violation`),
+    ///             _ => throw "unknown DMARC policy"
+    ///         }
+    ///     }
+    /// }
+    /// ```
     /// # rhai-autodocs:index:1
     #[rhai_fn(pure, return_raw)]
     pub fn check(
@@ -165,6 +198,7 @@ mod rhai_dmarc {
         .into())
     }
 
+    /// Cache DMARC result from the `dmarc::check` function.
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, pure, return_raw)]
     pub fn store(ctx: &mut Ctx, dmarc_result: DmarcResult) -> Result<(), Box<rhai::EvalAltResult>> {
@@ -174,6 +208,7 @@ mod rhai_dmarc {
         })
     }
 
+    /// Get the value of the dmarc result after calling the `dmarc::check` function.
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, get = "value", pure)]
     pub fn get_value(res: &mut DmarcResult) -> DmarcValue {
@@ -181,6 +216,7 @@ mod rhai_dmarc {
     }
 
     // TODO: if the RFC5322's domain is a subdomain of of the Organizational Domain AND, then record's subdomain policy must be used
+    /// Get the policy fetched from the DMARC records.
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, get = "policy", pure)]
     pub fn get_policy(res: &mut DmarcResult) -> String {
@@ -189,6 +225,19 @@ mod rhai_dmarc {
             .map_or_else(|| "none".to_string(), backend::Record::get_policy)
     }
 
+    /// Compare dmarc result as equal to a string.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// let result = dmarc::check(#{ dns_resolver: global::dns_resolver });
+    ///
+    /// // The `==` operator is used here.
+    /// if result == "pass" {
+    ///     // ...
+    /// }
+    /// ```
+    ///
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, name = "==", pure)]
     pub fn equal_to_str(lhs: &mut DmarcValue, rhs: &str) -> bool {
@@ -202,6 +251,18 @@ mod rhai_dmarc {
         )
     }
 
+    /// Compare dmarc result as not equal to a string.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// let result = dmarc::check(#{ dns_resolver: global::dns_resolver });
+    ///
+    /// // The `==` operator is used here.
+    /// if result != "pass" {
+    ///     // ...
+    /// }
+    /// ```
     /// # rhai-autodocs:index:6
     #[rhai_fn(global, name = "!=", pure)]
     pub fn not_equal_to_str(lhs: &mut DmarcValue, rhs: &str) -> bool {

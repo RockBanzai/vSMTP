@@ -178,6 +178,44 @@ type DkimVerificationResult = rhai::Shared<Vec<vsmtp_common::dkim::DkimVerificat
 #[rhai::plugin::export_module]
 mod dkim {
     use crate::api::Result;
+    /// This method will produce a new signature for the message, with the given parameters and
+    /// add a `DKIM-Signature` header to the message.
+    ///
+    /// # Arguments
+    ///
+    /// * `params` - A map containing the parameters for the signature.
+    ///   * `sdid` - The domain name of the signing domain (used to retrieves the public key).
+    ///   * `selector` - The selector for the signing domain (used to retrieves the public key).
+    ///   * `private_key` - The private key to use for the signature, loaded with the [crypto] module.
+    ///   * `headers_field` - The list of headers to sign, optional `["From", "To", "Date", "Subject", "From"]` by default.
+    ///   * `canonicalization` - The canonicalization algorithm to use, optional `"simple/relaxed"` by default.
+    ///
+    /// [crypto]: http://vsmtp.rs/docs/global/crypto
+    ///
+    /// # Example
+    ///
+    ///```js
+    /// fn on_pre_queue(ctx) {
+    ///   dkim::sign(ctx.mail, #{
+    ///     sdid: "mydomain.tld",
+    ///     selector: "myselector",
+    ///     private_key: crypto::load_pem_rsa_pkcs8("/etc/vsmtp/keys/my_key.pem"),
+    ///     headers_field: ["From", "To", "Date", "Subject", "From"],
+    ///     canonicalization: "simple/relaxed",
+    ///   });
+    ///   status::next();
+    /// }
+    /// ```
+    ///
+    /// # rhai-autodocs:index:1
+    #[rhai_fn(return_raw)]
+    pub fn sign(mail: &mut Mail, params: rhai::Dynamic) -> Result<()> {
+        let signature = create_signature(mail, params)?;
+        mail.write()
+            .unwrap()
+            .prepend_headers([Header::new("DKIM-Signature", signature)]);
+        Ok(())
+    }
 
     /// Produce a DKIM signature with the given parameters.
     ///
@@ -201,7 +239,7 @@ mod dkim {
     /// # Example
     ///
     ///```js
-    /// rule "add dkim signature" |ctx| {
+    /// fn on_pre_queue(ctx) {
     ///   let signature = dkim::sign(ctx.mail, #{
     ///     sdid: "mydomain.tld",
     ///     selector: "myselector",
@@ -215,7 +253,7 @@ mod dkim {
     /// }
     /// ```
     ///
-    /// # rhai-autodocs:index:1
+    /// # rhai-autodocs:index:2
     #[rhai_fn(return_raw)]
     pub fn create_signature(mail: &mut Mail, params: rhai::Dynamic) -> Result<String> {
         let SignParams {
@@ -260,45 +298,6 @@ mod dkim {
         }
     }
 
-    /// This method will produce a new signature for the message, with the given parameters and
-    /// add a `DKIM-Signature` header to the message.
-    ///
-    /// # Arguments
-    ///
-    /// * `params` - A map containing the parameters for the signature.
-    ///   * `sdid` - The domain name of the signing domain (used to retrieves the public key).
-    ///   * `selector` - The selector for the signing domain (used to retrieves the public key).
-    ///   * `private_key` - The private key to use for the signature, loaded with the [crypto] module.
-    ///   * `headers_field` - The list of headers to sign, optional `["From", "To", "Date", "Subject", "From"]` by default.
-    ///   * `canonicalization` - The canonicalization algorithm to use, optional `"simple/relaxed"` by default.
-    ///
-    /// [crypto]: http://vsmtp.rs/docs/global/crypto
-    ///
-    /// # Example
-    ///
-    ///```js
-    /// rule "add dkim signature" |ctx| {
-    ///   dkim::sign(ctx.mail, #{
-    ///     sdid: "mydomain.tld",
-    ///     selector: "myselector",
-    ///     private_key: crypto::load_pem_rsa_pkcs8("/etc/vsmtp/keys/my_key.pem"),
-    ///     headers_field: ["From", "To", "Date", "Subject", "From"],
-    ///     canonicalization: "simple/relaxed",
-    ///   });
-    ///   status::next();
-    /// }
-    /// ```
-    ///
-    /// # rhai-autodocs:index:2
-    #[rhai_fn(return_raw)]
-    pub fn sign(mail: &mut Mail, params: rhai::Dynamic) -> Result<()> {
-        let signature = create_signature(mail, params)?;
-        mail.write()
-            .unwrap()
-            .prepend_headers([Header::new("DKIM-Signature", signature)]);
-        Ok(())
-    }
-
     /// Verify all the DKIM signature of the message. This method will return a list of
     /// DKIM verification result, one for each signature (or an array of one element with
     /// the value `none` if there is no `DKIM-Signature` header).
@@ -318,7 +317,7 @@ mod dkim {
     /// # Example
     ///
     /// ```js
-    /// rule "verify dkim signature" |ctx| {
+    /// fn on_pre_queue(ctx) {
     ///   const dkim_results = dkim::verify(#{
     ///     header_limit_count: 5,
     ///     expiration_epsilon: 100,
