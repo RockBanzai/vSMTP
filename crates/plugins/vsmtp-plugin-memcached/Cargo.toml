@@ -7,13 +7,12 @@ documentation = "https://docs.rs/crate/vsmtp-plugin-memcached/"
 edition.workspace = true
 homepage = "https://github.com/viridIT/vSMTP"
 keywords = ["vsmtp", "memcached"]
+license = "Elastic-2.0"
 publish.workspace = true
 readme = "../../../README.md"
 repository = "https://github.com/viridIT/vSMTP"
 rust-version.workspace = true
 description = "A plugin for vSMTP that enable support for memcached databases"
-license = "Elastic-2.0"
-license-file.workspace = true
 
 [package.metadata.release]
 pre-release-commit-message = "chore: Release {{crate_name}} version {{version}}"

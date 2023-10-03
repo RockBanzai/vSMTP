@@ -2,10 +2,9 @@
 name = "vsmtp-protocol"
 version.workspace = true
 edition.workspace = true
+license = "Elastic-2.0"
 publish.workspace = true
 rust-version.workspace = true
-license = "Elastic-2.0"
-license-file.workspace = true
 
 [lints]
 workspace = true
@@ -16,6 +15,7 @@ async-stream = { workspace = true }
 async-trait = { workspace = true }
 base64 = { workspace = true }
 bytes = { workspace = true }
+fake = { workspace = true }
 humantime = { workspace = true }
 memchr = { workspace = true }
 rand = { workspace = true }
@@ -30,7 +30,6 @@ tokio-stream = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 trust-dns-proto = { workspace = true }
 uuid = { workspace = true }
-fake = { workspace = true }
 
 [dependencies.tokio]
 workspace = true

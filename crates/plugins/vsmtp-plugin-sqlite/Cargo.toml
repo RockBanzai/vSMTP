@@ -7,13 +7,12 @@ documentation = "https://docs.rs/crate/vsmtp-plugin-sqlite/"
 edition.workspace = true
 homepage = "https://github.com/viridIT/vsmtp-plugin-sqlite"
 keywords = ["vsmtp", "sqlite"]
+license = "Elastic-2.0"
 publish.workspace = true
 readme = "README.md"
 repository = "https://github.com/viridIT/vsmtp-plugin-sqlite"
 rust-version.workspace = true
 description = "A plugin for vSMTP that enable support for sqlite databases"
-license = "Elastic-2.0"
-license-file.workspace = true
 
 [lints]
 workspace = true

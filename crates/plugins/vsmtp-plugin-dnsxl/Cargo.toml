@@ -7,13 +7,12 @@ documentation = "https://docs.rs/crate/vsmtp-plugin-dnsxl/"
 edition.workspace = true
 homepage = "https://github.com/viridIT/vsmtp-plugin-dnsxl"
 keywords = ["vsmtp", "dns"]
+license = "Elastic-2.0"
 publish.workspace = true
 readme = "README.md"
 repository = "https://github.com/viridIT/vsmtp-plugin-dnsxl"
 rust-version.workspace = true
 description = "A plugin for vSMTP that is able to check if a domain is contained in a whitelist or a blacklist."
-license = "Elastic-2.0"
-license-file.workspace = true
 
 [lints]
 workspace = true
