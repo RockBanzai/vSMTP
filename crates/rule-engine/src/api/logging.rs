@@ -27,7 +27,7 @@ mod logging {
     ///
     /// # Args
     ///
-    /// * `target_topic` - the queue on which the log is sent.
+    /// * `target_topic` (default: "system")- the queue on which the log is sent.
     /// * `level` - the level of the message, can be "trace", "debug", "info", "warn" or "error".
     /// * `message` - the message to log.
     ///
@@ -193,16 +193,7 @@ mod logging {
         tracing::trace!(message, target_topic)
     }
 
-    /// Log information to the default rabbitmq queue (system) which can be retrieve via the log-dispatcher service.
-    ///
-    /// # Args
-    ///
-    /// * `level` - the level of the message, can be "trace", "debug", "info", "warn" or "error".
-    /// * `message` - the message to log.
-    ///
-    /// # SMTP stages
-    ///
-    /// All of them.
+    #[doc(hidden)]
     #[rhai_fn(global, name = "log")]
     #[allow(clippy::cognitive_complexity)]
     pub fn log_default_target(level: &str, message: &str) {
@@ -246,6 +237,7 @@ mod logging {
     /// # SMTP stages
     ///
     /// All of them.
+    /// # rhai-autodocs:index:7
     #[rhai_fn(global, name = "err_default_target")]
     #[allow(clippy::cognitive_complexity)]
     pub fn err_default_target(message: &str) {
@@ -262,6 +254,7 @@ mod logging {
     /// # SMTP stages
     ///
     /// All of them.
+    /// # rhai-autodocs:index:8
     #[rhai_fn(global, name = "warn_default_target")]
     #[allow(clippy::cognitive_complexity)]
     pub fn warn_default_target(message: &str) {
@@ -278,6 +271,7 @@ mod logging {
     /// # SMTP stages
     ///
     /// All of them.
+    /// # rhai-autodocs:index:9
     #[rhai_fn(global, name = "info_default_target")]
     #[allow(clippy::cognitive_complexity)]
     pub fn info_default_target(message: &str) {
@@ -294,6 +288,7 @@ mod logging {
     /// # SMTP stages
     ///
     /// All of them.
+    /// # rhai-autodocs:index:10
     #[rhai_fn(global, name = "debug_default_target")]
     #[allow(clippy::cognitive_complexity)]
     pub fn debug_default_target(message: &str) {
@@ -310,6 +305,7 @@ mod logging {
     /// # SMTP stages
     ///
     /// All of them.
+    /// # rhai-autodocs:index:11
     #[rhai_fn(global, name = "trace_default_target")]
     #[allow(clippy::cognitive_complexity)]
     pub fn trace_default_target(message: &str) {
