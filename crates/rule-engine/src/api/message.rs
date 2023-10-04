@@ -458,13 +458,13 @@ mod message {
     ///
     /// ```js
     /// fn on_post_queue(ctx) {
-    ///     ctx.rewrite_mail_from("john.doe@example.com");
+    ///     ctx.rewrite_mail_from_message("john.doe@example.com");
     ///     // ...
     /// }
     /// ```
     ///
     /// # rhai-autodocs:index:15
-    #[rhai_fn(global, name = "rewrite_mail_from", return_raw)]
+    #[rhai_fn(global, name = "rewrite_mail_from_message", return_raw)]
     pub fn rewrite_mail_from_message_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_mail(|mail| {
@@ -489,13 +489,13 @@ mod message {
     ///
     /// ```js
     /// fn on_post_queue(ctx) {
-    ///     ctx.rewrite_rcpt("john.doe@example.com", "john.mta@example.com");
+    ///     ctx.rewrite_rcpt_message("john.doe@example.com", "john.mta@example.com");
     ///     // ...
     /// }
     /// ```
     ///
     /// # rhai-autodocs:index:16
-    #[rhai_fn(global, name = "rewrite_rcpt", return_raw)]
+    #[rhai_fn(global, name = "rewrite_rcpt_message", return_raw)]
     pub fn rewrite_rcpt_message_str_str(
         ctx: &mut Ctx,
         old_addr: &str,
@@ -523,13 +523,13 @@ mod message {
     ///
     /// ```js
     /// fn on_post_queue(ctx) {
-    ///     ctx.add_rcpt("john.doe@example.com", "john.mta@example.com");
+    ///     ctx.add_rcpt_message("john.doe@example.com", "john.mta@example.com");
     ///     // ...
     /// }
     /// ```
     ///
     /// # rhai-autodocs:index:17
-    #[rhai_fn(global, name = "add_rcpt", return_raw)]
+    #[rhai_fn(global, name = "add_rcpt_message", return_raw)]
     pub fn add_rcpt_message_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         ctx.write(|ctx| {
             ctx.mut_mail(|mail| {
@@ -553,13 +553,13 @@ mod message {
     ///
     /// ```js
     /// fn on_post_queue(ctx) {
-    ///     ctx.remove_rcpt("john.doe@example.com");
+    ///     ctx.remove_rcpt_message("john.doe@example.com");
     ///     // ...
     /// }
     /// ```
     ///
     /// # rhai-autodocs:index:18
-    #[rhai_fn(global, name = "remove_rcpt", return_raw)]
+    #[rhai_fn(global, name = "remove_rcpt_message", return_raw)]
     pub fn remove_rcpt_message_str(ctx: &mut Ctx, addr: &str) -> Result<()> {
         ctx.write(|ctx| ctx.mut_mail(|mail| mail.remove_rcpt(addr)))
             .map_err(StateError::into)

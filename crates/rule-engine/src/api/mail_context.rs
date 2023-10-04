@@ -18,6 +18,8 @@ use rhai::plugin::{
 
 pub use mail_context::*;
 
+pub type Recipient = rhai::Shared<vsmtp_common::Recipient>;
+
 // TODO: handle error when the context is not in the expected stage.
 
 /// Inspect the transaction context.
@@ -48,11 +50,7 @@ mod mail_context {
     /// # rhai-autodocs:index:1
     #[rhai_fn(global, return_raw, pure)]
     #[tracing::instrument(skip(rcpt), fields(rcpt = %rcpt.forward_path))]
-    pub fn set_routing_path(
-        ctx: &mut Ctx,
-        rcpt: rhai::Shared<vsmtp_common::Recipient>,
-        path: &str,
-    ) -> Result<()> {
+    pub fn set_routing_path(ctx: &mut Ctx, rcpt: Recipient, path: &str) -> Result<()> {
         let path = path
             .parse::<vsmtp_common::delivery_route::DeliveryRoute>()
             .map_err(|e| e.to_string())?;
@@ -381,7 +379,7 @@ mod mail_context {
     /// ```
     /// # rhai-autodocs:index:14
     #[rhai_fn(global, pure, get = "domain")]
-    pub fn recipient_domain(ctx: &mut rhai::Shared<vsmtp_common::Recipient>) -> String {
+    pub fn recipient_domain(ctx: &mut Recipient) -> String {
         ctx.forward_path.domain().to_string()
     }
 
@@ -406,7 +404,7 @@ mod mail_context {
     /// ```
     /// # rhai-autodocs:index:15
     #[rhai_fn(global, pure, get = "local_part")]
-    pub fn recipient_local_part(ctx: &mut rhai::Shared<vsmtp_common::Recipient>) -> String {
+    pub fn recipient_local_part(ctx: &mut Recipient) -> String {
         ctx.forward_path.local_part().to_string()
     }
 
@@ -425,7 +423,7 @@ mod mail_context {
     /// ```
     /// # rhai-autodocs:index:16
     #[rhai_fn(global, pure, get = "address")]
-    pub fn recipient_address(ctx: &mut rhai::Shared<vsmtp_common::Recipient>) -> String {
+    pub fn recipient_address(ctx: &mut Recipient) -> String {
         ctx.forward_path.to_string()
     }
 
