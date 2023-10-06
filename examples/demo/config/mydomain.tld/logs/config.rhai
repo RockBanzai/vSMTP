@@ -9,14 +9,14 @@ fn on_config(config) {
         async_io: "warn",
     };
 
-    config.topics = [
+    config.loggers = [
         #{
-            name: "system",
+            topic: "system",
             type: "console",
             formatter: "rfc5424",
         },
         #{
-            name: "journald",
+            topic: "journald",
             type: "journald",
         },
     ];

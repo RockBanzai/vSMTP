@@ -12,8 +12,9 @@ fn on_config(config) {
             rustls: "warn",
         },
     };
-    config.topics = [
+    config.loggers = [
         #{
+            topic: "system",
             type: "console",
             formatter: "compact",
         },

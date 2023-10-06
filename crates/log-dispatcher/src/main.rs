@@ -109,15 +109,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut consumers = StreamMap::new(); // rabbitmq consumers
     let mut loggers = HashMap::<String, Vec<Box<dyn logger::Logger>>>::new();
-    for topic in config.topics {
-        if !loggers.contains_key(&topic.name) {
-            loggers.insert(topic.name.clone(), Vec::new());
+    for logger in config.loggers {
+        if !loggers.contains_key(&logger.topic) {
+            loggers.insert(logger.topic.clone(), Vec::new());
         }
         loggers
-            .get_mut(&topic.name)
+            .get_mut(&logger.topic)
             .unwrap()
-            .push(instantiate_logger(topic.logger));
-        if consumers.contains_key(&topic.name) {
+            .push(instantiate_logger(logger.config));
+        if consumers.contains_key(&logger.topic) {
             continue;
         }
         let channel = conn.create_channel().await?;
@@ -155,7 +155,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .queue_bind(
                 queue.name().as_str(),
                 LOG_EXCHANGER_NAME,
-                &topic.name,
+                &logger.topic,
                 lapin::options::QueueBindOptions::default(),
                 lapin::types::FieldTable::default(),
             )
@@ -163,7 +163,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .unwrap();
 
         consumers.insert(
-            topic.name,
+            logger.topic,
             channel
                 .basic_consume(
                     queue.name().as_str(),

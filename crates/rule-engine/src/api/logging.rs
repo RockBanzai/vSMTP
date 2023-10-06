@@ -194,7 +194,7 @@ mod logging {
     }
 
     #[doc(hidden)]
-    #[rhai_fn(global, name = "log")]
+    #[rhai_fn(global, name = "log_default")]
     #[allow(clippy::cognitive_complexity)]
     pub fn log_default_target(level: &str, message: &str) {
         match <tracing::Level as std::str::FromStr>::from_str(level) {

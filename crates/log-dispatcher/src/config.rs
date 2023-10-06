@@ -95,10 +95,10 @@ pub enum LogInstanceType {
 #[serde(tag = "type", rename_all = "lowercase")]
 pub struct LogInstance {
     /// Name of the topic on which the logger will listen.
-    pub name: String,
-    /// Details of the logger which listen to the topic.
+    pub topic: String,
+    /// configuration of the logger which listen to the topic.
     #[serde(flatten)]
-    pub logger: LogInstanceType,
+    pub config: LogInstanceType,
 }
 
 /// Configuration for log dispatcher service.
@@ -122,8 +122,8 @@ pub struct LogDispatcherConfig {
     /// Path to the configuration script.
     pub path: std::path::PathBuf,
     #[serde(default)] // FIXME: should be deserialized from "type" field
-    /// topics on which logs are written.
-    pub topics: Vec<LogInstance>,
+    /// all loggers used by the log dispatcher.
+    pub loggers: Vec<LogInstance>,
 }
 
 impl LogDispatcherConfig {
