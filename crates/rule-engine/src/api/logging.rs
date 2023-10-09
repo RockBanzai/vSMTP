@@ -19,7 +19,7 @@ pub use logging::*;
 
 const DEFAULT_USER_LOG_TOPIC: &str = "user";
 
-/// Logging mechanisms.
+/// Logging mechanisms for rhai scripts.
 #[rhai::plugin::export_module]
 mod logging {
 
@@ -27,7 +27,7 @@ mod logging {
     ///
     /// # Args
     ///
-    /// * `target_topic` (default: "system")- the queue on which the log is sent.
+    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
     /// * `level` - the level of the message, can be "trace", "debug", "info", "warn" or "error".
     /// * `message` - the message to log.
     ///
@@ -46,7 +46,7 @@ mod logging {
     /// log("my_queue", level, message);
     ///
     /// const level = "warn";
-    /// log("my_queue", level, "I love rhai!");
+    /// log(level, "I love rhai!"); // this is send to "user" topic in logging queue
     /// ```
     ///
     /// # rhai-autodocs:index:1
@@ -73,12 +73,12 @@ mod logging {
         }
     }
 
-    /// Log information to a rabbitmq log which can be retrieve via the log-dispatcher service.
-    /// The message is consider as an error.
+    /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
+    /// The message is consider with a level error.
     ///
     /// # Args
     ///
-    /// * `target_topic` - the queue on which the log is sent.
+    /// * `target_topic` (default: "user") - the queue on which the log is sent .
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -88,6 +88,7 @@ mod logging {
     /// # Examples
     ///
     /// ```js
+    /// err("An error occurred");
     /// err("my_queue", "An error occurred");
     /// ```
     /// # rhai-autodocs:index:2
@@ -97,12 +98,12 @@ mod logging {
         tracing::error!(message, target_topic)
     }
 
-    /// Log information to a rabbitmq log which can be retrieve via the log-dispatcher service.
-    /// The message is consider as a warning.
+    /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
+    /// The message is consider with a level warning.
     ///
     /// # Args
     ///
-    /// * `target_topic` - the queue on which the log is sent.
+    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -112,6 +113,7 @@ mod logging {
     /// # Examples
     ///
     /// ```js
+    /// warn("warning!");
     /// warn("my_queue", "warning!");
     /// ```
     /// # rhai-autodocs:index:3
@@ -121,12 +123,12 @@ mod logging {
         tracing::warn!(message, target_topic)
     }
 
-    /// Log information to a rabbitmq log which can be retrieve via the log-dispatcher service.
-    /// The message is consider as an info.
+    /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
+    /// The message is consider with a level info.
     ///
     /// # Args
     ///
-    /// * `target_topic` - the queue on which the log is sent.
+    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -136,6 +138,7 @@ mod logging {
     /// # Examples
     ///
     /// ```js
+    /// info("New info just dropped");
     /// info("my_queue", "New info just dropped");
     /// ```
     /// # rhai-autodocs:index:4
@@ -145,12 +148,12 @@ mod logging {
         tracing::info!(message, target_topic)
     }
 
-    /// Log information to a rabbitmq log which can be retrieve via the log-dispatcher service.
-    /// The message is consider as a debug.
+    /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
+    /// The message is consider with a level debug.
     ///
     /// # Args
     ///
-    /// * `target_topic` - the queue on which the log is sent.
+    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -160,6 +163,7 @@ mod logging {
     /// # Examples
     ///
     /// ```js
+    /// debug("Debugging stuff");
     /// debug("my_queue", "Debugging stuff");
     /// ```
     /// # rhai-autodocs:index:5
@@ -169,12 +173,12 @@ mod logging {
         tracing::debug!(message, target_topic)
     }
 
-    /// Log information to a rabbitmq log which can be retrieve via the log-dispatcher service.
-    /// The message is consider as a trace.
+    /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
+    /// The message is consider with a level trace.
     ///
     /// # Args
     ///
-    /// * `target_topic` - the queue on which the log is sent.
+    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -184,6 +188,7 @@ mod logging {
     /// # Examples
     ///
     /// ```js
+    /// trace(`client_ip=${ctx.client_ip}`);
     /// trace("my_queue", `client_ip=${ctx.client_ip}`);
     /// ```
     /// # rhai-autodocs:index:6
@@ -194,9 +199,9 @@ mod logging {
     }
 
     #[doc(hidden)]
-    #[rhai_fn(global, name = "log_default")]
+    #[rhai_fn(global, name = "log")]
     #[allow(clippy::cognitive_complexity)]
-    pub fn log_default_target(level: &str, message: &str) {
+    pub fn log_default_topic(level: &str, message: &str) {
         match <tracing::Level as std::str::FromStr>::from_str(level) {
             // 'target_topic' field is not called 'topic' to avoid overriding the topic of tracing API.
             Ok(level) => match level {
@@ -227,88 +232,38 @@ mod logging {
         }
     }
 
-    /// Log information to the default rabbitmq queue (system) which can be retrieve via the log-dispatcher service.
-    /// The message is consider as an error.
-    ///
-    /// # Args
-    ///
-    /// * `message` - the message to log.
-    ///
-    /// # SMTP stages
-    ///
-    /// All of them.
-    /// # rhai-autodocs:index:7
-    #[rhai_fn(global, name = "err_default_target")]
+    #[doc(hidden)]
+    #[rhai_fn(global, name = "err")]
     #[allow(clippy::cognitive_complexity)]
-    pub fn err_default_target(message: &str) {
+    pub fn err_default_topic(message: &str) {
         tracing::error!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
     }
 
-    /// Log information to the default rabbitmq queue (system) which can be retrieve via the log-dispatcher service.
-    /// The message is consider a warning.
-    ///
-    /// # Args
-    ///
-    /// * `message` - the message to log.
-    ///
-    /// # SMTP stages
-    ///
-    /// All of them.
-    /// # rhai-autodocs:index:8
-    #[rhai_fn(global, name = "warn_default_target")]
+    #[doc(hidden)]
+    #[rhai_fn(global, name = "warn")]
     #[allow(clippy::cognitive_complexity)]
-    pub fn warn_default_target(message: &str) {
+    pub fn warn_default_topic(message: &str) {
         tracing::warn!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
     }
 
-    /// Log information to the default rabbitmq queue (system) which can be retrieve via the log-dispatcher service.
-    /// The message is consider as an info.
-    ///
-    /// # Args
-    ///
-    /// * `message` - the message to log.
-    ///
-    /// # SMTP stages
-    ///
-    /// All of them.
-    /// # rhai-autodocs:index:9
-    #[rhai_fn(global, name = "info_default_target")]
+    #[doc(hidden)]
+    #[rhai_fn(global, name = "info")]
     #[allow(clippy::cognitive_complexity)]
-    pub fn info_default_target(message: &str) {
+    pub fn info_default_topic(message: &str) {
         tracing::info!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
     }
 
-    /// Log information to the default rabbitmq queue (system) which can be retrieve via the log-dispatcher service.
-    /// The message is consider as a debug.
-    ///
-    /// # Args
-    ///
-    /// * `message` - the message to log.
-    ///
-    /// # SMTP stages
-    ///
-    /// All of them.
-    /// # rhai-autodocs:index:10
-    #[rhai_fn(global, name = "debug_default_target")]
+    #[doc(hidden)]
+    #[rhai_fn(global, name = "debug")]
     #[allow(clippy::cognitive_complexity)]
-    pub fn debug_default_target(message: &str) {
+    pub fn debug_default_topic(message: &str) {
         tracing::debug!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
     }
 
-    /// Log information to the default rabbitmq queue (system) which can be retrieve via the log-dispatcher service.
-    /// The message is consider as a trace.
-    ///
-    /// # Args
-    ///
-    /// * `message` - the message to log.
-    ///
-    /// # SMTP stages
-    ///
-    /// All of them.
-    /// # rhai-autodocs:index:11
-    #[rhai_fn(global, name = "trace_default_target")]
+    #[doc(hidden)]
+    #[rhai_fn(global, name = "trace")]
     #[allow(clippy::cognitive_complexity)]
-    pub fn trace_default_target(message: &str) {
+    pub fn trace_default_topic(message: &str) {
         tracing::trace!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
     }
 }
