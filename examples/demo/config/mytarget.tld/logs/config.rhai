@@ -16,9 +16,10 @@ fn on_config(config) {
         #{
             topic: "system",
             type: "console",
-            formatter: "compact",
+            formatter: "rfc5424",
         },
     ];
     config.broker.uri = env::variable("BROKER");
+    // config.broker.uri = "amqps://sink-mytarget:password@rabbitmq.mydomain.tld:5671/sink-mytarget";
     config
 }

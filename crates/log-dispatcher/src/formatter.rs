@@ -7,6 +7,10 @@ pub trait Formatter {
     fn format(&self, event: &Event) -> Result<String, FormatterError>;
 }
 
+pub fn extract_first_span(target: &String) -> String {
+    target[0..target.find(':').unwrap_or(target.len())].to_string()
+}
+
 /// Error which can happens in a formatter
 #[derive(Error, Debug)]
 pub enum FormatterError {
@@ -47,6 +51,8 @@ struct Rfc5424Msg {
     pub app_name: String,
     /// Content of the log message
     pub content: String,
+    /// procID
+    pub proc_id: String,
 }
 
 impl ToString for Rfc5424Msg {
@@ -58,7 +64,7 @@ impl ToString for Rfc5424Msg {
             Rfc5424::format_timestamp(&self.timestamp),
             self.hostname,
             self.app_name,
-            "-",
+            extract_first_span(&self.proc_id),
             "-",
             self.content,
         );
@@ -90,7 +96,8 @@ impl Rfc5424Msg {
                 gravity: level_to_syslog_level(&event.level),
                 timestamp: event.timestamp.into(),
                 hostname: event.hostname.clone().unwrap_or("Unknown".to_string()), // TODO: IP address should be used if hostname is unknown
-                app_name: event.target.to_string(),
+                app_name: "vSMTP".to_string(),
+                proc_id: event.target.to_string(),
                 content: rfc_formatted_msg,
             })
         } else {

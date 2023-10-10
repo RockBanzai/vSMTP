@@ -59,9 +59,10 @@ impl Logger for Console {
         } else {
             match vsmtp_log_dispatcher::get_message(event) {
                 Some(msg) => println!(
-                    "{} {} {}",
+                    "{} {} {}: {}",
                     vsmtp_log_dispatcher::format_timestamp(&event.timestamp.into()),
                     Console::format_level(event.level),
+                    formatter::extract_first_span(&event.target.to_string()).italic(), // TODO: add this information only in dev mod
                     msg
                 ),
                 None => tracing::warn!("Cannot not display received log, this is a bug"),
