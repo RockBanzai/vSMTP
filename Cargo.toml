@@ -119,7 +119,7 @@ default-features = false
 features = ["rustls", "rustls-native-certs", "rustls-webpki-roots-certs"]
 
 [workspace.dependencies.libc]
-version = "0.2.148"
+version = "0.2.149"
 default-features = false
 features = ["std", "const-extern-fn", "extra_traits"]
 
