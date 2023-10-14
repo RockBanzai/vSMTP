@@ -93,9 +93,8 @@ mod logging {
     /// ```
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, name = "err")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn err(target_topic: &str, message: &str) {
-        tracing::error!(message, target_topic)
+        tracing::error!(message, target_topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -118,9 +117,8 @@ mod logging {
     /// ```
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, name = "warn")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn warn(target_topic: &str, message: &str) {
-        tracing::warn!(message, target_topic)
+        tracing::warn!(message, target_topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -143,9 +141,8 @@ mod logging {
     /// ```
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "info")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn info(target_topic: &str, message: &str) {
-        tracing::info!(message, target_topic)
+        tracing::info!(message, target_topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -168,9 +165,8 @@ mod logging {
     /// ```
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, name = "debug")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn debug(target_topic: &str, message: &str) {
-        tracing::debug!(message, target_topic)
+        tracing::debug!(message, target_topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -193,9 +189,8 @@ mod logging {
     /// ```
     /// # rhai-autodocs:index:6
     #[rhai_fn(global, name = "trace")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn trace(target_topic: &str, message: &str) {
-        tracing::trace!(message, target_topic)
+        tracing::trace!(message, target_topic);
     }
 
     #[doc(hidden)]
@@ -206,19 +201,19 @@ mod logging {
             // 'target_topic' field is not called 'topic' to avoid overriding the topic of tracing API.
             Ok(level) => match level {
                 tracing::Level::TRACE => {
-                    tracing::trace!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+                    tracing::trace!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
                 }
                 tracing::Level::DEBUG => {
-                    tracing::debug!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+                    tracing::debug!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
                 }
                 tracing::Level::INFO => {
-                    tracing::info!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+                    tracing::info!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
                 }
                 tracing::Level::WARN => {
-                    tracing::warn!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+                    tracing::warn!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
                 }
                 tracing::Level::ERROR => {
-                    tracing::error!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+                    tracing::error!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
                 }
             },
             Err(e) => {
@@ -234,36 +229,31 @@ mod logging {
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "err")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn err_default_topic(message: &str) {
-        tracing::error!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+        tracing::error!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
     }
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "warn")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn warn_default_topic(message: &str) {
-        tracing::warn!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+        tracing::warn!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
     }
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "info")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn info_default_topic(message: &str) {
-        tracing::info!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+        tracing::info!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
     }
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "debug")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn debug_default_topic(message: &str) {
-        tracing::debug!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+        tracing::debug!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
     }
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "trace")]
-    #[allow(clippy::cognitive_complexity)]
     pub fn trace_default_topic(message: &str) {
-        tracing::trace!(message, target_topic = DEFAULT_USER_LOG_TOPIC)
+        tracing::trace!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
     }
 }

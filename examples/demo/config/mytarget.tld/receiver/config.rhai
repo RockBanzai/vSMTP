@@ -6,7 +6,7 @@ fn on_config(config) {
     };
 
     config.broker.uri = env::variable("BROKER");
-    config.broker.certificate_chain = "/etc/ssl/certs/ca-certificates.crt";
+    config.broker.extra_root_ca = crypto::load_cert("/etc/ssl/certs/ca-certificates.crt");
     config.scripts.path = "/rules.rhai";
 
     config.logs.default_level = "trace";
@@ -15,7 +15,6 @@ fn on_config(config) {
         pinky_swear: "warn",
         mio: "warn",
         polling: "warn",
-        want: "warn",
         async_io: "warn",
     };
 
@@ -23,13 +22,18 @@ fn on_config(config) {
         pipelining: true,
         dsn: true,
         starttls: true,
+        auth: #{
+            mechanisms: ["Plain", "Login"],
+        }
     };
+
+    config.name = "mytarget.tld";
 
     config.tls = #{
         protocol_version: ["TLSv1.2", "TLSv1.3"],
         root: #{
-            certificate: "/etc/ssl/certs/smtp-in.mytarget.tld.crt",
-            private_key: "/etc/ssl/certs/smtp-in.mytarget.tld.key",
+            certificate: crypto::load_cert("/etc/ssl/certs/mytarget.tld.crt"),
+            private_key: crypto::load_pem_rsa_pkcs8("/etc/ssl/certs/mytarget.tld.key"),
         }
     };
 

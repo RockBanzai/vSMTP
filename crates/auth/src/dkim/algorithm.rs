@@ -22,6 +22,7 @@
     strum::Display,
     serde_with::SerializeDisplay,
     serde_with::DeserializeFromStr,
+    fake::Dummy,
 )]
 pub enum SigningAlgorithm {
     /// The SHA-1 hash function should be considered cryptographically broken and unsuitable

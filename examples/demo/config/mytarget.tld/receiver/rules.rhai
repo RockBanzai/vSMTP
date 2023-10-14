@@ -41,8 +41,17 @@ const rules = #{
                 [ prelude::debug_ctx ]
             })
         },
-        helo:       |ctx| { ctx.run([ prelude::spf_rule(#{ identity: "helo",        policy: get_spf_policy(ctx) }) ]) },
-        mail_from:  |ctx| { ctx.run([ prelude::spf_rule(#{ identity: "mail_from",   policy: get_spf_policy(ctx) }) ]) },
+        helo:       |ctx| { ctx.run([ prelude::spf_rule(#{
+            identity: "helo",
+            policy: get_spf_policy(ctx)
+        }) ]) },
+        mail_from:  |ctx| { ctx.run([
+            prelude::deny_unencrypted,
+            prelude::spf_rule(#{
+                identity: "mail_from",
+                policy: get_spf_policy(ctx)
+            })
+        ]) },
         rcpt_to:    |ctx| { ctx.run([
             rule "check if recipient exists" |ctx| {
                 // FIXME: only check the last rcpt?
@@ -104,13 +113,8 @@ const rules = #{
         ]) },
         mail_from:  |ctx| { ctx.run([
             prelude::debug_ctx,
-            rule "deny sender" |ctx| {
-                if ctx.is_authenticated {
-                    status::next()
-                } else {
-                    status::deny("530 5.7.0 Authentication required")
-                }
-            },
+            prelude::deny_unencrypted,
+            prelude::deny_unauthenticated,
         ]) },
         rcpt_to:    |ctx| { ctx.run([ prelude::debug_ctx ]) },
         pre_queue:  |ctx| { ctx.run([ prelude::debug_ctx ]) }

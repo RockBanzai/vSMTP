@@ -20,6 +20,7 @@ use chrono::{Datelike, Timelike};
 /// # Arguments:
 ///
 /// * `event` - event received from the log queue.
+#[must_use]
 pub fn get_message(event: &Event) -> Option<String> {
     if event.fields.len() == 1 && event.fields.contains_key("message") {
         return match serde_json::to_string(event.fields.get("message").unwrap()) {
@@ -29,7 +30,7 @@ pub fn get_message(event: &Event) -> Option<String> {
     }
     let mut extended_msg = "{".to_string();
     for (name, field) in &event.fields {
-        extended_msg.push_str(format!("{}: {}", name, field).as_str());
+        extended_msg.push_str(format!("{name}: {field}").as_str());
         extended_msg.push(' ');
     }
     extended_msg.replace_range(extended_msg.len() - 1..extended_msg.len(), "}");
@@ -44,6 +45,7 @@ pub fn get_message(event: &Event) -> Option<String> {
 ///
 /// # Arguments:
 /// * `timestamp` timestamp to format
+#[must_use]
 pub fn format_timestamp(timestamp: &chrono::DateTime<chrono::Utc>) -> String {
     format!(
         "{:04}-{:02}-{:02} {:02}:{:02}:{:02}",
@@ -60,6 +62,7 @@ pub fn format_timestamp(timestamp: &chrono::DateTime<chrono::Utc>) -> String {
 ///
 /// # Arguments:
 /// * `level` level to format
+#[must_use]
 pub fn format_level(level: tracing::Level) -> String {
     match level {
         tracing::Level::ERROR => "ERROR",

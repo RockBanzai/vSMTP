@@ -14,7 +14,9 @@
 ///
 /// To satisfy all requirements, two canonicalization algorithms are
 /// defined for each of the header and the body
-#[derive(Debug, Default, PartialEq, Eq, Copy, Clone, strum::EnumString, strum::Display)]
+#[derive(
+    Debug, Default, PartialEq, Eq, Copy, Clone, strum::EnumString, strum::Display, fake::Dummy,
+)]
 #[strum(serialize_all = "lowercase")]
 #[allow(clippy::module_name_repetitions)]
 pub(super) enum CanonicalizationAlgorithm {
@@ -125,6 +127,7 @@ impl CanonicalizationAlgorithm {
     Clone,
     serde_with::SerializeDisplay,
     serde_with::DeserializeFromStr,
+    fake::Dummy,
 )]
 pub struct Canonicalization {
     /// The algorithm used to canonicalize the header.

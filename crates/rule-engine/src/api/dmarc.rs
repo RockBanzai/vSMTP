@@ -15,7 +15,7 @@ use rhai::plugin::{
     PluginFunction, RhaiResult, TypeId,
 };
 use vsmtp_auth::dmarc as backend;
-use vsmtp_common::{dkim, dmarc, dns_resolver::DnsResolver, spf};
+use vsmtp_common::dns_resolver::DnsResolver;
 use vsmtp_mail_parser::{mail::headers::Header, Mail};
 
 pub use rhai_dmarc::*;
@@ -53,7 +53,7 @@ fn get_rfc5322_from_domain(msg: &Mail) -> Result<String, String> {
 async fn get_dmarc_record(
     dns_resolver: std::sync::Arc<DnsResolver>,
     rfc5322_from_domain: &str,
-) -> Result<backend::Record, dmarc::Value> {
+) -> Result<backend::Record, backend::Value> {
     match dns_resolver
         .resolver
         .txt_lookup(format!("_dmarc.{rfc5322_from_domain}"))
@@ -61,7 +61,7 @@ async fn get_dmarc_record(
     {
         Ok(record) if record.iter().count() != 1 => {
             tracing::debug!("No DMARC record found");
-            Err(dmarc::Value::None)
+            Err(backend::Value::None)
         }
         Ok(record) => {
             let record = record.into_iter().next().expect("count == 1");
@@ -69,19 +69,19 @@ async fn get_dmarc_record(
                 Ok(dmarc_record) => Ok(dmarc_record),
                 Err(e) => {
                     tracing::debug!(?e, "Invalid DMARC record");
-                    Err(dmarc::Value::None)
+                    Err(backend::Value::None)
                 }
             }
         }
         Err(e) => {
             tracing::debug!(?e, "DNS error");
-            Err(dmarc::Value::TempError)
+            Err(backend::Value::TempError)
         }
     }
 }
 
-type DmarcResult = rhai::Shared<dmarc::Dmarc>;
-type DmarcValue = dmarc::Value;
+type DmarcResult = rhai::Shared<backend::Dmarc>;
+type DmarcValue = backend::Value;
 
 /// Domain-based message authentication, reporting and conformance implementation
 /// specified by RFC 7489. (<https://www.rfc-editor.org/rfc/rfc7489>)
@@ -151,7 +151,7 @@ mod rhai_dmarc {
         let record = match crate::block_on(get_dmarc_record(dns_resolver, &rfc5322_from_domain)) {
             Ok(record) => record,
             Err(value) => {
-                return Ok(dmarc::Dmarc {
+                return Ok(backend::Dmarc {
                     value,
                     domain: rfc5322_from_domain.parse().unwrap(),
                     record: None,
@@ -160,14 +160,14 @@ mod rhai_dmarc {
             }
         };
 
-        if spf.value == spf::Value::Pass
+        if spf.value == vsmtp_auth::spf::Value::Pass
             && spf
                 .domain
                 .as_deref()
                 .is_some_and(|spf_domain| record.spf_is_aligned(&rfc5322_from_domain, spf_domain))
         {
-            return Ok(dmarc::Dmarc {
-                value: dmarc::Value::Pass,
+            return Ok(backend::Dmarc {
+                value: backend::Value::Pass,
                 domain: rfc5322_from_domain.parse().unwrap(),
                 record: Some(record),
             }
@@ -175,14 +175,14 @@ mod rhai_dmarc {
         }
 
         for i in &*dkim {
-            if i.value == dkim::Value::Pass
+            if i.value == vsmtp_auth::dkim::Value::Pass
                 && i.signature.as_ref().is_some_and(|signature| {
                     record.dkim_is_aligned(&rfc5322_from_domain, &signature.sdid)
                 })
             {
                 tracing::debug!("Dmarc signature checked");
-                return Ok(dmarc::Dmarc {
-                    value: dmarc::Value::Pass,
+                return Ok(backend::Dmarc {
+                    value: backend::Value::Pass,
                     domain: rfc5322_from_domain.parse().unwrap(),
                     record: Some(record),
                 }
@@ -190,8 +190,8 @@ mod rhai_dmarc {
             }
         }
 
-        Ok(dmarc::Dmarc {
-            value: dmarc::Value::Fail,
+        Ok(backend::Dmarc {
+            value: backend::Value::Fail,
             domain: rfc5322_from_domain.parse().unwrap(),
             record: Some(record),
         }

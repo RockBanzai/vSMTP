@@ -88,10 +88,10 @@ impl Rfc5424Msg {
                 .replace('{', "[")
                 .replace('}', "]");
             if !rfc_formatted_msg.contains('[') {
-                rfc_formatted_msg = format!("[{}]", rfc_formatted_msg);
+                rfc_formatted_msg = format!("[{rfc_formatted_msg}]");
             }
 
-            Ok(Rfc5424Msg {
+            Ok(Self {
                 facility: DEFAULT_SYSLOG_FACILITY,
                 gravity: level_to_syslog_level(&event.level),
                 timestamp: event.timestamp.into(),
@@ -184,7 +184,7 @@ impl Rfc3164Msg {
             return Err(FormatterError::NotAnEvent);
         }
         if let Some(msg) = vsmtp_log_dispatcher::get_message(event) {
-            Ok(Rfc3164Msg {
+            Ok(Self {
                 facility: DEFAULT_SYSLOG_FACILITY,
                 gravity: level_to_syslog_level(&event.level),
                 timestamp: event.timestamp.into(),
@@ -208,7 +208,7 @@ impl Rfc3164 {
     fn format_timestamp(timestamp: &DateTime<Utc>) -> String {
         format!(
             "{} {:02} {:02}:{:02}:{:02}",
-            Rfc3164::match_month(timestamp.month()),
+            Self::match_month(timestamp.month()),
             timestamp.day(),
             timestamp.hour(),
             timestamp.minute(),

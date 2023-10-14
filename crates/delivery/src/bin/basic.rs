@@ -9,6 +9,7 @@
  *
  */
 
+use vsmtp_auth::TlsCertificate;
 use vsmtp_common::{
     ctx_delivery::CtxDelivery,
     delivery_attempt::{DeliveryAttempt, RemoteInformation, RemoteMailExchange, ShouldNotify},
@@ -34,13 +35,12 @@ struct Basic {
     dns: DnsResolver,
     tls: Tls,
     #[serde(default)]
-    queues: vsmtp_config::Queues,
-    #[serde(default)]
     broker: vsmtp_config::Broker,
     #[serde(default)]
     logs: vsmtp_config::Logs,
     #[serde(skip)]
     path: std::path::PathBuf,
+    extra_root_ca: Option<std::sync::Arc<TlsCertificate>>,
 }
 
 const fn get_notification_supported() -> ShouldNotify {
@@ -124,6 +124,7 @@ impl Basic {
             rcpt_to.into_iter().cloned().collect::<Vec<_>>(),
             mail,
             &self.tls,
+            self.extra_root_ca.clone(),
         )
         .await
     }
@@ -158,29 +159,27 @@ impl DeliverySystem for Basic {
     }
 }
 
-impl Config for Basic {
-    fn with_path(_: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self> {
-        Ok(Self {
+impl Default for Basic {
+    fn default() -> Self {
+        Self {
             dns: DnsResolver::google(),
             api_version: vsmtp_config::semver::VersionReq::default(),
-            queues: vsmtp_config::Queues::default(),
             broker: vsmtp_config::Broker::default(),
             logs: vsmtp_config::Logs::default(),
             path: std::path::PathBuf::default(),
             tls: Tls::default(),
-        })
+            extra_root_ca: None,
+        }
     }
+}
 
+impl Config for Basic {
     fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
         &self.api_version
     }
 
     fn broker(&self) -> &vsmtp_config::Broker {
         &self.broker
-    }
-
-    fn queues(&self) -> &vsmtp_config::Queues {
-        &self.queues
     }
 
     fn logs(&self) -> &vsmtp_config::logs::Logs {

@@ -101,7 +101,9 @@ impl Server {
                     None
                 }
                 Ok((tcp_stream, client_addr)) => {
-                    tracing::info!("Accepted connection from {client_addr}");
+                    tracing::info!(
+                        "Accepting connection on '{kind}/{server_addr}' from '{client_addr}'"
+                    );
                     Some((kind, server_addr, client_addr, tcp_stream))
                 }
             },

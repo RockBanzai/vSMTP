@@ -61,7 +61,7 @@ impl Logger for Console {
                 Some(msg) => println!(
                     "{} {} {}: {}",
                     vsmtp_log_dispatcher::format_timestamp(&event.timestamp.into()),
-                    Console::format_level(event.level),
+                    Self::format_level(event.level),
                     formatter::extract_first_span(&event.target.to_string()).italic(), // TODO: add this information only in dev mod
                     msg
                 ),
@@ -110,10 +110,10 @@ impl File {
 
 impl Logger for File {
     fn log(&mut self, event: &Event) {
-        if let Some(mut msg) = File::format(event) {
+        if let Some(mut msg) = Self::format(event) {
             msg.push('\n');
             if let Err(err) = self.file_appender.write(msg.as_bytes()) {
-                tracing::warn!("Cannot write log to log file: {}", err)
+                tracing::warn!("Cannot write log to log file: {}", err);
             }
         }
     }
@@ -175,7 +175,7 @@ impl Syslog {
             config::SyslogProtocol::Udp => {
                 instance.udp_socket = match UdpSocket::bind("127.0.0.1:0") {
                     Ok(socket) => match socket.connect(instance.address.clone()) {
-                        Ok(_) => Some(socket),
+                        Ok(()) => Some(socket),
                         Err(err) => {
                             tracing::warn!(
                                 "Failed to connect to a syslog service with the address {}: {}",
@@ -265,8 +265,8 @@ impl Logger for Journald {
     fn log(&mut self, event: &Event) {
         if let Some(socket) = &mut self.socket {
             if let Some(msg) = vsmtp_log_dispatcher::get_message(event) {
-                let msg = Journald::format_event(event, &msg);
-                if let Err(err) = socket.send_to(msg.as_bytes(), Journald::SYSTEMD_SOCKET) {
+                let msg = Self::format_event(event, &msg);
+                if let Err(err) = socket.send_to(msg.as_bytes(), Self::SYSTEMD_SOCKET) {
                     tracing::warn!("Cannot send message to journald: {err}");
                 }
             }
@@ -275,7 +275,7 @@ impl Logger for Journald {
 }
 
 impl Journald {
-    const SYSTEMD_SOCKET: &str = "/run/systemd/journal/socket";
+    const SYSTEMD_SOCKET: &'static str = "/run/systemd/journal/socket";
 
     /// Format an event to be syslog compliant
     ///
@@ -307,6 +307,6 @@ impl Journald {
                 None
             }
         };
-        Journald { socket }
+        Self { socket }
     }
 }

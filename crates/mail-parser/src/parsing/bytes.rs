@@ -68,7 +68,7 @@ impl Parser {
 
                     return Ok(Mail {
                         headers,
-                        body: Body::Raw(bytes.iter().map(|s| s.to_string()).collect()),
+                        body: Body::Raw(bytes.iter().map(|s| (*s).to_string()).collect()),
                     });
                 }
             };
@@ -110,7 +110,8 @@ impl Parser {
 
                     mail.body = Body::Parsed(ParsedBody::Mime(mime));
                 } else {
-                    mail.body = Body::Parsed(ParsedBody::Text(self.as_regular_body(&mut &raw[..])?))
+                    mail.body =
+                        Body::Parsed(ParsedBody::Text(self.as_regular_body(&mut &raw[..])?));
                 };
 
                 match &mut mail.body {
@@ -422,8 +423,7 @@ impl Parser {
                 .parse_preamble(content)?
                 .iter()
                 .map(ToString::to_string)
-                .collect::<Vec<_>>()
-                .join(""),
+                .collect::<String>(),
             parts: Vec::new(),
             epilogue: String::new(),
         };
@@ -445,8 +445,7 @@ impl Parser {
                         .parse_epilogue(content)?
                         .iter()
                         .map(ToString::to_string)
-                        .collect::<Vec<_>>()
-                        .join("");
+                        .collect::<String>();
                     return Ok(multi_parts);
                 }
 
@@ -492,7 +491,7 @@ pub fn get_mime_header(name: &str, value: &str) -> mime::Header {
     let args = value.split(';').collect::<Vec<&str>>();
     let mut args_iter = args.iter();
 
-    let body = args_iter.next().unwrap_or(&"").to_string();
+    let body = (*args_iter.next().unwrap_or(&"")).to_string();
     let mut parsed_args = args_iter
         .filter_map(|arg| Arg::from_str(arg).ok())
         .collect::<Vec<_>>();

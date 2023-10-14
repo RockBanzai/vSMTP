@@ -86,23 +86,6 @@ pub fn get_rustls_config(
     root: Option<&Secret>,
     r#virtual: &std::collections::BTreeMap<Domain, Secret>,
 ) -> Result<rustls::ServerConfig, Error> {
-    fn to_rustls(
-        cert: Vec<rustls::Certificate>,
-        key: &rustls::PrivateKey,
-    ) -> Result<rustls::sign::CertifiedKey, Error> {
-        rustls::sign::any_supported_type(key)
-            .map_err(Error::Sign)
-            .map(|key| {
-                rustls::sign::CertifiedKey {
-                    cert,
-                    key,
-                    // TODO: support OCSP and SCT
-                    ocsp: None,
-                    sct_list: None,
-                }
-            })
-    }
-
     let protocol_version = match (
         protocol_version
             .iter()
@@ -129,13 +112,7 @@ pub fn get_rustls_config(
 
     for (domain, secret) in r#virtual {
         cert_resolver
-            .add(
-                &domain.to_string(),
-                to_rustls(
-                    secret.certificate.inner.clone(),
-                    &secret.private_key.inner.clone(),
-                )?,
-            )
+            .add(&domain.to_string(), secret.to_rustls()?)
             .map_err(Error::Protocol)?;
     }
 
@@ -150,12 +127,7 @@ pub fn get_rustls_config(
             hostname: hostname.to_string(),
             default_cert: root
                 .as_ref()
-                .map(|secret| {
-                    to_rustls(
-                        secret.certificate.inner.clone(),
-                        &secret.private_key.inner.clone(),
-                    )
-                })
+                .map(|secret| secret.to_rustls())
                 .transpose()?
                 .map(std::sync::Arc::new),
         }));

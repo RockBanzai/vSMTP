@@ -16,7 +16,7 @@ use vsmtp_common::{
 use vsmtp_config::Config;
 use vsmtp_delivery::{delivery_main, DeliverySystem};
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Mbox {}
 
@@ -32,19 +32,11 @@ impl DeliverySystem for Mbox {
 }
 
 impl Config for Mbox {
-    fn with_path(_: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self> {
-        todo!()
-    }
-
     fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
         todo!()
     }
 
     fn broker(&self) -> &vsmtp_config::broker::Broker {
-        todo!()
-    }
-
-    fn queues(&self) -> &vsmtp_config::queues::Queues {
         todo!()
     }
 

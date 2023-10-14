@@ -14,10 +14,7 @@ use vsmtp_common::broker::{Exchange, Queue};
 use vsmtp_config::Config;
 use vsmtp_protocol::ConnectionKind;
 use vsmtp_receiver::smtp::{
-    config::{cli::Args, SMTPReceiverConfig},
-    rules::api,
-    server::Server,
-    session::Handler,
+    config::SMTPReceiverConfig, rules::api, server::Server, session::Handler,
 };
 use vsmtp_rule_engine::{
     api::{msa_modules, net_modules, server_auth, utils_modules},
@@ -117,39 +114,24 @@ struct Receiver {
     >,
 }
 
+#[derive(clap::Parser)]
+#[command(author, version, about)]
+pub struct Args {
+    /// Path to the rhai configuration file.
+    #[arg(short, long, default_value_t = String::from("/etc/vsmtp/receiver-smtp/conf.d/config.rhai"))]
+    pub config: String,
+}
+
 impl Receiver {
     /// Build the configuration, AMQP connections and rule engine for the service.
     async fn build() -> Result<Self, Box<dyn std::error::Error>> {
-        use tracing_subscriber::prelude::*;
-        let args = <Args as clap::Parser>::parse();
+        let Args { config } = <Args as clap::Parser>::parse();
 
-        let config = SMTPReceiverConfig::from_rhai_file(&args.config)?;
-
-        let conn = lapin::Connection::connect_with_config(
-            &config.broker().uri,
-            lapin::ConnectionProperties::default(),
-            lapin::tcp::OwnedTLSConfig {
-                identity: None,
-                cert_chain: config.broker.certificate_chain.clone(),
-            },
-        )
-        .await?;
+        let config = SMTPReceiverConfig::from_rhai_file(&config)?;
+        let conn = config.broker().connect().await?;
         let conn = std::sync::Arc::new(conn);
 
-        let (layer, task) = tracing_amqp::layer(&conn).await;
-        let filter = tracing_subscriber::filter::Targets::new()
-            .with_targets(config.logs.levels.clone())
-            .with_default(config.logs().default_level);
-
-        tracing_subscriber::registry()
-            .with(layer.with_filter(filter))
-            .try_init()?;
-
-        tokio::spawn(task);
-
-        std::panic::set_hook(Box::new(|e| {
-            tracing::error!(?e, "a panic occurred");
-        }));
+        vsmtp_common::init_logs(&conn, config.logs()).await?;
 
         let channel = conn.create_channel().await?;
         channel
@@ -212,7 +194,7 @@ impl Receiver {
             config,
             conn,
             rule_engine_config,
-            ..
+            channel: _,
         } = self;
 
         let sockets = bind(SocketsConfig::from_iter([
@@ -229,7 +211,6 @@ impl Receiver {
         .await?;
 
         let config = std::sync::Arc::new(config);
-        let config_clone = config.clone();
         let rustls_config = if let Some(tls) = &config.tls {
             Some(std::sync::Arc::new(vsmtp_common::tls::get_rustls_config(
                 &tls.protocol_version,
@@ -243,6 +224,11 @@ impl Receiver {
             None
         };
 
+        let server = Server {
+            socket: sockets,
+            config: config.clone(),
+        };
+
         let on_accept = move |args| async move {
             let channel = conn.create_channel().await.unwrap();
             channel
@@ -253,20 +239,8 @@ impl Receiver {
                 .basic_qos(1, lapin::options::BasicQosOptions::default())
                 .await
                 .unwrap();
-            Handler::on_accept(
-                args,
-                rule_engine_config.clone(),
-                channel,
-                config_clone,
-                rustls_config,
-            )
+            Handler::on_accept(args, rule_engine_config, channel, config, rustls_config)
         };
-
-        let server = Server {
-            socket: sockets,
-            config,
-        };
-
         tracing::info!("SMTP server is listening");
         server.listen(on_accept).await;
         tracing::info!("SMTP server has stop");
@@ -274,6 +248,7 @@ impl Receiver {
         Ok(())
     }
 }
+
 #[tokio::main]
 async fn main() {
     let receiver = match Receiver::build().await {

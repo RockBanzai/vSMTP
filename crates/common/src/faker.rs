@@ -207,7 +207,7 @@ pub struct MailFaker;
 
 impl fake::Dummy<MailFaker> for Mail {
     fn dummy_with_rng<R: rand::Rng + ?Sized>(_: &MailFaker, _rng: &mut R) -> Self {
-        let raw = r#"From: <foo@mydomain.tld>
+        let raw = r"From: <foo@mydomain.tld>
 To: <foo@mydomain.tld>
 Date: Wed, 31 May 2023 14:29:09 +0200 (CEST)
 Message-Id: <14e17.0003.0000@mlala-Nitro-AN515-54>
@@ -216,7 +216,7 @@ La de da de da 1.
 La de da de da 2.
 La de da de da 3.
 La de da de da 4.
-"#;
+";
 
         let raw = raw.replace('\n', "\r\n");
         raw.as_str().try_into().unwrap()

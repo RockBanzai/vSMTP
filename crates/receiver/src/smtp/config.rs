@@ -10,10 +10,9 @@
  */
 
 use vsmtp_common::tls::{secret::Secret, CipherSuite, ProtocolVersion};
-use vsmtp_config::{logs, semver, Broker, Config, ConfigResult, Logs, Queues};
+use vsmtp_config::{logs, semver, Broker, Config, Logs};
 use vsmtp_protocol::{rustls, Domain};
 
-pub mod cli;
 pub const SUBMIT_TO: &str = "working";
 
 /// Configuration for the SMTP receiver.
@@ -42,9 +41,6 @@ pub struct SMTPReceiverConfig {
     /// TLS parameters.
     #[serde(default)]
     pub tls: Option<Tls>,
-    /// Queue names to redirect or forward the email.
-    #[serde(default = "SMTPReceiverConfig::default_queues")]
-    pub queues: Queues,
     /// Filters configuration.
     #[serde(default)]
     pub scripts: Scripts,
@@ -76,13 +72,6 @@ impl SMTPReceiverConfig {
         20_000_000
     }
 
-    fn default_queues() -> Queues {
-        Queues {
-            submit: Some(SUBMIT_TO.to_string()),
-            ..Default::default()
-        }
-    }
-
     fn default_storage() -> std::path::PathBuf {
         "/var/vsmtp/storage".into()
     }
@@ -99,7 +88,6 @@ impl Default for SMTPReceiverConfig {
             max_clients: Self::default_max_client(),
             message_size_limit: Self::default_message_size_limit(),
             tls: None,
-            queues: Self::default_queues(),
             scripts: Scripts::default(),
             storage: Self::default_storage(),
             broker: Broker::default(),
@@ -399,15 +387,8 @@ impl std::fmt::Display for Mechanism {
 }
 
 impl Config for SMTPReceiverConfig {
-    #[allow(clippy::field_reassign_with_default)]
-    fn with_path(path: &impl AsRef<std::path::Path>) -> ConfigResult<Self>
-    where
-        Self: Config + serde::de::DeserializeOwned + serde::Serialize,
-    {
-        let mut config = Self::default();
-        config.path = path.as_ref().into();
-
-        Ok(config)
+    fn with_path(&mut self, path: &impl AsRef<std::path::Path>) {
+        self.path = path.as_ref().into();
     }
 
     fn api_version(&self) -> &semver::VersionReq {
@@ -416,10 +397,6 @@ impl Config for SMTPReceiverConfig {
 
     fn broker(&self) -> &Broker {
         &self.broker
-    }
-
-    fn queues(&self) -> &Queues {
-        &self.queues
     }
 
     fn logs(&self) -> &logs::Logs {

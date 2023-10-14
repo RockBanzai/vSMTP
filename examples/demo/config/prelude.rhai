@@ -18,6 +18,18 @@ export const debug_ctx = rule "debug ctx" |ctx| {
 };
 
 //
+// TLS
+//
+
+export const deny_unencrypted = rule "deny unencrypted" |ctx| {
+    if ctx.is_secured() {
+        status::next()
+    } else {
+        status::deny(`523 5.7.10 unencrypted connections are not allowed`)
+    }
+};
+
+//
 // Authentication
 //
 
@@ -43,6 +55,15 @@ fn run_testsaslauthd(authid, password) {
         status::next()
     }
 }
+
+export const deny_unauthenticated = rule "deny unauthenticated" |ctx| {
+    debug(ctx);
+    if ctx.is_authenticated {
+        status::next()
+    } else {
+        status::deny("530 5.7.0 Authentication required")
+    }
+};
 
 // FIXME: those rules use global variable, it should be passed as a parameter
 

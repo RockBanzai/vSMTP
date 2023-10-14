@@ -25,15 +25,13 @@ enum UserLookup {
     FullAddress,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Default, serde::Serialize, serde::Deserialize)]
 struct Maildir {
     api_version: vsmtp_config::semver::VersionReq,
     #[serde(default, with = "option_group")]
     group_local: Option<uzers::Group>,
     #[serde(default)]
     user_lookup: UserLookup,
-    #[serde(default)]
-    queues: vsmtp_config::Queues,
     #[serde(default)]
     broker: vsmtp_config::Broker,
     #[serde(default)]
@@ -193,28 +191,12 @@ impl DeliverySystem for Maildir {
 }
 
 impl Config for Maildir {
-    fn with_path(_: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self> {
-        Ok(Self {
-            group_local: None,
-            user_lookup: UserLookup::default(),
-            api_version: vsmtp_config::semver::VersionReq::default(),
-            queues: vsmtp_config::Queues::default(),
-            broker: vsmtp_config::Broker::default(),
-            logs: vsmtp_config::Logs::default(),
-            path: std::path::PathBuf::default(),
-        })
-    }
-
     fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
         &self.api_version
     }
 
     fn broker(&self) -> &vsmtp_config::Broker {
         &self.broker
-    }
-
-    fn queues(&self) -> &vsmtp_config::Queues {
-        &self.queues
     }
 
     fn logs(&self) -> &vsmtp_config::logs::Logs {

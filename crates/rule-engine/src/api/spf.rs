@@ -10,12 +10,14 @@
  */
 
 use crate::api::docs::Ctx;
+use crate::api::Result;
 use crate::block_on;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
-use vsmtp_common::{dns_resolver::DnsResolver, spf, trust_dns_resolver};
+use vsmtp_auth::spf;
+use vsmtp_common::{dns_resolver::DnsResolver, trust_dns_resolver};
 use vsmtp_protocol::ClientName;
 
 pub use rhai_spf::*;
@@ -147,8 +149,8 @@ fn to_spf_result(
         trace: _,
     }: viaspf::QueryResult,
     domain: String,
-) -> spf::SpfResult {
-    spf::SpfResult {
+) -> spf::Result {
+    spf::Result {
         value: match spf_result {
             viaspf::SpfResult::None => spf::Value::None,
             viaspf::SpfResult::Neutral => spf::Value::Neutral,
@@ -162,7 +164,7 @@ fn to_spf_result(
     }
 }
 
-type SpfResult = rhai::Shared<spf::SpfResult>;
+type SpfResult = rhai::Shared<spf::Result>;
 
 /// Implementation of the Sender Policy Framework (SPF), described by RFC 7208. (<https://datatracker.ietf.org/doc/html/rfc7208>)
 #[rhai::plugin::export_module]
@@ -201,9 +203,9 @@ mod rhai_spf {
     /// ```
     ///
     /// # rhai-autodocs:index:1
-    #[rhai_fn(return_raw)] // NOTE: should return a spf::tempfail to handle user's rules issues??
+    #[rhai_fn(return_raw)] // NOTE: should return a tempfail to handle user's rules issues??
     #[tracing::instrument(skip(params), ret, err)]
-    pub fn check_host(params: rhai::Dynamic) -> Result<SpfResult, Box<rhai::EvalAltResult>> {
+    pub fn check_host(params: rhai::Dynamic) -> Result<SpfResult> {
         let Params {
             ip,
             helo,
@@ -213,7 +215,7 @@ mod rhai_spf {
 
         let helo = match helo {
             ClientName::Ip4(..) | ClientName::Ip6(..) => {
-                return Ok(spf::SpfResult {
+                return Ok(spf::Result {
                     value: spf::Value::None,
                     domain: None,
                 }
@@ -285,11 +287,7 @@ mod rhai_spf {
     /// Store the result of a previous `spf::check_host` function execution.
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, pure, return_raw)]
-    pub fn store(
-        ctx: &mut Ctx,
-        identity: &str,
-        spf_result: SpfResult,
-    ) -> Result<(), Box<rhai::EvalAltResult>> {
+    pub fn store(ctx: &mut Ctx, identity: &str, spf_result: SpfResult) -> Result<()> {
         match identity {
             "helo" => ctx.write(|ctx| {
                 ctx.mut_helo().map_err(|e| e.to_string())?.spf_helo_identity = Some(spf_result);

@@ -1,6 +1,6 @@
 fn on_config(config) {
     config.broker.uri = env::variable("BROKER");
-    config.broker.certificate_chain = "/etc/ssl/certs/ca-certificates.crt";
+    config.broker.extra_root_ca = crypto::load_cert("/etc/ssl/certs/ca-certificates.crt");
 
     config.dns.config = #{
         name_servers: [
@@ -14,9 +14,10 @@ fn on_config(config) {
         pinky_swear: "warn",
         mio: "warn",
         polling: "warn",
-        want: "warn",
         async_io: "warn",
     };
+
+    config.extra_root_ca = crypto::load_cert("/etc/ssl/certs/mytarget.tld-root-ca.crt");
 
     config
 }

@@ -9,9 +9,19 @@
  *
  */
 
+use super::Signature;
+
+#[serde_with::serde_as]
+#[derive(Debug, serde::Serialize, serde::Deserialize, fake::Dummy)]
+pub struct DkimVerificationResult {
+    pub value: Value,
+    /// NOTE: wrapped in an Option if the query/parsing failed
+    pub signature: Option<Signature>,
+}
+
+/// <https://datatracker.ietf.org/doc/html/rfc8601#section-2.7.1>
 #[derive(
     Debug,
-    Clone,
     PartialEq,
     Eq,
     strum::EnumString,
@@ -22,19 +32,11 @@
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Value {
+    None,
     Pass,
     Fail,
-    SoftFail,
+    Policy,
     Neutral,
-    None,
-    TempError,
-    PermError,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
-pub struct SpfResult {
-    pub value: Value,
-    /// The domain that was queried for.
-    /// Wrapped in an option to handle the case where EHLO/HELO is an ip4/ip6 and no domain can be verified.
-    pub domain: Option<String>,
+    PermFail,
+    TempFail,
 }

@@ -16,8 +16,13 @@ workspace = true
 [dependencies]
 addr = { workspace = true }
 base64 = { workspace = true }
+fake = { workspace = true }
+pem-rfc7468 = { workspace = true }
+rand = { workspace = true }
 ring-compat = { workspace = true }
 rsa = { workspace = true }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
 serde = { workspace = true }
 serde_with = { workspace = true }
 sha1 = { workspace = true, optional = true }
@@ -26,6 +31,8 @@ strum = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 viaspf = { workspace = true }
+vsmtp-protocol = { workspace = true }
+time = { workspace = true }
 
 [features]
 historic = ["dep:sha1"]

@@ -9,8 +9,9 @@
  *
  */
 
-use super::{handler::UpgradeTls, Context, SenderHandler};
+use super::{handler::UpgradeTls, Sender, SenderHandler};
 use crate::{Requirement, Tls};
+use vsmtp_auth::TlsCertificate;
 use vsmtp_common::{
     delivery_attempt::{
         DeliveryAttempt, RemoteInformation, RemoteMailExchange, RemoteServer, ShouldNotify,
@@ -21,7 +22,7 @@ use vsmtp_common::{
     transfer_error::Delivery,
     Recipient,
 };
-use vsmtp_protocol::{ClientName, Domain, Reader, Reply, Writer};
+use vsmtp_protocol::{rustls, tokio_rustls, ClientName, Domain, Reader, Reply, Writer};
 
 struct Handler {
     client_name: ClientName,
@@ -41,7 +42,7 @@ impl SenderHandler for Handler {
         true
     }
 
-    async fn on_connect(&mut self, _context: &mut Context) -> Result<(), Delivery> {
+    async fn on_connect(&mut self) -> Result<(), Delivery> {
         Ok(())
     }
 
@@ -80,20 +81,15 @@ impl SenderHandler for Handler {
         &self.tls_connector
     }
 
-    async fn on_ehlo(
-        &mut self,
-        response: response::Ehlo,
-        _context: &mut Context,
-    ) -> Result<UpgradeTls, Delivery> {
+    async fn on_ehlo(&mut self, response: response::Ehlo) -> Result<UpgradeTls, Delivery> {
         self.remote_output.save_ehlo(response);
 
         let has_starttls = self.remote_output.has_extension(Extension::StartTls);
 
         match self.tls.starttls {
             Requirement::Required if !has_starttls => Err(Delivery::StartTls),
-            Requirement::Required => Ok(UpgradeTls::Yes),
             Requirement::Optional if !has_starttls => Ok(UpgradeTls::No),
-            Requirement::Optional => Ok(UpgradeTls::Yes),
+            Requirement::Required | Requirement::Optional => Ok(UpgradeTls::Yes),
             Requirement::Disabled => Ok(UpgradeTls::No),
         }
     }
@@ -141,6 +137,7 @@ pub async fn send(
     to: Vec<Recipient>,
     message: &[u8],
     tls: &Tls,
+    extra_root_ca: Option<std::sync::Arc<TlsCertificate>>,
 ) -> DeliveryAttempt {
     let should_notify = ShouldNotify {
         // false only if the DSN has been transferred to the next hop
@@ -182,10 +179,9 @@ pub async fn send(
 
     let remote_addr = socket.peer_addr().unwrap();
     let (read, write) = socket.into_split();
-    let mut context = Context;
-    let mut handler = Handler {
+    let handler = Handler {
         client_name: ClientName::Domain(client_name.parse().unwrap()),
-        sni: vsmtp_protocol::rustls::ServerName::try_from(domain.to_string().as_str())
+        sni: rustls::ServerName::try_from(domain.to_string().as_str())
             .expect("valid domain from the trust-dns crate"),
         message: message.to_vec(),
         mail_from: from,
@@ -203,49 +199,42 @@ pub async fn send(
         should_notify: should_notify.clone(),
         // TODO: should be cached.
         tls_connector: {
-            let mut root_store = vsmtp_protocol::rustls::RootCertStore::empty();
+            let mut root_store = rustls::RootCertStore::empty();
 
-            // NOTE: Could the user add his own root certificates ? webpki certs comes from Modzilla.
             root_store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.iter().map(|ta| {
-                vsmtp_protocol::rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
+                rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
                     ta.subject,
                     ta.spki,
                     ta.name_constraints,
                 )
             }));
 
+            if let Some(extra_root_ca) = extra_root_ca {
+                for i in extra_root_ca.certs() {
+                    root_store.add(i).unwrap();
+                }
+            }
+
             // NOTE: We could let the user customize the tls parameters here.
-            let config = vsmtp_protocol::rustls::ClientConfig::builder()
+            let config = rustls::ClientConfig::builder()
                 .with_safe_defaults()
                 .with_root_certificates(root_store)
                 .with_no_client_auth();
 
-            vsmtp_protocol::tokio_rustls::TlsConnector::from(std::sync::Arc::new(config))
+            tokio_rustls::TlsConnector::from(std::sync::Arc::new(config))
         },
     };
 
-    super::exchange::deliver_mail(
-        Reader::new(read, true),
-        Writer::new(write),
-        &mut handler,
-        &mut context,
-    )
-    .await
-    .unwrap_or_else(|delivery| match &delivery {
-        Delivery::StartTls => DeliveryAttempt::new_smtp(
-            to,
-            RemoteInformation::StartTlsError { error: delivery },
-            should_notify,
-        ),
-        Delivery::Tls { .. } => DeliveryAttempt::new_smtp(
-            to,
-            RemoteInformation::TlsError { error: delivery },
-            should_notify,
-        ),
-        Delivery::ReplyParsing { .. }
-        | Delivery::Permanent { .. }
-        | Delivery::Transient { .. }
-        | Delivery::Client { .. }
-        | Delivery::Connection { .. } => handler.get_result(),
-    })
+    let mut sender = Sender::new(
+        Reader::new(Box::new(read), true),
+        Writer::new(Box::new(write)),
+        handler,
+    );
+
+    if matches!(sender.pre_transaction().await.unwrap(), UpgradeTls::Yes) {
+        let mut sender = sender.upgrade_tls().await.unwrap();
+        sender.send().await
+    } else {
+        sender.send().await
+    }
 }

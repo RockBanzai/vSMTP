@@ -28,8 +28,8 @@ services:
       - ./receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
       - ./receiver/rules-pre-av.rhai:/rules.rhai:ro
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./receiver/generated/smtp-msa.mydomain.tld.crt:/etc/ssl/certs/smtp-msa.mydomain.tld.crt:ro
-      - ./receiver/generated/smtp-msa.mydomain.tld.key:/etc/ssl/certs/smtp-msa.mydomain.tld.key:ro
+      - ./receiver/generated/mydomain.tld.crt:/etc/ssl/certs/mydomain.tld.crt:ro
+      - ./receiver/generated/mydomain.tld.key:/etc/ssl/certs/mydomain.tld.key:ro
     networks:
       net:
         ipv4_address: 172.23.0.3
@@ -104,6 +104,7 @@ services:
     volumes:
       - ./basic/config.rhai:/etc/vsmtp/basic/conf.d/config.rhai:ro
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
+      - ../mytarget.tld/receiver/generated/rootCA.crt:/etc/ssl/certs/mytarget.tld-root-ca.crt:ro
     networks:
       net:
         ipv4_address: 172.23.0.10

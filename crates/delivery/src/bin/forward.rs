@@ -10,6 +10,7 @@
  */
 
 use std::sync::Arc;
+use vsmtp_auth::TlsCertificate;
 use vsmtp_common::{
     ctx_delivery::CtxDelivery, delivery_attempt::DeliveryAttempt, delivery_route::DeliveryRoute,
 };
@@ -24,13 +25,12 @@ struct Forward {
     target: url::Url,
     tls: Tls,
     #[serde(default)]
-    queues: vsmtp_config::Queues,
-    #[serde(default)]
     broker: vsmtp_config::Broker,
     #[serde(default)]
     logs: vsmtp_config::Logs,
     #[serde(skip)]
     path: std::path::PathBuf,
+    extra_root_ca: Option<std::sync::Arc<TlsCertificate>>,
 }
 
 #[async_trait::async_trait]
@@ -78,36 +78,35 @@ impl DeliverySystem for Forward {
                 rcpt_to.clone(),
                 message_str.as_bytes(),
                 &self.tls,
+                self.extra_root_ca.clone(),
             )
             .await,
         ]
     }
 }
 
-impl Config for Forward {
-    fn with_path(_: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self> {
-        Ok(Self {
+impl Default for Forward {
+    fn default() -> Self {
+        Self {
             target: url::Url::parse("smtp://localhost").unwrap(),
             service: String::default(),
             api_version: vsmtp_config::semver::VersionReq::default(),
-            queues: vsmtp_config::Queues::default(),
             broker: vsmtp_config::Broker::default(),
             logs: vsmtp_config::Logs::default(),
             path: std::path::PathBuf::default(),
             tls: Tls::default(),
-        })
+            extra_root_ca: None,
+        }
     }
+}
 
+impl Config for Forward {
     fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
         &self.api_version
     }
 
     fn broker(&self) -> &vsmtp_config::Broker {
         &self.broker
-    }
-
-    fn queues(&self) -> &vsmtp_config::Queues {
-        &self.queues
     }
 
     fn logs(&self) -> &vsmtp_config::logs::Logs {

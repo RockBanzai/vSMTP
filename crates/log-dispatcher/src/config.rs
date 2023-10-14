@@ -110,8 +110,6 @@ pub struct LogDispatcherConfig {
     /// Name of the server. Used when identifying itself to the client.
     #[serde(default = "LogDispatcherConfig::default_name")]
     pub name: String,
-    /// Queue names to redirect or forward the email.
-    pub queues: vsmtp_config::Queues,
     /// RabbitMQ client configuration.
     #[serde(default)]
     pub broker: vsmtp_config::Broker,
@@ -161,15 +159,8 @@ impl LogDispatcherConfig {
 }
 
 impl Config for LogDispatcherConfig {
-    fn with_path(path: &impl AsRef<std::path::Path>) -> vsmtp_config::ConfigResult<Self>
-    where
-        Self: vsmtp_config::Config + serde::de::DeserializeOwned + serde::Serialize,
-    {
-        Ok(Self {
-            path: path.as_ref().into(),
-            name: Self::default_name(),
-            ..Default::default()
-        })
+    fn with_path(&mut self, path: &impl AsRef<std::path::Path>) {
+        self.path = path.as_ref().into();
     }
 
     fn api_version(&self) -> &vsmtp_config::semver::VersionReq {
@@ -178,10 +169,6 @@ impl Config for LogDispatcherConfig {
 
     fn broker(&self) -> &vsmtp_config::Broker {
         &self.broker
-    }
-
-    fn queues(&self) -> &vsmtp_config::Queues {
-        &self.queues
     }
 
     fn logs(&self) -> &vsmtp_config::logs::Logs {

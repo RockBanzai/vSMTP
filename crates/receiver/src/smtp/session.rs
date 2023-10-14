@@ -241,26 +241,30 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         peer_certificates: Option<Vec<rustls::Certificate>>,
         alpn_protocol: Option<Vec<u8>>,
     ) -> Reply {
-        match self.rule_engine.write_state(|state| {
-            // FIXME: should return an error instead of ignoring the SNI if could not been parsed ?
-            let sni = sni
-                .clone()
-                .and_then(|sni| <Domain as std::str::FromStr>::from_str(&sni).ok());
+        let Ok(sni) = sni
+            .map(|sni| <Domain as std::str::FromStr>::from_str(&sni))
+            .transpose()
+        else {
+            tracing::warn!("SNI is not a valid domain");
+            return "501 5.5.4 Syntax error in parameters or arguments\r\n"
+                .parse::<Reply>()
+                .unwrap();
+        };
 
-            state.set_secured(
-                sni,
-                protocol_version,
-                cipher_suite,
-                peer_certificates,
-                alpn_protocol,
-            )
+        match self.rule_engine.write_state(|state| {
+            state
+                .set_secured(
+                    sni,
+                    protocol_version,
+                    cipher_suite,
+                    peer_certificates,
+                    alpn_protocol,
+                )
+                .map(|()| state.server_name().clone())
         }) {
-            Ok(()) => format!(
-                "220 {} Service ready\r\n",
-                sni.unwrap_or_else(|| self.config.name.clone())
-            )
-            .parse::<Reply>()
-            .unwrap(),
+            Ok(server_name) => format!("220 {server_name} Service ready\r\n")
+                .parse::<Reply>()
+                .unwrap(),
             Err(error) => {
                 tracing::warn!(%error, "Post TLS handshake called during a wrong stage");
                 "451 Requested action aborted: error in processing.\r\n"

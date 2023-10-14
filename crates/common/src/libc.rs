@@ -15,7 +15,7 @@
 ///
 /// * `@path` cannot be convert to `CString`
 /// * see `chown(2)` ERRORS
-// NOTE: should use https://docs.rs/rustix/latest/rustix/fs/fn.fchown.html
+// NOTE: should use https://doc.rust-lang.org/stable/std/os/unix/fs/fn.chown.html
 #[inline]
 pub fn chown(path: &std::path::Path, user: Option<u32>, group: Option<u32>) -> std::io::Result<()> {
     let path = std::ffi::CString::new(path.to_string_lossy().as_bytes())?;

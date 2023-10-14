@@ -9,7 +9,6 @@
  *
  */
 
-use crate::faker::OptionNameFaker;
 use vsmtp_protocol::Domain;
 
 /// <https://datatracker.ietf.org/doc/html/rfc8601#section-2.7.3>
@@ -36,6 +35,6 @@ pub enum Value {
 pub struct IpRevResult {
     pub value: Value,
     pub ip: std::net::IpAddr,
-    #[dummy(faker = "OptionNameFaker")]
+    #[dummy(faker = "crate::FreeEmailProvider")]
     pub fqdn: Option<Domain>,
 }

@@ -28,15 +28,15 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 tokio-stream = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
-tracing-amqp = { workspace = true }
-tracing-subscriber = { workspace = true }
 trust-dns-resolver = { workspace = true, optional = true }
 url = { workspace = true }
 uzers = { workspace = true }
+vsmtp-auth = { workspace = true }
 vsmtp-common = { workspace = true }
 vsmtp-config = { workspace = true }
 vsmtp-mail-parser = { workspace = true }
 vsmtp-protocol = { workspace = true }
+vsmtp-rhai-utils = { workspace = true }
 webpki-roots = { workspace = true }
 
 [[bin]]

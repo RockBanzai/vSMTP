@@ -14,7 +14,8 @@ pub mod smtp {
     mod handler;
     mod send;
 
-    pub use handler::{Context, SenderHandler};
+    pub use exchange::Sender;
+    pub use handler::{SenderHandler, UpgradeTls};
     pub use send::send;
 }
 
@@ -255,6 +256,7 @@ async fn init(
             )
             .await?;
 
+        tracing::debug!("Starting consumer for {}", deferred_q);
         consumers.push((deferred_q, consumer));
     }
 
@@ -290,6 +292,7 @@ async fn init(
             )
             .await?;
 
+        tracing::debug!("Starting consumer for {}", delivery_q);
         consumers.push((delivery_q, consumer));
     }
 
@@ -349,31 +352,7 @@ pub async fn start_delivery(
 pub async fn delivery_main(
     system: std::sync::Arc<impl DeliverySystem + Config + 'static>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    use tracing_subscriber::prelude::*;
-
-    let conn = lapin::Connection::connect_with_config(
-        &system.broker().uri,
-        lapin::ConnectionProperties::default(),
-        lapin::tcp::OwnedTLSConfig {
-            identity: None,
-            cert_chain: system.broker().certificate_chain.clone(),
-        },
-    )
-    .await?;
-
-    let filter = tracing_subscriber::filter::Targets::new()
-        .with_targets(system.logs().levels.clone())
-        .with_default(system.logs().default_level);
-
-    let (layer, task) = tracing_amqp::layer(&conn).await;
-    tracing_subscriber::registry()
-        .with(layer.with_filter(filter))
-        .try_init()
-        .unwrap();
-    tokio::spawn(task);
-
-    std::panic::set_hook(Box::new(|e| {
-        tracing::error!(?e, "panic occurred"); // TODO: check a way to improve formatting from this
-    }));
+    let conn = system.broker().connect().await?;
+    vsmtp_common::init_logs(&conn, system.logs()).await?;
     start_delivery(system, &conn).await
 }

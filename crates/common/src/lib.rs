@@ -15,15 +15,11 @@ pub mod ctx_delivery;
 pub mod ctx_received;
 pub mod delivery_attempt;
 pub mod delivery_route;
-pub mod dkim;
-pub mod dmarc;
 pub mod dns_resolver;
 pub mod extensions;
 pub mod faker;
-pub mod iprev;
 pub mod libc;
 pub mod response;
-pub mod spf;
 pub mod stateful_ctx_received;
 pub mod tls;
 pub mod transfer_error;
@@ -34,6 +30,29 @@ pub use uuid;
 
 use crate::faker::MailboxFaker;
 use vsmtp_protocol::{Address, Domain, NotifyOn, OriginalRecipient};
+
+pub async fn init_logs(
+    conn: &lapin::Connection,
+    config: &vsmtp_config::Logs,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use tracing_subscriber::prelude::*;
+    let filter = tracing_subscriber::filter::Targets::new()
+        .with_targets(config.levels.clone())
+        .with_default(config.default_level);
+
+    let (layer, task) = tracing_amqp::layer(conn).await;
+    tracing_subscriber::registry()
+        .with(layer.with_filter(filter))
+        .try_init()
+        .unwrap();
+    tokio::spawn(task);
+
+    std::panic::set_hook(Box::new(|e| {
+        // TODO: check a way to improve formatting from this
+        tracing::error!(?e, "panic occurred");
+    }));
+    Ok(())
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct Mailbox(#[dummy(faker = "MailboxFaker { domain: None }")] pub Address);

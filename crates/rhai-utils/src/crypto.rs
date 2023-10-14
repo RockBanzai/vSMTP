@@ -14,10 +14,10 @@ use rhai::plugin::{
     PluginFunction, RhaiResult, TypeId,
 };
 
-use vsmtp_auth::dkim as backend;
+use vsmtp_auth::TlsCertificate;
+use vsmtp_auth::TlsPrivateKey;
 
 pub type Result<T> = std::result::Result<T, Box<rhai::EvalAltResult>>;
-pub type PrivateKey = rhai::Shared<backend::PrivateKey>;
 
 /// Utility functions to load certificates and keys from file.
 ///
@@ -38,11 +38,10 @@ pub mod api {
     ///
     /// # rhai-autodocs:index:1
     #[rhai_fn(return_raw)]
-    pub fn load_pem_rsa_pkcs8(filepath: &str) -> Result<PrivateKey> {
-        match <rsa::RsaPrivateKey as rsa::pkcs8::DecodePrivateKey>::read_pkcs8_pem_file(filepath) {
-            Ok(key) => Ok(rhai::Shared::new(backend::PrivateKey::Rsa(Box::new(key)))),
-            Err(e) => Err(e.to_string().into()),
-        }
+    pub fn load_pem_rsa_pkcs8(filepath: &str) -> Result<rhai::Dynamic> {
+        let private_key =
+            TlsPrivateKey::load_pem_rsa_pkcs8_file(filepath).map_err(|e| e.to_string())?;
+        rhai::serde::to_dynamic(&private_key).map_err(|e| e.to_string().into())
     }
 
     /// Load a RSA private key from a PEM file, with the format **pkcs1**.
@@ -59,12 +58,10 @@ pub mod api {
     ///
     /// # rhai-autodocs:index:2
     #[rhai_fn(return_raw)]
-    pub fn load_pem_rsa_pkcs1(filepath: &str) -> Result<PrivateKey> {
-        match <rsa::RsaPrivateKey as rsa::pkcs1::DecodeRsaPrivateKey>::read_pkcs1_pem_file(filepath)
-        {
-            Ok(key) => Ok(rhai::Shared::new(backend::PrivateKey::Rsa(Box::new(key)))),
-            Err(e) => Err(e.to_string().into()),
-        }
+    pub fn load_pem_rsa_pkcs1(filepath: &str) -> Result<rhai::Dynamic> {
+        let private_key =
+            TlsPrivateKey::load_pem_rsa_pkcs1_file(filepath).map_err(|e| e.to_string())?;
+        rhai::serde::to_dynamic(&private_key).map_err(|e| e.to_string().into())
     }
 
     /// Load an Ed25519 private key from a PEM file.
@@ -81,17 +78,27 @@ pub mod api {
     ///
     /// # rhai-autodocs:index:3
     #[rhai_fn(return_raw)]
-    pub fn load_pem_ed_pkcs8(filepath: &str) -> Result<PrivateKey> {
-        let content = std::fs::read_to_string(filepath).map_err(|e| e.to_string())?;
-        let (_type_label, data) =
-            pem_rfc7468::decode_vec(content.as_bytes()).map_err(|e| e.to_string())?;
+    pub fn load_pem_ed_pkcs8(filepath: &str) -> Result<rhai::Dynamic> {
+        let private_key =
+            TlsPrivateKey::load_pem_ed_pkcs8_file(filepath).map_err(|e| e.to_string())?;
+        rhai::serde::to_dynamic(&private_key).map_err(|e| e.to_string().into())
+    }
 
-        let ed25519 =
-            ring_compat::ring::signature::Ed25519KeyPair::from_pkcs8_maybe_unchecked(&data)
-                .map_err(|e| e.to_string())?;
-
-        Ok(rhai::Shared::new(backend::PrivateKey::Ed25519(Box::new(
-            ed25519,
-        ))))
+    /// Load a certificate from a PEM file.
+    ///
+    /// # Arguments
+    ///
+    /// * `filepath` - The absolute path to the file containing the certificate.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// const my_cert = crypto::load_cert("/etc/vsmtp/cert/mydomain.tld.crt");
+    /// ```
+    /// # rhai-autodocs:index:4
+    #[rhai_fn(return_raw)]
+    pub fn load_cert(filepath: &str) -> Result<rhai::Dynamic> {
+        let certificate = TlsCertificate::load_pem_file(filepath).map_err(|e| e.to_string())?;
+        rhai::serde::to_dynamic(&certificate).map_err(|e| e.to_string().into())
     }
 }

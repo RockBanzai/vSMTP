@@ -308,7 +308,7 @@ impl std::future::Future for BackgroundTask {
 
 /// Instantiate a amqp tracing layer.
 /// This layer send received log events to a "log" exchanger
-/// The returns values are the Layer in itself and a background task to run in a tokio::spawn
+/// The returns values are the Layer in itself and a background task to run in a `tokio::spawn`
 ///
 /// # Arguments
 ///

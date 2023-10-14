@@ -97,15 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let layer = tracing_subscriber::fmt::layer().with_filter(filter);
     tracing_subscriber::registry().with(layer).init();
 
-    let conn = lapin::Connection::connect_with_config(
-        &config.broker.uri,
-        lapin::ConnectionProperties::default(),
-        lapin::tcp::OwnedTLSConfig {
-            identity: None,
-            cert_chain: config.broker().certificate_chain.clone(),
-        },
-    )
-    .await?;
+    let conn = config.broker.connect().await?;
 
     let mut consumers = StreamMap::new(); // rabbitmq consumers
     let mut loggers = HashMap::<String, Vec<Box<dyn logger::Logger>>>::new();

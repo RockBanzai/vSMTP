@@ -15,16 +15,16 @@ use rhai::plugin::{
     TypeId,
 };
 use std::sync::Arc;
-use vsmtp_common::stateful_ctx_received::StateError;
-use vsmtp_common::{dkim, dmarc, iprev, spf, stateful_ctx_received::StatefulCtxReceived};
+use vsmtp_auth::{dkim::DkimVerificationResult, dmarc::Dmarc, iprev, spf};
+use vsmtp_common::stateful_ctx_received::{StateError, StatefulCtxReceived};
 use vsmtp_mail_parser::mail::headers::Header;
 
 struct AuthMechanism {
     iprev: Option<iprev::IpRevResult>,
-    spf_helo: Option<Arc<spf::SpfResult>>,
-    spf_mail_from: Option<Arc<spf::SpfResult>>,
-    dkim: Option<Arc<Vec<dkim::DkimVerificationResult>>>,
-    dmarc: Option<Arc<dmarc::Dmarc>>,
+    spf_helo: Option<Arc<spf::Result>>,
+    spf_mail_from: Option<Arc<spf::Result>>,
+    dkim: Option<Arc<Vec<DkimVerificationResult>>>,
+    dmarc: Option<Arc<Dmarc>>,
 }
 
 impl From<&StatefulCtxReceived> for AuthMechanism {

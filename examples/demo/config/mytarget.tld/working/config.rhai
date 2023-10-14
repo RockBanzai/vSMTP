@@ -1,6 +1,6 @@
 fn on_config(config) {
     config.broker.uri = env::variable("BROKER");
-    config.broker.certificate_chain = "/etc/ssl/certs/ca-certificates.crt";
+    config.broker.extra_root_ca = crypto::load_cert("/etc/ssl/certs/ca-certificates.crt");
     config.scripts.path = "/rules.rhai";
 
     config.logs.default_level = "trace";
@@ -9,7 +9,6 @@ fn on_config(config) {
         pinky_swear: "warn",
         mio: "warn",
         polling: "warn",
-        want: "warn",
         async_io: "warn",
     };
 

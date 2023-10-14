@@ -15,7 +15,7 @@ use ::vsmtp_common::{
     ctx_received::CtxReceived, delivery_route::DeliveryRoute,
     stateful_ctx_received::StatefulCtxReceived, Mailbox,
 };
-use vsmtp_config::{broker, logs, queues, semver, Config, ConfigResult};
+use vsmtp_config::{broker, logs, semver, Config};
 use vsmtp_protocol::Address;
 use vsmtp_rule_engine::{
     rhai::plugin::*, DirectiveError, RuleEngine, RuleEngineConfigBuilder, Stage, Status,
@@ -135,22 +135,11 @@ struct MyConfig {
 }
 
 impl Config for MyConfig {
-    fn with_path(_path: &impl AsRef<std::path::Path>) -> ConfigResult<Self>
-    where
-        Self: Config + serde::de::DeserializeOwned + serde::Serialize,
-    {
-        Ok(Self::default())
-    }
-
     fn api_version(&self) -> &semver::VersionReq {
         unimplemented!()
     }
 
     fn broker(&self) -> &broker::Broker {
-        unimplemented!()
-    }
-
-    fn queues(&self) -> &queues::Queues {
         unimplemented!()
     }
 

@@ -22,7 +22,10 @@ use vsmtp_rule_engine::{
     api::{server_auth, utils_modules},
     rhai, RuleEngine, RuleEngineConfig, RuleEngineConfigBuilder,
 };
-use vsmtp_working::{config, rules};
+use vsmtp_working::{
+    config::{self, cli::Args},
+    rules,
+};
 
 async fn init(channel: &lapin::Channel) -> lapin::Result<lapin::Consumer> {
     let _to_working = channel
@@ -108,38 +111,13 @@ struct Working {
 impl Working {
     /// Build the configuration, AMQP connections and rule engine for the service.
     async fn build() -> Result<Self, Box<dyn std::error::Error>> {
-        use tracing_subscriber::prelude::*;
-
-        let args = <config::cli::Args as clap::Parser>::parse();
-        let config = config::WorkingConfig::from_rhai_file(&args.config).map_err(|error| {
+        let Args { config } = <Args as clap::Parser>::parse();
+        let config = config::WorkingConfig::from_rhai_file(&config).map_err(|error| {
             eprintln!("Failed to boot Working service: {error}");
             error
         })?;
-
-        let conn = lapin::Connection::connect_with_config(
-            &config.broker.uri,
-            lapin::ConnectionProperties::default(),
-            lapin::tcp::OwnedTLSConfig {
-                identity: None,
-                cert_chain: config.broker.certificate_chain.clone(),
-            },
-        )
-        .await?;
-
-        let filter = tracing_subscriber::filter::Targets::new()
-            .with_targets(config.logs.levels.clone())
-            .with_default(config.logs().default_level);
-
-        let (layer, task) = tracing_amqp::layer(&conn).await;
-        tracing_subscriber::registry()
-            .with(layer.with_filter(filter))
-            .try_init()
-            .unwrap();
-        tokio::spawn(task);
-
-        std::panic::set_hook(Box::new(|e| {
-            tracing::error!(?e, "Panic occurred");
-        }));
+        let conn = config.broker().connect().await?;
+        vsmtp_common::init_logs(&conn, config.logs()).await?;
 
         let channel = conn.create_channel().await?;
         channel

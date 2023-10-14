@@ -7,9 +7,8 @@ fn on_config(config) {
             pinky_swear: "warn",
             mio: "warn",
             polling: "warn",
-            want: "warn",
             async_io: "warn",
-            rustls: "warn",
+            rustls: "trace",
         },
     };
     config.loggers = [

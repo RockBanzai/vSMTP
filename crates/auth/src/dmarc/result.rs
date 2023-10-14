@@ -9,7 +9,7 @@
  *
  */
 
-use crate::faker::NameFaker;
+use super::Record;
 use vsmtp_protocol::Domain;
 
 #[derive(
@@ -37,16 +37,8 @@ pub enum Value {
 #[derive(Debug, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct Dmarc {
     pub value: Value,
-    #[dummy(faker = "NameFaker")]
+    #[dummy(faker = "crate::FreeEmailProvider")]
     pub domain: Domain,
     // NOTE: wrapped in an Option if the query failed
-    #[dummy(faker = "DmarcRecordFaker")]
-    pub record: Option<vsmtp_auth::dmarc::Record>,
-}
-
-struct DmarcRecordFaker;
-impl fake::Dummy<DmarcRecordFaker> for vsmtp_auth::dmarc::Record {
-    fn dummy_with_rng<R: rand::Rng + ?Sized>(_: &DmarcRecordFaker, _: &mut R) -> Self {
-        todo!()
-    }
+    pub record: Option<Record>,
 }

@@ -23,6 +23,7 @@ use base64::{engine::general_purpose::STANDARD, Engine};
     strum::Display,
     serde::Deserialize,
     serde::Serialize,
+    fake::Dummy,
 )]
 pub enum QueryMethod {
     #[default]
@@ -30,8 +31,16 @@ pub enum QueryMethod {
     DnsTxt,
 }
 
+struct OptionalDurationFaker;
+impl fake::Dummy<OptionalDurationFaker> for std::time::Duration {
+    fn dummy_with_rng<R: rand::Rng + ?Sized>(_: &OptionalDurationFaker, rng: &mut R) -> Self {
+        let d = fake::Fake::fake_with_rng::<usize, _>(&(0..usize::MAX), rng);
+        Self::from_secs(d as u64)
+    }
+}
+
 /// Representation of the "DKIM-Signature" header
-#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize, serde::Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, serde::Deserialize, serde::Serialize, fake::Dummy)]
 pub struct Signature {
     /// tag "v="
     pub(super) version: usize,
@@ -50,8 +59,10 @@ pub struct Signature {
     /// tag "i=", or "@d" is "i" is missing
     pub auid: String,
     /// tag "t="
+    #[dummy(faker = "OptionalDurationFaker")]
     pub(super) signature_timestamp: Option<std::time::Duration>,
     /// tag "x="
+    #[dummy(faker = "OptionalDurationFaker")]
     pub(super) expire_time: Option<std::time::Duration>,
     /// tag "l="
     pub(super) body_length: Option<usize>,

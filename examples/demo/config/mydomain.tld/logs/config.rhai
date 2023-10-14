@@ -5,7 +5,6 @@ fn on_config(config) {
         pinky_swear: "warn",
         mio: "warn",
         polling: "warn",
-        want: "warn",
         async_io: "warn",
     };
 
@@ -13,7 +12,6 @@ fn on_config(config) {
         #{
             topic: "system",
             type: "console",
-            formatter: "rfc5424",
         },
         #{
             topic: "journald",

@@ -17,7 +17,11 @@ pem-rfc7468 = { workspace = true }
 rhai = { workspace = true }
 ring-compat = { workspace = true }
 rsa = { workspace = true }
+rustls = { workspace = true }
+rustls-pemfile = { workspace = true }
 serde = { workspace = true }
+serde_with = { workspace = true }
+thiserror = { workspace = true }
 time = { workspace = true }
 tracing = { workspace = true }
 uzers = { workspace = true }

@@ -15,15 +15,6 @@ use vsmtp_common::{
 };
 use vsmtp_protocol::{ClientName, Reply};
 
-pub struct Context;
-
-impl Context {
-    #[must_use]
-    pub const fn has_value(&self) -> bool {
-        false
-    }
-}
-
 pub enum UpgradeTls {
     Yes,
     No,
@@ -54,7 +45,7 @@ pub trait SenderHandler {
 
     fn has_just_connected(&self) -> bool;
 
-    async fn on_connect(&mut self, context: &mut Context) -> Result<(), Delivery>;
+    async fn on_connect(&mut self) -> Result<(), Delivery>;
     async fn on_greetings(&mut self, reply: Reply) -> Result<(), Delivery>;
 
     fn get_client_name(&self) -> ClientName;
@@ -64,11 +55,7 @@ pub trait SenderHandler {
     fn get_rcpt_to(&self) -> Vec<Recipient>;
     fn get_tls_connector(&self) -> &vsmtp_protocol::tokio_rustls::TlsConnector;
 
-    async fn on_ehlo(
-        &mut self,
-        response: response::Ehlo,
-        context: &mut Context,
-    ) -> Result<UpgradeTls, Delivery>;
+    async fn on_ehlo(&mut self, response: response::Ehlo) -> Result<UpgradeTls, Delivery>;
 
     fn has_extension(&self, extension: Extension) -> bool;
 

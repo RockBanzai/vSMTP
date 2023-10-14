@@ -18,7 +18,6 @@ use rhai::plugin::{
 use trust_dns_resolver::{error::ResolveErrorKind, proto::xfer::retry_dns_handle::RetryableError};
 use vsmtp_common::{
     dns_resolver::DnsResolver,
-    iprev::IpRevResult,
     trust_dns_resolver::{self, proto::op::ResponseCode},
 };
 
@@ -33,7 +32,8 @@ struct IpRevParams {
     dns_resolver: std::sync::Arc<DnsResolver>,
 }
 
-type IpRevValue = vsmtp_common::iprev::Value;
+type IpRevValue = vsmtp_auth::iprev::Value;
+type IpRevResult = vsmtp_auth::iprev::IpRevResult;
 
 #[rhai::plugin::export_module]
 mod iprev {

@@ -20,6 +20,7 @@ use crate::{get_root_domain, ParseError};
     strum::Display,
     serde_with::SerializeDisplay,
     serde_with::DeserializeFromStr,
+    fake::Dummy,
 )]
 #[strum(serialize_all = "UPPERCASE")]
 pub enum Version {
@@ -34,6 +35,7 @@ pub enum Version {
     strum::Display,
     serde_with::SerializeDisplay,
     serde_with::DeserializeFromStr,
+    fake::Dummy,
 )]
 enum AlignmentMode {
     #[default]
@@ -50,6 +52,7 @@ enum AlignmentMode {
     strum::Display,
     serde_with::SerializeDisplay,
     serde_with::DeserializeFromStr,
+    fake::Dummy,
 )]
 enum FailureReportOption {
     #[strum(serialize = "0")]
@@ -70,6 +73,7 @@ enum FailureReportOption {
     strum::Display,
     serde_with::SerializeDisplay,
     serde_with::DeserializeFromStr,
+    fake::Dummy,
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum ReceiverPolicy {
@@ -89,6 +93,7 @@ pub enum ReceiverPolicy {
     strum::Display,
     serde_with::SerializeDisplay,
     serde_with::DeserializeFromStr,
+    fake::Dummy,
 )]
 enum ReportFailure {
     #[default]
@@ -97,7 +102,7 @@ enum ReportFailure {
 }
 
 /// DNS record `_dmarc.{domain}`
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
 #[allow(dead_code)]
 pub struct Record {
     version: Version,

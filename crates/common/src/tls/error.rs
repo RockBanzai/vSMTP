@@ -13,8 +13,12 @@ use vsmtp_protocol::rustls;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("the key format is not supported for this usage")]
+    Ed25519UUnimplemented,
     #[error("Failed to sign: {0}")]
-    Sign(rustls::sign::SignError),
+    Sign(#[from] rustls::sign::SignError),
+    #[error("Pkcs8 format error: {0}")]
+    Pkcs8(#[from] ring_compat::pkcs8::Error),
     #[error("No requested TLS versions '{0}' are supported")]
     Versions(String),
     #[error("TLS protocol error: {0}")]

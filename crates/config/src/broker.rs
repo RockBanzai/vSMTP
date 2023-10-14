@@ -8,31 +8,31 @@
  * this program. If not, see https://www.elastic.co/licensing/elastic-license.
  *
  */
+use vsmtp_auth::TlsCertificate;
 
-// TODO: This configuration could be parsed from an url.
-// See https://github.com/viridIT/rfc/blob/main/text/0008-smtp-receiver/0008-smtp-receiver.md#complete-example
 #[derive(Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub struct Broker {
     // FIXME: Which default should be used ?
     /// AMQP endpoint.
     pub uri: String,
-    #[serde(default)]
-    pub scheme: Scheme,
-    #[serde(
-        default,
-        skip_serializing,
-        deserialize_with = "crate::deserialize_certificate"
-    )]
-    pub certificate_chain: Option<String>,
-    // TODO: query argument
-    // TODO: tls root certificate / validate peer / client certificate
-    // TODO: vhost: "/path/to/vhost" | null,
+    pub extra_root_ca: Option<std::sync::Arc<TlsCertificate>>,
 }
 
-#[derive(Default, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
-pub enum Scheme {
-    Amqp,
-    #[default]
-    Amqps,
+impl Broker {
+    pub async fn connect(&self) -> Result<lapin::Connection, lapin::Error> {
+        let Self { uri, extra_root_ca } = self;
+
+        lapin::Connection::connect_with_config(
+            uri,
+            lapin::ConnectionProperties::default(),
+            lapin::tcp::OwnedTLSConfig {
+                identity: None,
+                cert_chain: extra_root_ca
+                    .as_ref()
+                    .map(|certs| certs.source().to_string()),
+            },
+        )
+        .await
+    }
 }

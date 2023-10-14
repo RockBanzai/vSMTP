@@ -16,12 +16,20 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 //
 #![doc(html_no_source)]
-#![deny(missing_docs)]
+// #![deny(missing_docs)]
 #![forbid(unsafe_code)]
 //
 
 // #![warn(clippy::restriction)]
 //
+
+mod private_key;
+pub use private_key::{TlsPrivateKey, TlsPrivateKeyError};
+
+mod certificate;
+pub use certificate::{TlsCertificate, TlsCertificateError};
+
+pub use viaspf;
 
 /// The implementation follow the RFC 7208
 ///
@@ -37,7 +45,7 @@
 /// ```
 pub mod spf;
 
-pub use viaspf;
+pub mod iprev;
 
 /// The implementation follow the RFC 6376 & 8301 & 8463
 ///
@@ -61,6 +69,7 @@ pub mod dkim {
     mod private_key;
     mod public_key;
     mod record;
+    mod result;
     mod sign;
     mod signature;
     mod verify;
@@ -83,6 +92,7 @@ pub mod dkim {
     pub use mail::{Header, Mail};
     pub use private_key::PrivateKey;
     pub use public_key::PublicKey;
+    pub use result::{DkimVerificationResult, Value};
     pub use sign::{sign, SigningError};
     pub use signature::Signature;
     pub use verify::{verify, VerifierError};
@@ -110,9 +120,10 @@ pub mod dkim {
 /// ```
 pub mod dmarc {
     mod record;
+    mod result;
 
-    pub use record::ReceiverPolicy;
-    pub use record::Record;
+    pub use record::{ReceiverPolicy, Record};
+    pub use result::{Dmarc, Value};
 }
 
 ///
@@ -147,4 +158,13 @@ pub enum ParseError {
 /// * could not retrieve the root of the domain
 fn get_root_domain(domain: &str) -> Result<Option<String>, addr::error::Error<'_>> {
     Ok(addr::parse_domain_name(domain)?.root().map(str::to_string))
+}
+
+struct FreeEmailProvider;
+impl fake::Dummy<FreeEmailProvider> for vsmtp_protocol::Domain {
+    fn dummy_with_rng<R: rand::Rng + ?Sized>(_: &FreeEmailProvider, rng: &mut R) -> Self {
+        let domain: String =
+            fake::Fake::fake_with_rng(&fake::faker::internet::fr_fr::FreeEmailProvider(), rng);
+        domain.parse().unwrap()
+    }
 }

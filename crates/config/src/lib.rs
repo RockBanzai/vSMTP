@@ -12,26 +12,24 @@
 pub mod broker;
 pub mod error;
 pub mod logs;
-pub mod queues;
 
 pub use broker::Broker;
 pub use error::ConfigError;
 pub use logs::{Logs, LogsFacility, SyslogTransport};
-pub use queues::Queues;
 pub use semver;
 
 /// Result type for configuration operations.
 pub type ConfigResult<T> = Result<T, error::ConfigError>;
 
 /// Getters for base configuration structures.
-pub trait Config: serde::Serialize + serde::de::DeserializeOwned + Sized {
+pub trait Config: Default + serde::Serialize + serde::de::DeserializeOwned + Sized {
     /// Create a default configuration with the path of the script passed
     /// as parameter.
     ///
     /// This function provide the Rhai context with the returned configuration.
     /// Prefer to set any defaults in this function before it can be set by the
     /// user.
-    fn with_path(path: &impl AsRef<std::path::Path>) -> ConfigResult<Self>;
+    fn with_path(&mut self, _path: &impl AsRef<std::path::Path>) {}
 
     /// Create a configuration structure from a rhai file.
     ///
@@ -88,8 +86,10 @@ pub trait Config: serde::Serialize + serde::de::DeserializeOwned + Sized {
 
         let ast = engine.compile_into_self_contained(&rhai::Scope::new(), script)?;
 
-        let cfg = Self::with_path(path)?;
-        let cfg = serde_json::to_string(&cfg)?;
+        let mut cfg = Self::default();
+        cfg.with_path(path);
+
+        let cfg = serde_json::to_string_pretty(&cfg)?;
         let cfg = rhai::Engine::new().parse_json(cfg, true)?;
         let cfg =
             engine.call_fn::<rhai::Dynamic>(&mut rhai::Scope::new(), &ast, "on_config", (cfg,))?;
@@ -107,25 +107,9 @@ pub trait Config: serde::Serialize + serde::de::DeserializeOwned + Sized {
     /// Broker (`AMQP`) parameters configuration.
     fn broker(&self) -> &broker::Broker;
 
-    /// Special queues used when problems are raised. (quarantine, no-route, etc.)
-    fn queues(&self) -> &queues::Queues;
-
     /// Log configuration for this specific service.
     fn logs(&self) -> &logs::Logs;
 
     /// Path on disk of the configuration file.
     fn path(&self) -> &std::path::Path;
-}
-
-/// Deserialize a certificate from a path into the content of it's content.
-pub fn deserialize_certificate<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    let path = &<Option<std::path::PathBuf> as serde::Deserialize>::deserialize(deserializer)?;
-
-    Ok(match path {
-        Some(path) => Some(std::fs::read_to_string(path).map_err(serde::de::Error::custom)?),
-        None => None,
-    })
 }

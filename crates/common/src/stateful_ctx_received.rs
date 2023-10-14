@@ -12,14 +12,12 @@
 use crate::{
     ctx_received::CtxReceived,
     delivery_route::DeliveryRoute,
-    dkim, dmarc,
     faker::{ClientNameFaker, DsnReturnFaker, IpFaker, NameFaker, RcptToFaker},
-    iprev,
-    spf::SpfResult,
     tls::TlsProps,
     Mailbox, Recipient,
 };
 use fake::faker::time::fr_fr::DateTimeBetween;
+use vsmtp_auth::{dkim::DkimVerificationResult, dmarc::Dmarc, iprev::IpRevResult, spf};
 use vsmtp_mail_parser::Mail;
 use vsmtp_protocol::{rustls, ClientName, Domain, DsnReturn, NotifyOn, Stage};
 
@@ -453,7 +451,7 @@ pub struct ConnectProps {
     #[dummy(faker = "NameFaker")]
     pub server_name: Domain,
     pub sasl: Option<SaslAuthProps>,
-    pub iprev: Option<iprev::IpRevResult>,
+    pub iprev: Option<IpRevResult>,
     /// This field is `Some` when the client and server
     /// exchange data through a secure tunnel.
     pub tls: Option<TlsProps>,
@@ -478,7 +476,7 @@ pub struct HeloProps {
     #[dummy(faker = "ClientNameFaker")]
     pub client_name: ClientName,
     pub using_deprecated: bool,
-    pub spf_helo_identity: Option<std::sync::Arc<SpfResult>>,
+    pub spf_helo_identity: Option<std::sync::Arc<spf::Result>>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
@@ -501,7 +499,7 @@ pub struct MailFromProps {
     pub mail_timestamp: time::OffsetDateTime,
     pub message_uuid: uuid::Uuid,
     pub envelop_id: Option<String>,
-    pub spf_mail_from_identity: Option<std::sync::Arc<SpfResult>>,
+    pub spf_mail_from_identity: Option<std::sync::Arc<spf::Result>>,
     #[dummy(faker = "DsnReturnFaker")]
     pub ret: Option<DsnReturn>,
 }
@@ -562,6 +560,6 @@ impl RcptToProps {
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct CompleteProps {
-    pub dkim: Option<std::sync::Arc<Vec<dkim::DkimVerificationResult>>>,
-    pub dmarc: Option<std::sync::Arc<dmarc::Dmarc>>,
+    pub dkim: Option<std::sync::Arc<Vec<DkimVerificationResult>>>,
+    pub dmarc: Option<std::sync::Arc<Dmarc>>,
 }

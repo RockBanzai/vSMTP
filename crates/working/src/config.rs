@@ -9,7 +9,7 @@
  *
  */
 
-use vsmtp_config::{logs, semver, Broker, Config, ConfigResult, Logs, Queues};
+use vsmtp_config::{logs, semver, Broker, Config, Logs};
 
 pub mod cli;
 
@@ -26,9 +26,6 @@ pub struct WorkingConfig {
     /// Filters configuration.
     #[serde(default)]
     pub scripts: Scripts,
-    /// Queue names to redirect or forward the email.
-    #[serde(default = "WorkingConfig::default_queues")]
-    pub queues: Queues,
     /// AMQP client configuration.
     #[serde(default)]
     pub broker: Broker,
@@ -43,13 +40,6 @@ pub struct WorkingConfig {
 impl WorkingConfig {
     fn default_name() -> String {
         "vsmtp".to_string()
-    }
-
-    fn default_queues() -> Queues {
-        Queues {
-            submit: Some(SUBMIT_TO.to_string()),
-            ..Default::default()
-        }
     }
 }
 
@@ -69,15 +59,8 @@ impl Scripts {
 }
 
 impl Config for WorkingConfig {
-    #[allow(clippy::field_reassign_with_default)]
-    fn with_path(path: &impl AsRef<std::path::Path>) -> ConfigResult<Self>
-    where
-        Self: Config + serde::de::DeserializeOwned + serde::Serialize,
-    {
-        let mut config = Self::default();
-        config.path = path.as_ref().into();
-
-        Ok(config)
+    fn with_path(&mut self, path: &impl AsRef<std::path::Path>) {
+        self.path = path.as_ref().into();
     }
 
     fn api_version(&self) -> &semver::VersionReq {
@@ -86,10 +69,6 @@ impl Config for WorkingConfig {
 
     fn broker(&self) -> &Broker {
         &self.broker
-    }
-
-    fn queues(&self) -> &Queues {
-        &self.queues
     }
 
     fn logs(&self) -> &logs::Logs {
