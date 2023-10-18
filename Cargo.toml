@@ -165,7 +165,7 @@ default-features = false
 features = ["macros", "base64", "indexmap_2"]
 
 [workspace.dependencies.time]
-version = "0.3.29"
+version = "0.3.30"
 default-features = false
 features = ["std", "formatting", "macros", "serde-well-known"]
 
