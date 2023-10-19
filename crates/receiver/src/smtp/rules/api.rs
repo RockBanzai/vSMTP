@@ -328,11 +328,14 @@ pub mod status {
 /// Predefined codes for SMTP responses.
 #[rhai::plugin::export_module]
 pub mod code {
+    /// SMTP code, used in with the `status` module.
+    ///
+    /// # rhai-autodocs:index:1
     pub type Code = Reply;
 
     /// A SMTP code with the code and message as parameter and an enhanced code.
     ///
-    /// # rhai-autodocs:index:1
+    /// # rhai-autodocs:index:2
     #[rhai_fn(global, name = "code", return_raw)]
     pub fn code_enhanced(code: rhai::INT, enhanced: &str, text: &str) -> Result<Code> {
         format!("{code} {enhanced} {text}")
@@ -364,7 +367,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:2
+    /// # rhai-autodocs:index:3
     #[rhai_fn(name = "c554_7_1")]
     pub fn c554_7_1() -> Code {
         code_enhanced(554, "5.7.1", "Relay access denied").expect("valid code")
@@ -393,7 +396,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:3
+    /// # rhai-autodocs:index:4
     #[rhai_fn(name = "c550_7_20")]
     pub fn c550_7_20() -> Code {
         code_enhanced(550, "5.7.20", "No passing DKIM signature found").expect("valid code")
@@ -422,7 +425,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:4
+    /// # rhai-autodocs:index:5
     #[rhai_fn(name = "c550_7_21")]
     pub fn c550_7_21() -> Code {
         code_enhanced(550, "5.7.21", "No acceptable DKIM signature found").expect("valid code")
@@ -451,7 +454,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:5
+    /// # rhai-autodocs:index:6
     #[rhai_fn(name = "c550_7_22")]
     pub fn c550_7_22() -> Code {
         code_enhanced(
@@ -485,7 +488,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:6
+    /// # rhai-autodocs:index:7
     #[rhai_fn(name = "c550_7_23")]
     pub fn c550_7_23() -> Code {
         code_enhanced(550, "5.7.23", "SPF validation failed").expect("valid code")
@@ -514,7 +517,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:7
+    /// # rhai-autodocs:index:8
     #[rhai_fn(name = "c550_7_24")]
     pub fn c550_7_24() -> Code {
         code_enhanced(550, "5.7.24", "SPF validation error").expect("valid code")
@@ -542,7 +545,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:8
+    /// # rhai-autodocs:index:9
     #[rhai_fn(name = "c550_7_25")]
     pub fn c550_7_25() -> Code {
         code_enhanced(550, "5.7.25", "Reverse DNS validation failed").expect("valid code")
@@ -570,7 +573,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:9
+    /// # rhai-autodocs:index:10
     #[rhai_fn(name = "c500_7_26")]
     pub fn c550_7_26() -> Code {
         code_enhanced(500, "5.7.26", "Multiple authentication checks failed").expect("valid code")
@@ -599,7 +602,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:10
+    /// # rhai-autodocs:index:11
     #[rhai_fn(name = "c550_7_27")]
     pub fn c550_7_27() -> Code {
         code_enhanced(550, "5.7.27", "Sender address has null MX").expect("valid code")
@@ -630,7 +633,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:11
+    /// # rhai-autodocs:index:12
     #[rhai_fn(name = "c556_1_10")]
     pub fn c556_1_10() -> Code {
         code_enhanced(556, "5.1.10", "Recipient address has null MX").expect("valid code")
@@ -658,7 +661,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:12
+    /// # rhai-autodocs:index:13
     #[rhai_fn(name = "c451_7_1")]
     pub fn greylist() -> Code {
         code_enhanced(451, "4.7.1", "Sender is not authorized. Please try again.")
@@ -689,7 +692,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:13
+    /// # rhai-autodocs:index:14
     #[rhai_fn(name = "c451_3_0")]
     pub fn multi_destination() -> Code {
         code_enhanced(
@@ -724,7 +727,7 @@ pub mod code {
     /// # );
     /// ```
     ///
-    /// # rhai-autodocs:index:14
+    /// # rhai-autodocs:index:15
     #[rhai_fn(name = "c550_1_1")]
     pub fn unknown_account() -> Code {
         code_enhanced(

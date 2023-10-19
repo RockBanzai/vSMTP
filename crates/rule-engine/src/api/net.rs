@@ -19,6 +19,8 @@ pub use net::*;
 /// Predefined network ip ranges.
 #[rhai::plugin::export_module]
 mod net {
+    /// An ip range for ipv4.
+    /// # rhai-autodocs:index:1
     pub type RangeIPv4 = iprange::IpRange<ipnet::Ipv4Net>;
 
     /// Return an ip range over "192.168.0.0/16".
@@ -31,7 +33,7 @@ mod net {
     /// }
     /// ```
     ///
-    /// # rhai-autodocs:index:1
+    /// # rhai-autodocs:index:2
     #[must_use]
     #[rhai_fn(name = "range_192")]
     pub fn range_192() -> RangeIPv4 {
@@ -48,7 +50,7 @@ mod net {
     /// }
     /// ```
     ///
-    /// # rhai-autodocs:index:2
+    /// # rhai-autodocs:index:3
     #[must_use]
     #[rhai_fn(name = "range_172")]
     pub fn range_172() -> RangeIPv4 {
@@ -65,7 +67,7 @@ mod net {
     /// }
     /// ```
     ///
-    /// # rhai-autodocs:index:3
+    /// # rhai-autodocs:index:4
     #[must_use]
     #[rhai_fn(name = "range_10")]
     pub fn range_10() -> RangeIPv4 {
@@ -74,7 +76,7 @@ mod net {
 
     /// Return a list of non routable networks (`net_192`, `net_172`, and `net_10`).
     ///
-    /// # rhai-autodocs:index:4
+    /// # rhai-autodocs:index:5
     #[must_use]
     #[rhai_fn(name = "non_routable")]
     pub fn non_routable() -> rhai::Array {

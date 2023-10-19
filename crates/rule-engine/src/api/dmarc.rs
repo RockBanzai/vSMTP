@@ -11,8 +11,8 @@
 
 use crate::api::docs::Ctx;
 use rhai::plugin::{
-    mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
-    PluginFunction, RhaiResult, TypeId,
+    mem, Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult,
+    TypeId,
 };
 use vsmtp_auth::dmarc as backend;
 use vsmtp_common::{dns_resolver::DnsResolver, trust_dns_resolver};
@@ -136,9 +136,6 @@ async fn get_dmarc_record(
     }
 }
 
-type DmarcResult = rhai::Shared<backend::Result>;
-type DmarcValue = backend::Value;
-
 /// Domain-based message authentication, reporting and conformance implementation
 /// specified by RFC 7489. (<https://www.rfc-editor.org/rfc/rfc7489>)
 #[rhai::plugin::export_module]
@@ -251,15 +248,21 @@ mod rhai_dmarc {
         })
     }
 
-    /// Get the value of the dmarc result after calling the `dmarc::check` function.
+    /// Result of a DMARC verification run with `dmarc::check`.
+    ///
     /// # rhai-autodocs:index:3
+    pub type DmarcResult = rhai::Shared<backend::Result>;
+
+    /// Get the value of the dmarc result after calling the `dmarc::check` function as a string.
+    ///
+    /// # rhai-autodocs:index:4
     #[rhai_fn(global, get = "value", pure)]
-    pub fn get_value(res: &mut DmarcResult) -> DmarcValue {
-        res.value
+    pub fn get_value(res: &mut DmarcResult) -> String {
+        res.value.to_string()
     }
 
     /// Get the policy fetched from the DMARC records.
-    /// # rhai-autodocs:index:4
+    /// # rhai-autodocs:index:5
     #[rhai_fn(global, get = "policy", pure)]
     pub fn get_policy(res: &mut DmarcResult) -> String {
         let is_subdomain =
@@ -279,49 +282,5 @@ mod rhai_dmarc {
                 },
             )
             .to_string()
-    }
-
-    /// Compare dmarc result as equal to a string.
-    ///
-    /// # Examples
-    ///
-    /// ```js
-    /// let result = dmarc::check(#{ dns_resolver: global::dns_resolver });
-    ///
-    /// // The `==` operator is used here.
-    /// if result == "pass" {
-    ///     // ...
-    /// }
-    /// ```
-    ///
-    /// # rhai-autodocs:index:5
-    #[rhai_fn(global, name = "==", pure)]
-    pub fn equal_to_str(lhs: &mut DmarcValue, rhs: &str) -> bool {
-        matches!(
-            (lhs, rhs),
-            (DmarcValue::Pass, "pass")
-                | (DmarcValue::Fail, "fail")
-                | (DmarcValue::None, "none")
-                | (DmarcValue::TempError, "temperror")
-                | (DmarcValue::PermError, "permerror")
-        )
-    }
-
-    /// Compare dmarc result as not equal to a string.
-    ///
-    /// # Examples
-    ///
-    /// ```js
-    /// let result = dmarc::check(#{ dns_resolver: global::dns_resolver });
-    ///
-    /// // The `==` operator is used here.
-    /// if result != "pass" {
-    ///     // ...
-    /// }
-    /// ```
-    /// # rhai-autodocs:index:6
-    #[rhai_fn(global, name = "!=", pure)]
-    pub fn not_equal_to_str(lhs: &mut DmarcValue, rhs: &str) -> bool {
-        !equal_to_str(lhs, rhs)
     }
 }

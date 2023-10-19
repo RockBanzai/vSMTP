@@ -191,7 +191,9 @@ where
         let json = serde_json::to_value(event);
 
         if let Ok(json) = json {
-            let _: () = self.sender.try_send(json).unwrap();
+            if let Err(error) = self.sender.try_send(json) {
+                eprintln!("failed to send log message: {error}")
+            }
         }
     }
 }

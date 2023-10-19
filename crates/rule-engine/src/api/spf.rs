@@ -164,8 +164,6 @@ fn to_spf_result(
     }
 }
 
-type SpfResult = rhai::Shared<spf::Result>;
-
 /// Implementation of the Sender Policy Framework (SPF), described by RFC 7208. (<https://datatracker.ietf.org/doc/html/rfc7208>)
 #[rhai::plugin::export_module]
 mod rhai_spf {
@@ -303,53 +301,24 @@ mod rhai_spf {
         }
     }
 
-    /// Transform the spf result as a debug string.
+    /// Result of a SPF verification run with `spf::check_host`.
+    ///
     /// # rhai-autodocs:index:3
+    pub type SpfResult = rhai::Shared<vsmtp_auth::spf::Result>;
+
+    /// Get the value of the SPF result.
+    ///
+    /// # rhai-autodocs:index:4
+    #[rhai_fn(global, get = "value", pure)]
+    pub fn value(v: &mut SpfResult) -> String {
+        v.value.to_string()
+    }
+
+    /// Transform the spf result into a debug string.
+    ///
+    /// # rhai-autodocs:index:5
     #[rhai_fn(global, pure)]
     pub fn to_debug(v: &mut SpfResult) -> String {
         format!("{v:?}")
-    }
-
-    /// Compare spf results returned by `spf::check_host` as equal to a string.
-    ///
-    /// ```js
-    /// fn on_pre_queue(ctx) {
-    ///     let result = spf::check_host(#{
-    ///         ip: ctx.client_ip,
-    ///         helo: ctx.helo,
-    ///         mail_from: ctx.sender,
-    ///         dns_resolver: global::dns_resolver
-    ///     });
-    ///
-    ///     if result == "pass" {
-    ///         status::next()
-    ///     } else if result = "softfail" {
-    ///         // Execute policy ...
-    ///     } else {
-    ///         // Execute another policy ...
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// # rhai-autodocs:index:4
-    #[rhai_fn(global, name = "==", pure)]
-    pub fn equal_to_str(lhs: &mut SpfResult, rhs: &str) -> bool {
-        matches!(
-            (&lhs.value, rhs),
-            (spf::Value::Pass, "pass")
-                | (spf::Value::Fail, "fail")
-                | (spf::Value::SoftFail, "softfail")
-                | (spf::Value::Neutral, "neutral")
-                | (spf::Value::None, "none")
-                | (spf::Value::TempError, "temperror")
-                | (spf::Value::PermError, "permerror")
-        )
-    }
-
-    /// Compare spf results returned by `spf::check_host` as not equal to a string.
-    /// # rhai-autodocs:index:5
-    #[rhai_fn(global, name = "!=", pure)]
-    pub fn not_equal_to_str(lhs: &mut SpfResult, rhs: &str) -> bool {
-        !equal_to_str(lhs, rhs)
     }
 }

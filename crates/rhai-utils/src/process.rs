@@ -47,8 +47,6 @@ fn to_string<T: std::io::Read>(ctx: Option<T>) -> std::io::Result<String> {
         .unwrap_or_default())
 }
 
-type ProcessResult = rhai::Shared<ProcessOutput>;
-
 /// Utility functions to interact with the system and execute commands.
 ///
 /// This modules is accessible in filtering AND configuration scripts.
@@ -127,29 +125,34 @@ pub mod api {
         }))
     }
 
-    /// Get the stderr content of the process result.
+    /// Result of a command.
+    ///
     /// # rhai-autodocs:index:2
+    pub type ProcessResult = rhai::Shared<ProcessOutput>;
+
+    /// Get the stderr content of the process result.
+    /// # rhai-autodocs:index:3
     #[rhai_fn(global, get = "stderr", pure)]
     pub fn stderr(result: &mut ProcessResult) -> String {
         result.stderr.clone()
     }
 
     /// Get the stdout content of the process result.
-    /// # rhai-autodocs:index:3
+    /// # rhai-autodocs:index:4
     #[rhai_fn(global, get = "stdout", pure)]
     pub fn stdout(result: &mut ProcessResult) -> String {
         result.stdout.clone()
     }
 
     /// Get the status returned by the command that gave this result.
-    /// # rhai-autodocs:index:4
+    /// # rhai-autodocs:index:5
     #[rhai_fn(global, get = "status", pure)]
     pub fn status(result: &mut ProcessResult) -> std::process::ExitStatus {
         result.status
     }
 
     /// Transform the process result into a debug string.
-    /// # rhai-autodocs:index:5
+    /// # rhai-autodocs:index:6
     #[rhai_fn(global, pure)]
     pub fn to_debug(result: &mut ProcessResult) -> String {
         format!("{result:?}",)

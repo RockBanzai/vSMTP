@@ -70,6 +70,7 @@ impl<T: std::fmt::Debug> State<T> {
     }
 }
 
+// TODO: add documentation of those objects in the `global` module.
 /// Type alias used to make the documentation easier to read.
 pub mod docs {
     pub type Ctx = super::State<vsmtp_common::stateful_ctx_received::StatefulCtxReceived>;

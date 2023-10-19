@@ -12,10 +12,11 @@
 use crate::api::docs::Ctx;
 use crate::block_on;
 use rhai::plugin::{
-    mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
-    PluginFunction, RhaiResult, TypeId,
+    mem, Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult,
+    TypeId,
 };
 use trust_dns_resolver::{error::ResolveErrorKind, proto::xfer::retry_dns_handle::RetryableError};
+use vsmtp_auth::iprev::Value;
 use vsmtp_common::{
     dns_resolver::DnsResolver,
     trust_dns_resolver::{self, proto::op::ResponseCode},
@@ -31,9 +32,6 @@ struct IpRevParams {
     #[serde(deserialize_with = "super::deserialize_dns_resolver")]
     dns_resolver: std::sync::Arc<DnsResolver>,
 }
-
-type IpRevValue = vsmtp_auth::iprev::Value;
-type IpRevResult = vsmtp_auth::iprev::IpRevResult;
 
 #[rhai::plugin::export_module]
 mod iprev {
@@ -58,7 +56,7 @@ mod iprev {
             {
                 tracing::debug!(?error, "DNS error");
                 return IpRevResult {
-                    value: IpRevValue::TempError,
+                    value: Value::TempError,
                     ip,
                     fqdn: None,
                 };
@@ -66,7 +64,7 @@ mod iprev {
             Err(error) => {
                 tracing::debug!(?error, "DNS error");
                 return IpRevResult {
-                    value: IpRevValue::PermError,
+                    value: Value::PermError,
                     ip,
                     fqdn: None,
                 };
@@ -80,7 +78,7 @@ mod iprev {
             if ips.iter().any(|ip_discovered| ip_discovered == ip) {
                 tracing::debug!("Iprev checked");
                 return IpRevResult {
-                    value: IpRevValue::Pass,
+                    value: Value::Pass,
                     ip,
                     fqdn: Some(record.0),
                 };
@@ -88,7 +86,7 @@ mod iprev {
         }
 
         IpRevResult {
-            value: IpRevValue::Fail,
+            value: Value::Fail,
             ip,
             fqdn: None,
         }
@@ -100,35 +98,24 @@ mod iprev {
         ctx.write(|ctx| ctx.mut_connect().iprev = Some(iprev));
     }
 
+    /// Result of a IpRev verification run with `iprev::check`.
+    ///
     /// # rhai-autodocs:index:3
-    #[rhai_fn(global, get = "value", pure)]
-    pub fn get_value(res: &mut IpRevResult) -> IpRevValue {
-        res.value
-    }
+    type IpRevResult = vsmtp_auth::iprev::IpRevResult;
 
-    /// Transform a Iprev result value to a debug string.
+    /// Get the value of an iprev result as a string.
     ///
     /// # rhai-autodocs:index:4
+    #[rhai_fn(global, get = "value", pure)]
+    pub fn get_value(res: &mut IpRevResult) -> String {
+        res.value.to_string()
+    }
+
+    /// Transform a iprev result value to a debug string.
+    ///
+    /// # rhai-autodocs:index:5
     #[rhai_fn(global, pure)]
     pub fn to_debug(res: &mut IpRevResult) -> String {
         format!("{res:?}")
-    }
-
-    /// # rhai-autodocs:index:5
-    #[rhai_fn(global, name = "==", pure)]
-    pub fn equal_to_str(lhs: &mut IpRevValue, rhs: &str) -> bool {
-        matches!(
-            (lhs, rhs),
-            (IpRevValue::Pass, "pass")
-                | (IpRevValue::Fail, "fail")
-                | (IpRevValue::TempError, "temperror")
-                | (IpRevValue::PermError, "permerror")
-        )
-    }
-
-    /// # rhai-autodocs:index:6
-    #[rhai_fn(global, name = "!=", pure)]
-    pub fn not_equal_to_str(lhs: &mut IpRevValue, rhs: &str) -> bool {
-        !equal_to_str(lhs, rhs)
     }
 }

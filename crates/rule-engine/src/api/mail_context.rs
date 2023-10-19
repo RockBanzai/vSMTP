@@ -15,18 +15,15 @@ use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
+use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
 
 pub use mail_context::*;
-
-pub type Recipient = rhai::Shared<vsmtp_common::Recipient>;
 
 // TODO: handle error when the context is not in the expected stage.
 
 /// Inspect the transaction context.
 #[rhai::plugin::export_module]
 mod mail_context {
-    use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
-
     /// Set the routing path of a recipient, mostly used to select which forwarding service to sent
     /// the email to before delivery.
     ///
@@ -277,6 +274,63 @@ mod mail_context {
         ctx.read(StatefulCtxReceived::is_secured)
     }
 
+    /// Get the time of reception of the email.
+    ///
+    /// # SMTP stages
+    ///
+    /// `pre_queue` and onwards.
+    ///
+    /// # Return
+    ///
+    /// * `string` - the timestamp.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// fn on_pre_queue(ctx) {
+    ///     log("my_queue", "info", `time of reception: ${ctx.mail_timestamp}`);
+    ///     // ...
+    /// }
+    /// ```
+    ///
+    /// # rhai-autodocs:index:11
+    #[rhai_fn(global, get = "mail_timestamp", return_raw)]
+    pub fn mail_timestamp(ctx: &mut Ctx) -> Result<vsmtp_common::time::OffsetDateTime> {
+        ctx.read(|ctx| Ok(ctx.get_mail_from()?.mail_timestamp))
+    }
+
+    /// Get the unique id of the received message.
+    ///
+    /// # SMTP stages
+    ///
+    /// `pre_queue` and onwards.
+    ///
+    /// # Return
+    ///
+    /// * `string` - the message id.
+    ///
+    /// # Examples
+    ///
+    /// ```js
+    /// fn on_pre_queue(ctx) {
+    ///     log("my_queue", "info", `message id: ${ctx.message_id}`);
+    ///     // ...
+    /// }
+    /// ```
+    ///
+    /// # rhai-autodocs:index:12
+    #[rhai_fn(global, get = "message_id", return_raw)]
+    pub fn message_id(ctx: &mut Ctx) -> Result<String> {
+        ctx.read(|ctx| Ok(ctx.get_mail_from()?.message_uuid.to_string()))
+    }
+
+    /// Transform the context to a debug string.
+    /// # rhai-autodocs:index:13
+    #[rhai_fn(global, name = "to_debug", pure)]
+    pub fn to_debug(ctx: &mut Ctx) -> String {
+        format!("{ctx:?}")
+    }
+
     /// Get the value of the `HELO/EHLO` command sent by the client.
     ///
     /// # SMTP stages
@@ -293,7 +347,7 @@ mod mail_context {
     /// log("my_queue", "info", `helo value: ${ctx.helo}`);
     /// ```
     ///
-    /// # rhai-autodocs:index:11
+    /// # rhai-autodocs:index:14
     #[rhai_fn(global, get = "helo", return_raw)]
     pub fn helo(ctx: &mut Ctx) -> Result<String> {
         ctx.read(|ctx| ctx.get_helo().map(|helo| helo.client_name.to_string()))
@@ -316,16 +370,15 @@ mod mail_context {
     /// log("my_queue", "info", `sender: ${ctx.sender}`);
     /// ```
     ///
-    /// # rhai-autodocs:index:12
+    /// # rhai-autodocs:index:15
     #[rhai_fn(global, get = "sender", return_raw)]
-    pub fn sender(ctx: &mut Ctx) -> Result<rhai::Dynamic> {
+    pub fn sender(ctx: &mut Ctx) -> Result<Address> {
         ctx.read(|ctx| {
             Ok(ctx
-                .get_mail_from()
-                .unwrap()
+                .get_mail_from()?
                 .reverse_path
                 .clone()
-                .map_or_else(|| "<>".into(), rhai::Dynamic::from))
+                .map_or_else(|| Address::Null, Address::Regular))
         })
     }
 
@@ -347,13 +400,12 @@ mod mail_context {
     /// log("my_queue", "info", `recipients: ${ctx.recipients}`);
     /// ```
     ///
-    /// # rhai-autodocs:index:13
+    /// # rhai-autodocs:index:16
     #[rhai_fn(global, return_raw, get = "recipients")]
     pub fn recipients(ctx: &mut Ctx) -> Result<rhai::Array> {
         ctx.read(|ctx| {
             Ok(ctx
-                .get_rcpt_to()
-                .unwrap()
+                .get_rcpt_to()?
                 .recipient
                 .values()
                 .flat_map(|i| i.iter().cloned())
@@ -377,16 +429,10 @@ mod mail_context {
     ///     }
     /// }
     /// ```
-    /// # rhai-autodocs:index:14
+    /// # rhai-autodocs:index:17
     #[rhai_fn(global, pure, get = "domain")]
     pub fn recipient_domain(ctx: &mut Recipient) -> String {
         ctx.forward_path.domain().to_string()
-    }
-
-    #[doc(hidden)]
-    #[rhai_fn(global, pure, get = "domain")]
-    pub fn mailbox_domain(ctx: &mut vsmtp_common::Mailbox) -> String {
-        ctx.domain().to_string()
     }
 
     /// Get a recipient's address local part.
@@ -402,7 +448,7 @@ mod mail_context {
     ///     }
     /// }
     /// ```
-    /// # rhai-autodocs:index:15
+    /// # rhai-autodocs:index:18
     #[rhai_fn(global, pure, get = "local_part")]
     pub fn recipient_local_part(ctx: &mut Recipient) -> String {
         ctx.forward_path.local_part().to_string()
@@ -421,91 +467,75 @@ mod mail_context {
     ///     }
     /// }
     /// ```
-    /// # rhai-autodocs:index:16
+    /// # rhai-autodocs:index:19
     #[rhai_fn(global, pure, get = "address")]
-    pub fn recipient_address(ctx: &mut Recipient) -> String {
-        ctx.forward_path.to_string()
+    pub fn recipient_address(ctx: &mut Recipient) -> Address {
+        Address::Regular(ctx.forward_path.clone())
     }
 
-    /// Check if the address is null.
+    /// A recipient received by the "RCPT TO" SMTP command.
+    /// Use `ctx.recipients` to get a list of this object.
+    ///
+    /// # rhai-autodocs:index:20
+    pub type Recipient = rhai::Shared<vsmtp_common::Recipient>;
+
+    #[derive(Clone)]
+    pub enum AddressInner {
+        Regular(vsmtp_common::Mailbox),
+        Null,
+    }
+
+    /// An email address. Can be null in case of a null sender.
+    ///
+    /// # rhai-autodocs:index:21
+    pub type Address = AddressInner;
+
+    /// Get the domain of an address.
+    ///
+    /// # rhai-autodocs:index:22
+    #[rhai_fn(global, get = "domain", pure)]
+    pub fn mailbox_domain(address: &mut Address) -> String {
+        match address {
+            AddressInner::Regular(address) => address.domain().to_string(),
+            AddressInner::Null => String::default(),
+        }
+    }
+
+    /// Get the local part of an address.
+    ///
+    /// # rhai-autodocs:index:23
+    #[rhai_fn(global, get = "local_part", pure)]
+    pub fn mailbox_local_part(address: &mut Address) -> String {
+        match address {
+            AddressInner::Regular(address) => address.local_part().to_string(),
+            AddressInner::Null => String::default(),
+        }
+    }
+
+    /// Check if an address is null.
     ///
     /// # Examples
     ///
     /// ```js
-    /// fn on_pre_queue(ctx) {
-    ///     for rcpt in ctx.recipients {
-    ///         if rcpt.address.is_null {
-    ///             // ...
-    ///         }
+    /// fn on_mail_from(ctx) {
+    ///     if ctx.sender.is_null() {
+    ///         // ...
     ///     }
     /// }
     /// ```
-    /// # rhai-autodocs:index:17
-    #[rhai_fn(global, pure, get = "is_null")]
-    pub fn is_null(mailbox: &mut rhai::Dynamic) -> bool {
-        !mailbox.is::<vsmtp_common::Mailbox>()
+    /// # rhai-autodocs:index:24
+    #[rhai_fn(global, pure, name = "is_null")]
+    pub fn is_null(address: &mut Address) -> bool {
+        matches!(address, Address::Null)
     }
 
-    /// Get the time of reception of the email.
-    ///
-    /// # SMTP stages
-    ///
-    /// `pre_queue` and onwards.
-    ///
-    /// # Return
-    ///
-    /// * `string` - the timestamp.
-    ///
-    /// # Examples
-    ///
-    /// ```js
-    /// fn on_pre_queue(ctx) {
-    ///     log("my_queue", "info", `time of reception: ${ctx.mail_timestamp}`);
-    ///     // ...
-    /// }
-    /// ```
-    ///
-    /// # rhai-autodocs:index:18
-    #[rhai_fn(global, get = "mail_timestamp", return_raw)]
-    pub fn mail_timestamp(ctx: &mut Ctx) -> Result<vsmtp_common::time::OffsetDateTime> {
-        ctx.read(|ctx| Ok(ctx.get_mail_from().unwrap().mail_timestamp))
-    }
-
-    /// Get the unique id of the received message.
-    ///
-    /// # SMTP stages
-    ///
-    /// `pre_queue` and onwards.
-    ///
-    /// # Return
-    ///
-    /// * `string` - the message id.
-    ///
-    /// # Examples
-    ///
-    /// ```js
-    /// fn on_pre_queue(ctx) {
-    ///     log("my_queue", "info", `message id: ${ctx.message_id}`);
-    ///     // ...
-    /// }
-    /// ```
-    ///
-    /// # rhai-autodocs:index:19
-    #[rhai_fn(global, get = "message_id", return_raw)]
-    pub fn message_id(ctx: &mut Ctx) -> Result<String> {
-        ctx.read(|ctx| Ok(ctx.get_mail_from().unwrap().message_uuid.to_string()))
-    }
-
-    /// Transform the context to a debug string.
-    /// # rhai-autodocs:index:20
-    #[rhai_fn(global, name = "to_debug", pure)]
-    pub fn to_debug(ctx: &mut Ctx) -> String {
-        format!("{ctx:?}")
-    }
-
-    /// # rhai-autodocs:index:21
+    /// Transform an address into a string.
+    /// # rhai-autodocs:index:25
     #[rhai_fn(global, name = "to_string", pure)]
-    pub fn mailbox_to_string(mailbox: &mut vsmtp_common::Mailbox) -> String {
-        mailbox.to_string()
+    pub fn address_to_string(address: &mut Address) -> String {
+        match address {
+            AddressInner::Regular(address) => address.to_string(),
+            AddressInner::Null => String::default(),
+        }
     }
 }

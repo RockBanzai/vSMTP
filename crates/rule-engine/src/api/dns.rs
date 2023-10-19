@@ -17,11 +17,14 @@ use rhai::plugin::{
 
 pub use dns::*;
 
-pub type DnsResolver = std::sync::Arc<vsmtp_common::dns_resolver::DnsResolver>;
-
 /// Functions used to query the DNS.
 #[rhai::plugin::export_module]
 mod dns {
+    /// DNS resolver instance created using `dns::resolver`.
+    ///
+    /// # rhai-autodocs:index:1
+    pub type DnsResolver = std::sync::Arc<vsmtp_common::dns_resolver::DnsResolver>;
+
     /// Create an instance of a DNS resolver.
     ///
     /// # Args
@@ -63,7 +66,7 @@ mod dns {
     ///
     /// [`ResolverConfig`]: https://docs.rs/trust-dns-resolver/latest/trust_dns_resolver/config/struct.ResolverConfig.html
     /// [`ResolverOpts`]: https://docs.rs/trust-dns-resolver/latest/trust_dns_resolver/config/struct.ResolverOpts.html
-    /// # rhai-autodocs:index:1
+    /// # rhai-autodocs:index:2
     #[rhai_fn(return_raw)]
     pub fn resolver(params: &mut rhai::Dynamic) -> Result<DnsResolver> {
         match rhai::serde::from_dynamic(params) {
@@ -106,10 +109,10 @@ mod dns {
     /// }
     /// ```
     ///
-    /// # rhai-autodocs:index:2
+    /// # rhai-autodocs:index:3
     #[rhai_fn(name = "lookup", return_raw)]
-    pub fn lookup(dns: &mut DnsResolver, host: &str) -> Result<rhai::Array> {
-        Ok(crate::block_on(dns.resolver.lookup_ip(host))
+    pub fn lookup(dns_resolver: &mut DnsResolver, host: &str) -> Result<rhai::Array> {
+        Ok(crate::block_on(dns_resolver.resolver.lookup_ip(host))
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
             .into_iter()
             .map(|record| rhai::Dynamic::from(record.to_string()))
@@ -148,13 +151,13 @@ mod dns {
     /// }
     /// ```
     ///
-    /// # rhai-autodocs:index:3
+    /// # rhai-autodocs:index:4
     #[rhai_fn(name = "rlookup", return_raw)]
-    pub fn rlookup(dns: &mut DnsResolver, ip: &str) -> Result<rhai::Array> {
+    pub fn rlookup(dns_resolver: &mut DnsResolver, ip: &str) -> Result<rhai::Array> {
         let ip = <std::net::IpAddr as std::str::FromStr>::from_str(ip)
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?;
 
-        Ok(crate::block_on(dns.resolver.reverse_lookup(ip))
+        Ok(crate::block_on(dns_resolver.resolver.reverse_lookup(ip))
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
             .into_iter()
             .map(|record| rhai::Dynamic::from(record.to_string()))

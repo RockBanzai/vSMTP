@@ -158,8 +158,6 @@ async fn get_public_key(
     }
 }
 
-type VerificationResult = rhai::Shared<Vec<DkimVerificationResult>>;
-
 /// Implementation of:
 /// * [`RFC "DomainKeys Identified Mail (DKIM) Signatures"`](https://datatracker.ietf.org/doc/html/rfc8601)
 /// * [`RFC "Cryptographic Algorithm and Key Usage Update to DomainKeys Identified Mail (DKIM)"`](https://datatracker.ietf.org/doc/html/rfc8301)
@@ -167,6 +165,7 @@ type VerificationResult = rhai::Shared<Vec<DkimVerificationResult>>;
 #[rhai::plugin::export_module]
 mod dkim {
     use crate::api::Result;
+
     /// This method will produce a new signature for the message, with the given parameters and
     /// add a `DKIM-Signature` header to the message.
     ///
@@ -307,7 +306,7 @@ mod dkim {
     ///
     /// ```js
     /// fn on_pre_queue(ctx) {
-    ///   const dkim_results = dkim::verify(#{
+    ///   const dkim_results = dkim::verify(ctx.mail, #{
     ///     header_limit_count: 5,
     ///     expiration_epsilon: 100,
     ///     dns_resolver: dns::resolver(),
@@ -321,14 +320,14 @@ mod dkim {
     /// # rhai-autodocs:index:3
     #[allow(clippy::significant_drop_tightening)]
     #[rhai_fn(return_raw)]
-    pub fn verify(ctx: &mut Mail, params: rhai::Dynamic) -> Result<VerificationResult> {
+    pub fn verify(mail: &mut Mail, params: rhai::Dynamic) -> Result<VerificationResult> {
         let VerifyParams {
             header_limit_count,
             expiration_epsilon,
             dns_resolver,
         } = rhai::serde::from_dynamic::<VerifyParams>(&params)?;
 
-        let mail = ctx.read().unwrap();
+        let mail = mail.read().unwrap();
 
         let verifications = mail
             .get_headers_raw_without_crlf("DKIM-Signature")
@@ -357,9 +356,22 @@ mod dkim {
         })
     }
 
-    /// Transform the given DKIM verification result into a debug string.
+    /// Result of a DKIM verification run with `dkim::verify`.
     ///
     /// # rhai-autodocs:index:5
+    pub type VerificationResult = rhai::Shared<Vec<vsmtp_auth::dkim::DkimVerificationResult>>;
+
+    /// Get an array of the results from all DKIM signatures checked by `dkim::verify` as strings.
+    ///
+    /// # rhai-autodocs:index:6
+    #[rhai_fn(global, get = "values", pure)]
+    pub fn values(res: &mut VerificationResult) -> rhai::Array {
+        res.iter().map(|v| v.value.to_string().into()).collect()
+    }
+
+    /// Transform the given DKIM verification results into a debug string.
+    ///
+    /// # rhai-autodocs:index:7
     #[rhai_fn(global, pure)]
     pub fn to_debug(v: &mut VerificationResult) -> String {
         format!("{v:?}")
