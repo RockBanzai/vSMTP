@@ -23,13 +23,12 @@ pub enum FormatterError {
 }
 
 /// Convert a tracing level to a syslog level.
-pub fn level_to_syslog_level(level: &Level) -> u8 {
+pub const fn level_to_syslog_level(level: &Level) -> u8 {
     match *level {
         Level::ERROR => 3,
         Level::WARN => 4,
         Level::INFO => 6,
-        Level::DEBUG => 7,
-        Level::TRACE => 7,
+        Level::DEBUG | Level::TRACE => 7,
     }
 }
 
@@ -220,7 +219,7 @@ impl Rfc3164 {
     ///
     /// # Arguments:
     /// * `month` digit
-    fn match_month(month: u32) -> &'static str {
+    const fn match_month(month: u32) -> &'static str {
         match month {
             1 => "Jan",
             2 => "Feb",

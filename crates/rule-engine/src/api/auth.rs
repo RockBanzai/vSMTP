@@ -15,7 +15,7 @@ use rhai::plugin::{
     TypeId,
 };
 use std::sync::Arc;
-use vsmtp_auth::{dkim::DkimVerificationResult, dmarc::Dmarc, iprev, spf};
+use vsmtp_auth::{dkim::DkimVerificationResult, dmarc, iprev, spf};
 use vsmtp_common::stateful_ctx_received::{StateError, StatefulCtxReceived};
 use vsmtp_mail_parser::mail::headers::Header;
 
@@ -24,7 +24,7 @@ struct AuthMechanism {
     spf_helo: Option<Arc<spf::Result>>,
     spf_mail_from: Option<Arc<spf::Result>>,
     dkim: Option<Arc<Vec<DkimVerificationResult>>>,
-    dmarc: Option<Arc<Dmarc>>,
+    dmarc: Option<Arc<dmarc::Result>>,
 }
 
 impl From<&StatefulCtxReceived> for AuthMechanism {
@@ -123,8 +123,12 @@ impl AuthMechanism {
                 .collect::<Vec<_>>()
             });
 
-            let dmarc =
-                dmarc.map(|dmarc| format!("\tdmarc={} header.from={};", dmarc.value, dmarc.domain));
+            let dmarc = dmarc.map(|dmarc| {
+                format!(
+                    "\tdmarc={} header.from={};",
+                    dmarc.value, dmarc.rfc5322_from_domain
+                )
+            });
 
             std::iter::once(prefix)
                 .chain(iprev)

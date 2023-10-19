@@ -74,15 +74,11 @@ fn instantiate_logger(config: config::LogInstanceType) -> Box<dyn logger::Logger
             formatter,
             protocol,
             address,
-        } => {
-            let final_formatter;
-            if let Some(formatter) = formatter {
-                final_formatter = instantiate_formatter(formatter);
-            } else {
-                final_formatter = instantiate_formatter(LogFormat::RFC5424);
-            }
-            Box::new(logger::Syslog::new(protocol, address, final_formatter))
-        }
+        } => Box::new(logger::Syslog::new(
+            protocol,
+            address,
+            instantiate_formatter(formatter),
+        )),
         config::LogInstanceType::Journald => Box::new(logger::Journald::new()),
     }
 }
@@ -133,7 +129,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let queue = channel
             .queue_declare(
-                "",
+                format!("log-dispatcher-{}", logger.topic).as_str(),
                 lapin::options::QueueDeclareOptions {
                     durable: true,
                     ..Default::default()

@@ -5,6 +5,11 @@ const bridge = clamav::connect(#{
     url: "tcp://clamav:3310",
 });
 
+const MY_DOMAINS = [
+    "mydomain.tld",
+    "sub.mydomain.tld",
+];
+
 fn on_post_queue(ctx) {
     ctx.run([
         rule "check antivirus status" |ctx| {
@@ -16,7 +21,7 @@ fn on_post_queue(ctx) {
         },
         rule "set routing path" |ctx| {
             for i in ctx.recipients {
-                if i.domain is "mydomain.tld" {
+                if global::MY_DOMAINS.contains(i.domain) {
                     // set a routing maildir for my domain's recipients
                     ctx.set_routing_path(i, "maildir");
                 } else {

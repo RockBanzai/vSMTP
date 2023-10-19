@@ -15,7 +15,7 @@ use rhai::plugin::{
     PluginFunction, RhaiResult, TypeId,
 };
 use vsmtp_auth::dmarc as backend;
-use vsmtp_common::dns_resolver::DnsResolver;
+use vsmtp_common::{dns_resolver::DnsResolver, trust_dns_resolver};
 use vsmtp_mail_parser::{mail::headers::Header, Mail};
 
 pub use rhai_dmarc::*;
@@ -53,34 +53,90 @@ fn get_rfc5322_from_domain(msg: &Mail) -> Result<String, String> {
 async fn get_dmarc_record(
     dns_resolver: std::sync::Arc<DnsResolver>,
     rfc5322_from_domain: &str,
-) -> Result<backend::Record, backend::Value> {
-    match dns_resolver
-        .resolver
-        .txt_lookup(format!("_dmarc.{rfc5322_from_domain}"))
-        .await
-    {
-        Ok(record) if record.iter().count() != 1 => {
-            tracing::debug!("No DMARC record found");
-            Err(backend::Value::None)
-        }
-        Ok(record) => {
-            let record = record.into_iter().next().expect("count == 1");
-            match <backend::Record as std::str::FromStr>::from_str(&record.to_string()) {
-                Ok(dmarc_record) => Ok(dmarc_record),
-                Err(e) => {
-                    tracing::debug!(?e, "Invalid DMARC record");
-                    Err(backend::Value::None)
+) -> Result<backend::Result, backend::Result> {
+    async fn get_record(
+        dns_resolver: &DnsResolver,
+        domain: &str,
+    ) -> Result<backend::Record, backend::Value> {
+        tracing::debug!(domain, "Looking for DMARC record");
+        match dns_resolver
+            .resolver
+            .txt_lookup(format!("_dmarc.{domain}"))
+            .await
+        {
+            Ok(record) if record.iter().count() != 1 => {
+                tracing::debug!("Zero or more than 1 TXT record exist, ignoring");
+                Err(backend::Value::None)
+            }
+            Err(e)
+                if matches!(
+                    e.kind(),
+                    trust_dns_resolver::error::ResolveErrorKind::NoRecordsFound { .. }
+                ) =>
+            {
+                tracing::debug!("No DMARC record found");
+                Err(backend::Value::None)
+            }
+            Ok(record) => {
+                let record = record.into_iter().next().expect("count == 1");
+                match <backend::Record as std::str::FromStr>::from_str(&record.to_string()) {
+                    Ok(dmarc_record) => Ok(dmarc_record),
+                    Err(e) => {
+                        tracing::debug!(?e, "Invalid DMARC record");
+                        Err(backend::Value::None)
+                    }
                 }
             }
+            Err(e) => {
+                tracing::debug!(?e, "DNS error");
+                Err(backend::Value::TempError)
+            }
         }
-        Err(e) => {
-            tracing::debug!(?e, "DNS error");
-            Err(backend::Value::TempError)
+    }
+
+    let domain = addr::parse_domain_name(rfc5322_from_domain).unwrap();
+    match get_record(&dns_resolver, domain.as_str()).await {
+        Err(backend::Value::None) => {
+            if let Some(organizational_domain) = domain.root() {
+                match get_record(&dns_resolver, organizational_domain).await {
+                    Ok(record) => Ok(backend::Result {
+                        value: backend::Value::None,
+                        domain: organizational_domain.parse().unwrap(),
+                        rfc5322_from_domain: rfc5322_from_domain.parse().unwrap(),
+                        record: Some(record),
+                    }),
+                    Err(_otherwise) => Err(backend::Result {
+                        value: backend::Value::None,
+                        domain: organizational_domain.parse().unwrap(),
+                        rfc5322_from_domain: rfc5322_from_domain.parse().unwrap(),
+                        record: None,
+                    }),
+                }
+            } else {
+                Err(backend::Result {
+                    value: backend::Value::None,
+                    domain: rfc5322_from_domain.parse().unwrap(),
+                    rfc5322_from_domain: rfc5322_from_domain.parse().unwrap(),
+                    record: None,
+                })
+            }
         }
+        Ok(record) => Ok(backend::Result {
+            value: backend::Value::None,
+            domain: rfc5322_from_domain.parse().unwrap(),
+            rfc5322_from_domain: rfc5322_from_domain.parse().unwrap(),
+            record: Some(record),
+        }),
+        Err(_otherwise) => Err(backend::Result {
+            value: backend::Value::None,
+            domain: rfc5322_from_domain.parse().unwrap(),
+            rfc5322_from_domain: rfc5322_from_domain.parse().unwrap(),
+            record: None,
+        }),
     }
 }
 
-type DmarcResult = rhai::Shared<backend::Dmarc>;
+type DmarcResult = rhai::Shared<backend::Result>;
 type DmarcValue = backend::Value;
 
 /// Domain-based message authentication, reporting and conformance implementation
@@ -148,16 +204,14 @@ mod rhai_dmarc {
                 )),
             })?;
 
-        let record = match crate::block_on(get_dmarc_record(dns_resolver, &rfc5322_from_domain)) {
+        let mut result = match crate::block_on(get_dmarc_record(dns_resolver, &rfc5322_from_domain))
+        {
             Ok(record) => record,
-            Err(value) => {
-                return Ok(backend::Dmarc {
-                    value,
-                    domain: rfc5322_from_domain.parse().unwrap(),
-                    record: None,
-                }
-                .into())
-            }
+            Err(value) => return Ok(value.into()),
+        };
+
+        let Some(record) = &result.record else {
+            return Ok(result.into());
         };
 
         if spf.value == vsmtp_auth::spf::Value::Pass
@@ -166,12 +220,9 @@ mod rhai_dmarc {
                 .as_deref()
                 .is_some_and(|spf_domain| record.spf_is_aligned(&rfc5322_from_domain, spf_domain))
         {
-            return Ok(backend::Dmarc {
-                value: backend::Value::Pass,
-                domain: rfc5322_from_domain.parse().unwrap(),
-                record: Some(record),
-            }
-            .into());
+            tracing::debug!("Dmarc spf pass");
+            result.value = backend::Value::Pass;
+            return Ok(result.into());
         }
 
         for i in &*dkim {
@@ -180,22 +231,14 @@ mod rhai_dmarc {
                     record.dkim_is_aligned(&rfc5322_from_domain, &signature.sdid)
                 })
             {
-                tracing::debug!("Dmarc signature checked");
-                return Ok(backend::Dmarc {
-                    value: backend::Value::Pass,
-                    domain: rfc5322_from_domain.parse().unwrap(),
-                    record: Some(record),
-                }
-                .into());
+                tracing::debug!("Dmarc dkim pass");
+                result.value = backend::Value::Pass;
+                return Ok(result.into());
             }
         }
 
-        Ok(backend::Dmarc {
-            value: backend::Value::Fail,
-            domain: rfc5322_from_domain.parse().unwrap(),
-            record: Some(record),
-        }
-        .into())
+        result.value = backend::Value::Fail;
+        Ok(result.into())
     }
 
     /// Cache DMARC result from the `dmarc::check` function.
@@ -215,14 +258,27 @@ mod rhai_dmarc {
         res.value
     }
 
-    // TODO: if the RFC5322's domain is a subdomain of of the Organizational Domain AND, then record's subdomain policy must be used
     /// Get the policy fetched from the DMARC records.
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, get = "policy", pure)]
     pub fn get_policy(res: &mut DmarcResult) -> String {
+        let is_subdomain =
+            res.domain != res.rfc5322_from_domain && res.domain.zone_of(&res.rfc5322_from_domain);
+
         res.record
             .as_ref()
-            .map_or_else(|| "none".to_string(), backend::Record::get_policy)
+            .map_or_else(
+                || backend::ReceiverPolicy::None,
+                |record| {
+                    record
+                        .receiver_policy_subdomain
+                        .as_ref()
+                        .and_then(|sub| is_subdomain.then_some(sub))
+                        .unwrap_or(&record.receiver_policy)
+                        .clone()
+                },
+            )
+            .to_string()
     }
 
     /// Compare dmarc result as equal to a string.

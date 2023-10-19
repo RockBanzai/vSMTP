@@ -123,16 +123,10 @@ services:
 
   mytarget-log-dispatcher:
     image: vsmtp-log-dispatcher:dev
-    # environment:
-    #   - JAEGER=telemetry:6831
-    #   - LOKI_URL=http://loki:3100
     volumes:
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
-    networks:
-      - net
-      # - jaeger
-      # - loki
+      - ./logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai:ro
+    networks: [ net ]
     depends_on:
       broker:
         condition: service_healthy

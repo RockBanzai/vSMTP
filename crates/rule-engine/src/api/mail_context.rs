@@ -502,4 +502,10 @@ mod mail_context {
     pub fn to_debug(ctx: &mut Ctx) -> String {
         format!("{ctx:?}")
     }
+
+    /// # rhai-autodocs:index:21
+    #[rhai_fn(global, name = "to_string", pure)]
+    pub fn mailbox_to_string(mailbox: &mut vsmtp_common::Mailbox) -> String {
+        mailbox.to_string()
+    }
 }

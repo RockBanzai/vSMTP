@@ -72,11 +72,7 @@ where
     /// Rule engine configuration template used to the configure
     /// the Rhai engine.
     config: rhai::Shared<RuleEngineConfig<CONTEXT, STATUS, STAGE>>,
-    /// Marker for the status type used for this engine.
-    /// <https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters>
     status: std::marker::PhantomData<STATUS>,
-    /// Marker for the stage type used for this engine.
-    /// <https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters>
     stage: std::marker::PhantomData<STAGE>,
     // NOTE: Would a stateless `RuleEngine` be useful ?
     /// Global state that is passed to the rule engine. Is used to store and read
@@ -123,7 +119,7 @@ impl<CONTEXT: 'static + std::fmt::Debug, STATUS: Status, STAGE: Stage>
 
         rhai_engine
             .on_print(|msg| tracing::info!("{}", msg))
-            .on_debug(move |msg, src, pos| tracing::debug!(?src, ?pos, msg));
+            .on_debug(|msg, src, pos| tracing::debug!(?src, ?pos, msg));
 
         // Setting up directive parsing.
         // FIXME: this should not be necessary because the AST as already been parsed, right ?

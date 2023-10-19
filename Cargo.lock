@@ -4603,6 +4603,7 @@ dependencies = [
 name = "vsmtp-rule-engine"
 version = "3.0.0-rc.1"
 dependencies = [
+ "addr",
  "async-trait",
  "futures-util",
  "humantime-serde",

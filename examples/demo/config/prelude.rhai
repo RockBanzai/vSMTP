@@ -166,12 +166,10 @@ export const dmarc_rule = rule "dmarc check" |ctx| {
     if dmarc_result.value == "pass" {
         status::next()
     } else {
-        let policy = dmarc_result.policy;
-        switch policy {
+        switch dmarc_result.policy {
             "none" => {
                 // TODO: let the user decide what to do?
-                //log::warn("the message failed the DMARC check but DMARC policy is none, ignoring");
-                print("the message failed the DMARC check but DMARC policy is none, ignoring");
+                log("app", "warn", "the message failed the DMARC check but DMARC policy is none, ignoring");
                 status::next()
             }
             "quarantine" => status::quarantine("dmarc"),

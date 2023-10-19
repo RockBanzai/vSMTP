@@ -60,7 +60,7 @@ pub enum LogInstanceType {
     /// Send logs to console
     Console {
         /// Formatter used, none by default
-        #[serde(default = "LogDispatcherConfig::default_log_format", flatten)]
+        #[serde(default = "LogDispatcherConfig::default_log_format")]
         formatter: Option<LogFormat>,
     },
     /// Send logs to log files
@@ -77,10 +77,10 @@ pub enum LogInstanceType {
     /// Send logs to a syslog service
     Syslog {
         /// Formatter used, rfc 5424 by default.
-        #[serde(default = "LogDispatcherConfig::default_syslog_rfc", flatten)]
-        formatter: Option<LogFormat>,
+        #[serde(default = "LogDispatcherConfig::default_syslog_rfc")]
+        formatter: LogFormat,
         /// Protocol used, udp by default.
-        #[serde(default = "LogDispatcherConfig::default_syslog_protocol", flatten)]
+        #[serde(default = "LogDispatcherConfig::default_syslog_protocol")]
         protocol: SyslogProtocol,
         /// Address of the syslog service.
         #[serde(default = "LogDispatcherConfig::default_syslog_address")]
@@ -129,22 +129,18 @@ impl LogDispatcherConfig {
         "log-dispatcher".to_string()
     }
 
-    #[allow(dead_code)]
     const fn default_syslog_protocol() -> SyslogProtocol {
         SyslogProtocol::Udp
     }
 
-    #[allow(dead_code)]
-    const fn default_syslog_rfc() -> Option<LogFormat> {
-        Some(LogFormat::RFC5424)
+    const fn default_syslog_rfc() -> LogFormat {
+        LogFormat::RFC5424
     }
 
-    #[allow(dead_code)]
     const fn default_log_format() -> Option<LogFormat> {
         None
     }
 
-    #[allow(dead_code)]
     const fn default_file_rotation() -> FileRotation {
         FileRotation::Never
     }

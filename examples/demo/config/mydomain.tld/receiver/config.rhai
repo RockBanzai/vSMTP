@@ -28,6 +28,12 @@ fn on_config(config) {
             certificate: crypto::load_cert("/etc/ssl/certs/mydomain.tld.crt"),
             private_key: crypto::load_pem_rsa_pkcs8("/etc/ssl/certs/mydomain.tld.key"),
         },
+        virtual: #{
+            "sub.mydomain.tld": #{
+                certificate: crypto::load_cert("/etc/ssl/certs/sub.mydomain.tld.crt"),
+                private_key: crypto::load_pem_rsa_pkcs8("/etc/ssl/certs/sub.mydomain.tld.key"),
+            }
+        }
     };
 
     config.esmtp = #{

@@ -151,8 +151,7 @@ where
             .unwrap()
             .clone();
 
-        let mut fields: serde_json::Map<String, serde_json::Value> =
-            serde_json::Map::<String, serde_json::Value>::new();
+        let mut fields = serde_json::Map::<String, serde_json::Value>::new();
         for field_name in event.metadata().fields() {
             let filed_value = json_event.get(field_name.name());
             if let Some(value) = filed_value {
@@ -185,24 +184,14 @@ where
             line: event.metadata().line(),
             kind,
             topic: "system".to_string(), // this string will be replaced on serialization if needed
-            hostname: {
-                if let Ok(hostname) = hostname::get() {
-                    if let Ok(hostname) = hostname.into_string() {
-                        Some(hostname)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            },
+            hostname: hostname::get().map_or(None, |hostname| hostname.into_string().ok()),
             fields,
             spans,
         };
         let json = serde_json::to_value(event);
 
         if let Ok(json) = json {
-            let _: () = self.sender.try_send(json).unwrap_or_default();
+            let _: () = self.sender.try_send(json).unwrap();
         }
     }
 }
@@ -217,91 +206,94 @@ pub struct BackgroundTask {
     queue: Vec<serde_json::Value>,
 }
 
+use std::task::Poll;
+
+async fn make_sending_task(channel: lapin::Channel, queue: Vec<(String, Vec<u8>)>) -> TaskOutput {
+    let publishes = queue.iter().map(|(topic, payload)| {
+        channel.basic_publish(
+            LOG_EXCHANGER_NAME,
+            topic,
+            lapin::options::BasicPublishOptions::default(),
+            payload,
+            lapin::BasicProperties::default()
+                .with_content_type(lapin::types::ShortString::from("application/json")),
+        )
+    });
+    let publishes = futures_util::future::try_join_all(publishes)
+        .await?
+        .into_iter();
+    let confirms = futures_util::future::try_join_all(publishes).await?;
+
+    for i in confirms {
+        assert_eq!(
+            i,
+            lapin::publisher_confirm::Confirmation::Ack(None),
+            "{i:?}"
+        );
+    }
+
+    Ok(())
+}
+
 impl std::future::Future for BackgroundTask {
     type Output = ();
 
     fn poll(
         mut self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Self::Output> {
+    ) -> Poll<Self::Output> {
         let mut receiver_done = false;
 
-        // the topic the event will be send on
-        let mut topic = "system".to_string();
-        while let std::task::Poll::Ready(maybe_item) =
-            std::pin::Pin::new(&mut self.receiver).poll_next(cx)
-        {
+        while let Poll::Ready(maybe_item) = std::pin::Pin::new(&mut self.receiver).poll_next(cx) {
             if let Some(item) = maybe_item {
-                if let Some(event_topic) = item.get("topic") {
-                    if let Some(event_topic_str) = event_topic.as_str() {
-                        topic = event_topic_str.to_string();
-                    }
-                }
                 self.queue.push(item);
             } else {
                 receiver_done = true;
             }
         }
 
-        let mut send_task_done;
+        let mut send_task_done = false;
         loop {
-            let cloned_topic = topic.clone();
-            send_task_done = false;
-
             if let Some(send_task) = &mut self.send_task {
                 match std::pin::Pin::new(send_task).poll(cx) {
-                    std::task::Poll::Pending => {}
-                    std::task::Poll::Ready(Err(e)) => todo!("{e:?}"),
-                    std::task::Poll::Ready(Ok(())) => {
+                    Poll::Pending => {}
+                    Poll::Ready(Err(e)) => todo!("{e:?}"),
+                    Poll::Ready(Ok(())) => {
                         self.queue.clear();
-
                         send_task_done = true;
                     }
                 }
             }
-
             if send_task_done {
                 self.send_task = None;
             }
+
             if self.send_task.is_none() && !self.queue.is_empty() {
-                let channel = self.channel.clone();
                 let queue = self
                     .queue
                     .iter()
-                    .map(|i| serde_json::to_vec(&i).unwrap())
+                    .map(|v| {
+                        (
+                            v.get("topic")
+                                .map_or("system", |topic| {
+                                    topic.as_str().expect("topic must be a string")
+                                })
+                                .to_string(),
+                            serde_json::to_vec(&v).unwrap(),
+                        )
+                    })
                     .collect::<Vec<_>>();
 
-                self.send_task = Some(Box::pin(async move {
-                    let publishes = queue.iter().map(|payload| {
-                        channel.basic_publish(
-                            LOG_EXCHANGER_NAME,
-                            &cloned_topic,
-                            lapin::options::BasicPublishOptions::default(),
-                            payload,
-                            lapin::BasicProperties::default().with_content_type(
-                                lapin::types::ShortString::from("application/json"),
-                            ),
-                        )
-                    });
-                    let confirms = futures_util::future::try_join_all(publishes).await.unwrap();
-
-                    for confirm in confirms {
-                        assert_eq!(
-                            confirm.await.unwrap(),
-                            lapin::publisher_confirm::Confirmation::Ack(None)
-                        );
-                    }
-                    Ok(())
-                }));
+                self.send_task = Some(Box::pin(make_sending_task(self.channel.clone(), queue)));
             } else {
                 break;
             }
         }
 
         if receiver_done && send_task_done {
-            std::task::Poll::Ready(())
+            Poll::Ready(())
         } else {
-            std::task::Poll::Pending
+            Poll::Pending
         }
     }
 }

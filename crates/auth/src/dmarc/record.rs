@@ -111,7 +111,7 @@ pub struct Record {
     failure_report_options: Vec<FailureReportOption>,
     ///
     pub receiver_policy: ReceiverPolicy,
-    receiver_policy_subdomain: Option<ReceiverPolicy>,
+    pub receiver_policy_subdomain: Option<ReceiverPolicy>,
     percentage: u8, // 0-100
     report_failure: ReportFailure,
     report_interval: u32,
@@ -122,13 +122,6 @@ pub struct Record {
 }
 
 impl Record {
-    ///
-    #[must_use]
-    pub fn get_policy(&self) -> String {
-        // TODO: handle subdomain ?
-        self.receiver_policy.to_string()
-    }
-
     ///
     #[must_use]
     pub fn dkim_is_aligned(&self, rfc5322_from: &str, dkim_domain: &str) -> bool {
@@ -333,8 +326,6 @@ mod tests {
 
         let record = Record::from_str(record).unwrap();
         println!("{record:#?}");
-
-        assert_eq!(record.get_policy(), ReceiverPolicy::None.to_string());
     }
 
     #[test]

@@ -24,6 +24,14 @@ impl rustls::server::ResolvesServerCert for CertResolver {
         &self,
         client_hello: rustls::server::ClientHello<'_>,
     ) -> Option<std::sync::Arc<rustls::sign::CertifiedKey>> {
+        tracing::debug!(
+            server_name = ?client_hello.server_name(),
+            self.hostname,
+            //alpn = client_hello.alpn().map(|b| base64::encode(b)),
+            cipher_suites = ?client_hello.cipher_suites(),
+            signature_schemes = ?client_hello.signature_schemes(),
+            "resolving certificate"
+        );
         match client_hello.server_name() {
             Some(server_name) if server_name == self.hostname.as_str() => self.default_cert.clone(),
             Some(_) => self.sni_resolver.resolve(client_hello),

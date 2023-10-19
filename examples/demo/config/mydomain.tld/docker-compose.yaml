@@ -12,16 +12,12 @@ services:
       dockerfile_inline: |
         # syntax=docker/dockerfile:1
         FROM vsmtp-receiver:dev
-        ## saslauthd is used internally by vsmtp
         RUN apt-get update && apt-get install -y sasl2-bin openssl
-
         RUN sed -i 's/START=no/START=yes/g' /etc/default/saslauthd
         RUN sed -i 's/MECHANISMS="pam"/MECHANISMS="shadow"/g' /etc/default/saslauthd
 
         RUN useradd -p $(openssl passwd -1 john.doe) john.doe@mydomain.tld
-
-        # RUN usermod -a -G sasl vsmtp
-        # USER vsmtp
+        RUN useradd -p $(openssl passwd -1 john.doe) john.doe@sub.mydomain.tld
     command: sh -c "saslauthd -a shadow && vsmtp-receiver"
     volumes:
       - ../prelude.rhai:/prelude.rhai:ro
@@ -30,6 +26,8 @@ services:
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./receiver/generated/mydomain.tld.crt:/etc/ssl/certs/mydomain.tld.crt:ro
       - ./receiver/generated/mydomain.tld.key:/etc/ssl/certs/mydomain.tld.key:ro
+      - ./receiver/generated/sub.mydomain.tld.crt:/etc/ssl/certs/sub.mydomain.tld.crt:ro
+      - ./receiver/generated/sub.mydomain.tld.key:/etc/ssl/certs/sub.mydomain.tld.key:ro
     networks:
       net:
         ipv4_address: 172.23.0.3
@@ -69,7 +67,12 @@ services:
         # syntax=docker/dockerfile:1
         FROM vsmtp-maildir:dev
         RUN apt-get update && apt-get install -y openssl
-        RUN useradd -p $(openssl passwd -1 john.doe) --create-home john.doe@mydomain.tld
+
+        RUN groupadd -g 1002 john.doe@mydomain.tld
+        RUN useradd -u 1002 -g 1002 -p $(openssl passwd -1 john.doe) --create-home john.doe@mydomain.tld
+
+        RUN groupadd -g 1001 john.doe@sub.mydomain.tld
+        RUN useradd -u 1001 -g 1001 -p $(openssl passwd -1 john.doe) --create-home john.doe@sub.mydomain.tld
     volumes:
       - ./maildir/config.rhai:/etc/vsmtp/maildir/conf.d/config.rhai:ro
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
@@ -78,6 +81,8 @@ services:
     depends_on:
       broker:
         condition: service_healthy
+      mydomain-imap:
+        condition: service_started
     env_file:
       - broker-mydomain.env
 
@@ -88,7 +93,16 @@ services:
         # syntax=docker/dockerfile:1
         FROM dovecot/dovecot
         RUN apt-get update && apt-get install -y openssl
-        RUN useradd -p $(openssl passwd -1 john.doe) john.doe@mydomain.tld
+
+        RUN groupadd -g 1002 john.doe@mydomain.tld
+        RUN useradd -u 1002 -g 1002 -p $(openssl passwd -1 john.doe) --create-home john.doe@mydomain.tld
+        RUN mkdir /home/john.doe@mydomain.tld/Maildir
+        RUN chmod 777 -R /home/john.doe@mydomain.tld/Maildir
+
+        RUN groupadd -g 1001 john.doe@sub.mydomain.tld
+        RUN useradd -u 1001 -g 1001 -p $(openssl passwd -1 john.doe) --create-home john.doe@sub.mydomain.tld
+        RUN mkdir /home/john.doe@sub.mydomain.tld/Maildir
+        RUN chmod 777 -R /home/john.doe@sub.mydomain.tld/Maildir
     ports:
       # - 127.0.0.1:10110:110 # POP3
       # - 127.0.0.1:10995:995 # POP3S
@@ -128,17 +142,10 @@ services:
 
   mydomain-log-dispatcher:
     image: vsmtp-log-dispatcher:dev
-    # environment:
-    #   - JAEGER=telemetry:6831
-    #   - LOKI_URL=http://loki:3100
     volumes:
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai
-      - /run/systemd/journal/socket:/run/systemd/journal/socket
-    networks:
-      - net
-      # - jaeger
-      # - loki
+      - ./logs/config.rhai:/etc/vsmtp/log-dispatcher/conf.d/config.rhai:ro
+    networks: [ net ]
     depends_on:
       broker:
         condition: service_healthy

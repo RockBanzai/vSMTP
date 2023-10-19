@@ -10,9 +10,14 @@ $TTL 2d
                             IN  MX      1   smtp-msa.mydomain.tld.
                             IN  TXT     "v=spf1 +include:ip4._spf.%{d} -all"
 
+sub                         IN  MX      1   smtp-msa.mydomain.tld.
+                            IN  TXT     "v=spf1 +include:ip4._spf.%{d2} -all"
+
 _submission._tcp            IN  SRV     0 1 587 smtp-msa.mydomain.tld.
+_submission._tcp.sub        IN  SRV     0 1 587 smtp-msa.mydomain.tld.
+
 ip4._spf                    IN  TXT     "v=spf1 +ip4:172.23.0.2 +ip4:172.23.0.10 -all"
-_dmarc                      IN  TXT     "v=DMARC1; p=quarantine;"
+_dmarc                      IN  TXT     "v=DMARC1; p=quarantine; sp=quarantine"
 
 smtp-msa                     IN  A      172.23.0.3
 

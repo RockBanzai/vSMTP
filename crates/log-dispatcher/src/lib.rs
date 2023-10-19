@@ -9,9 +9,8 @@
  *
  */
 
-use tracing_amqp::Event;
-
 use chrono::{Datelike, Timelike};
+use tracing_amqp::Event;
 
 /// Create a message from a log event.
 /// If the event contains only a message, it returns the message, otherwise,
@@ -21,12 +20,10 @@ use chrono::{Datelike, Timelike};
 ///
 /// * `event` - event received from the log queue.
 #[must_use]
-pub fn get_message(event: &Event) -> Option<String> {
+pub fn get_message(event: &Event<'_>) -> Option<String> {
     if event.fields.len() == 1 && event.fields.contains_key("message") {
-        return match serde_json::to_string(event.fields.get("message").unwrap()) {
-            Ok(msg) => Some(msg.replace('\"', "")),
-            Err(_) => None,
-        };
+        return serde_json::to_string(event.fields.get("message").unwrap())
+            .map_or(None, |msg| Some(msg.replace('\"', "")));
     }
     let mut extended_msg = "{".to_string();
     for (name, field) in &event.fields {
@@ -63,7 +60,7 @@ pub fn format_timestamp(timestamp: &chrono::DateTime<chrono::Utc>) -> String {
 /// # Arguments:
 /// * `level` level to format
 #[must_use]
-pub fn format_level(level: tracing::Level) -> String {
+pub const fn format_level(level: tracing::Level) -> &'static str {
     match level {
         tracing::Level::ERROR => "ERROR",
         tracing::Level::WARN => "WARN",
@@ -71,5 +68,4 @@ pub fn format_level(level: tracing::Level) -> String {
         tracing::Level::DEBUG => "DEBUG",
         tracing::Level::TRACE => "TRACE",
     }
-    .to_string()
 }

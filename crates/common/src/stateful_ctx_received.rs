@@ -17,7 +17,7 @@ use crate::{
     Mailbox, Recipient,
 };
 use fake::faker::time::fr_fr::DateTimeBetween;
-use vsmtp_auth::{dkim::DkimVerificationResult, dmarc::Dmarc, iprev::IpRevResult, spf};
+use vsmtp_auth::{dkim::DkimVerificationResult, dmarc, iprev::IpRevResult, spf};
 use vsmtp_mail_parser::Mail;
 use vsmtp_protocol::{rustls, ClientName, Domain, DsnReturn, NotifyOn, Stage};
 
@@ -561,5 +561,5 @@ impl RcptToProps {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct CompleteProps {
     pub dkim: Option<std::sync::Arc<Vec<DkimVerificationResult>>>,
-    pub dmarc: Option<std::sync::Arc<Dmarc>>,
+    pub dmarc: Option<std::sync::Arc<dmarc::Result>>,
 }

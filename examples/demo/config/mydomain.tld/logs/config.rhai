@@ -14,8 +14,8 @@ fn on_config(config) {
             type: "console",
         },
         #{
-            topic: "journald",
-            type: "journald",
+            topic: "app",
+            type: "console",
         },
     ];
 

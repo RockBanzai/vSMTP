@@ -125,7 +125,9 @@ pub fn directives_try_from(value: rhai::Dynamic, stage: Option<&impl Stage>) -> 
 impl From<DirectiveError> for Box<rhai::EvalAltResult> {
     fn from(value: DirectiveError) -> Self {
         Self::new(rhai::EvalAltResult::ErrorInFunctionCall(
-            value.directive.unwrap_or("unknown directive".to_string()),
+            value
+                .directive
+                .unwrap_or_else(|| "unknown directive".to_string()),
             String::default(),
             match value.kind {
                 error::DirectiveErrorKind::Compile(r)

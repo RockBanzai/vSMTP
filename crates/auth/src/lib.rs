@@ -123,7 +123,7 @@ pub mod dmarc {
     mod result;
 
     pub use record::{ReceiverPolicy, Record};
-    pub use result::{Dmarc, Value};
+    pub use result::{Result, Value};
 }
 
 ///
