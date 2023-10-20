@@ -184,23 +184,19 @@ impl From<std::io::Error> for Delivery {
     }
 }
 
-impl From<trust_dns_resolver::error::ResolveError> for Lookup {
+impl From<hickory_resolver::error::ResolveError> for Lookup {
     #[inline]
-    fn from(error: trust_dns_resolver::error::ResolveError) -> Self {
+    fn from(error: hickory_resolver::error::ResolveError) -> Self {
         match error.kind() {
-            trust_dns_resolver::error::ResolveErrorKind::Message(e) => {
-                Self::Message((*e).to_owned())
-            }
-            trust_dns_resolver::error::ResolveErrorKind::Msg(e) => Self::Message(e.to_string()),
-            trust_dns_resolver::error::ResolveErrorKind::NoConnections => Self::NoConnections,
-            trust_dns_resolver::error::ResolveErrorKind::NoRecordsFound { .. } => {
-                Self::NoRecords {}
-            }
-            trust_dns_resolver::error::ResolveErrorKind::Io(io) => Self::IO(io.to_string()),
-            trust_dns_resolver::error::ResolveErrorKind::Proto(proto) => {
+            hickory_resolver::error::ResolveErrorKind::Message(e) => Self::Message((*e).to_owned()),
+            hickory_resolver::error::ResolveErrorKind::Msg(e) => Self::Message(e.to_string()),
+            hickory_resolver::error::ResolveErrorKind::NoConnections => Self::NoConnections,
+            hickory_resolver::error::ResolveErrorKind::NoRecordsFound { .. } => Self::NoRecords {},
+            hickory_resolver::error::ResolveErrorKind::Io(io) => Self::IO(io.to_string()),
+            hickory_resolver::error::ResolveErrorKind::Proto(proto) => {
                 Self::Proto(proto.to_string())
             }
-            trust_dns_resolver::error::ResolveErrorKind::Timeout => Self::TimedOut,
+            hickory_resolver::error::ResolveErrorKind::Timeout => Self::TimedOut,
             // NOTE: non_exhaustive
             _ => Self::NotImplemented,
         }

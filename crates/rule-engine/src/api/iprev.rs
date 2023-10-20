@@ -11,15 +11,14 @@
 
 use crate::api::docs::Ctx;
 use crate::block_on;
+use hickory_resolver::{error::ResolveErrorKind, proto::xfer::retry_dns_handle::RetryableError};
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult,
     TypeId,
 };
-use trust_dns_resolver::{error::ResolveErrorKind, proto::xfer::retry_dns_handle::RetryableError};
-use vsmtp_auth::iprev::Value;
 use vsmtp_common::{
     dns_resolver::DnsResolver,
-    trust_dns_resolver::{self, proto::op::ResponseCode},
+    hickory_resolver::{self, proto::op::ResponseCode},
 };
 
 pub use iprev::*;
@@ -35,6 +34,8 @@ struct IpRevParams {
 
 #[rhai::plugin::export_module]
 mod iprev {
+    use vsmtp_auth::iprev::Value;
+
     /// # rhai-autodocs:index:1
     #[tracing::instrument(skip(params), level = "debug", fields(ip), ret)]
     pub fn check(params: rhai::Dynamic) -> IpRevResult {

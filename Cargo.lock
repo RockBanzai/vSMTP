@@ -1649,6 +1649,59 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
+name = "hickory-proto"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "091a6fbccf4860009355e3efc52ff4acf37a63489aad7435372d44ceeb6fbbcf"
+dependencies = [
+ "async-trait",
+ "cfg-if",
+ "data-encoding",
+ "enum-as-inner 0.6.0",
+ "futures-channel",
+ "futures-io",
+ "futures-util",
+ "idna 0.4.0",
+ "ipnet",
+ "once_cell",
+ "rand",
+ "ring",
+ "rustls",
+ "rustls-pemfile",
+ "serde",
+ "thiserror",
+ "tinyvec",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "hickory-resolver"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35b8f021164e6a984c9030023544c57789c51760065cd510572fedcfb04164e8"
+dependencies = [
+ "cfg-if",
+ "futures-util",
+ "hickory-proto",
+ "ipconfig",
+ "lru-cache",
+ "once_cell",
+ "parking_lot",
+ "rand",
+ "resolv-conf",
+ "rustls",
+ "serde",
+ "smallvec",
+ "thiserror",
+ "tokio",
+ "tokio-rustls",
+ "tracing",
+]
+
+[[package]]
 name = "hmac"
 version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2214,8 +2267,8 @@ dependencies = [
  "tokio",
  "tokio-rustls",
  "tokio-util",
- "trust-dns-proto 0.21.2",
- "trust-dns-resolver 0.21.2",
+ "trust-dns-proto",
+ "trust-dns-resolver",
  "typed-builder",
  "uuid",
  "webpki-roots 0.25.2",
@@ -4022,37 +4075,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "trust-dns-proto"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0dc775440033cb114085f6f2437682b194fa7546466024b1037e82a48a052a69"
-dependencies = [
- "async-trait",
- "cfg-if",
- "data-encoding",
- "enum-as-inner 0.6.0",
- "futures-channel",
- "futures-io",
- "futures-util",
- "idna 0.4.0",
- "ipnet",
- "once_cell",
- "rand",
- "ring",
- "rustls",
- "rustls-pemfile",
- "rustls-webpki 0.101.4",
- "serde",
- "smallvec",
- "thiserror",
- "tinyvec",
- "tokio",
- "tokio-rustls",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "trust-dns-resolver"
 version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4069,32 +4091,7 @@ dependencies = [
  "smallvec",
  "thiserror",
  "tokio",
- "trust-dns-proto 0.21.2",
-]
-
-[[package]]
-name = "trust-dns-resolver"
-version = "0.23.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dff7aed33ef3e8bf2c9966fccdfed93f93d46f432282ea875cd66faabc6ef2f"
-dependencies = [
- "cfg-if",
- "futures-util",
- "ipconfig",
- "lru-cache",
- "once_cell",
- "parking_lot",
- "rand",
- "resolv-conf",
- "rustls",
- "serde",
- "smallvec",
- "thiserror",
- "tokio",
- "tokio-rustls",
- "tracing",
- "trust-dns-proto 0.23.0",
- "webpki-roots 0.25.2",
+ "trust-dns-proto",
 ]
 
 [[package]]
@@ -4261,6 +4258,7 @@ dependencies = [
  "base64 0.21.4",
  "env_logger",
  "fake",
+ "hickory-resolver",
  "pem-rfc7468",
  "pretty_assertions",
  "rand",
@@ -4278,7 +4276,6 @@ dependencies = [
  "time",
  "tracing",
  "tracing-subscriber",
- "trust-dns-resolver 0.23.0",
  "viaspf",
  "vsmtp-mail-parser",
  "vsmtp-protocol",
@@ -4289,6 +4286,7 @@ name = "vsmtp-common"
 version = "3.0.0-rc.1"
 dependencies = [
  "fake",
+ "hickory-resolver",
  "lapin",
  "libc",
  "rand",
@@ -4305,7 +4303,6 @@ dependencies = [
  "tracing",
  "tracing-amqp",
  "tracing-subscriber",
- "trust-dns-resolver 0.23.0",
  "uuid",
  "vsmtp-auth",
  "vsmtp-config",
@@ -4340,6 +4337,7 @@ dependencies = [
  "async-trait",
  "clap",
  "futures-util",
+ "hickory-resolver",
  "hostname",
  "humantime",
  "lapin",
@@ -4352,7 +4350,6 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
- "trust-dns-resolver 0.23.0",
  "url",
  "uzers",
  "vsmtp-auth",
@@ -4431,12 +4428,12 @@ dependencies = [
 name = "vsmtp-plugin-dnsxl"
 version = "3.0.0-rc.1"
 dependencies = [
+ "hickory-resolver",
  "rhai",
  "rhai-autodocs",
  "serde",
  "strum",
  "tracing",
- "trust-dns-resolver 0.23.0",
 ]
 
 [[package]]
@@ -4527,6 +4524,7 @@ dependencies = [
  "base64 0.21.4",
  "bytes",
  "fake",
+ "hickory-proto",
  "humantime",
  "memchr",
  "pretty_assertions",
@@ -4543,7 +4541,6 @@ dependencies = [
  "tokio-rustls",
  "tokio-stream",
  "tracing",
- "trust-dns-proto 0.23.0",
  "uuid",
 ]
 

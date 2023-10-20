@@ -11,13 +11,13 @@
 
 use std::str::FromStr;
 
+use hickory_resolver::config::{ResolverConfig, ResolverOpts};
+use hickory_resolver::Resolver;
 use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, Module, NativeCallContext, PluginFunction, RhaiResult,
     TypeId,
 };
 use strum::EnumString;
-use trust_dns_resolver::config::{ResolverConfig, ResolverOpts};
-use trust_dns_resolver::Resolver;
 
 #[derive(Debug, EnumString)]
 enum BlockListKind {

@@ -140,9 +140,9 @@ impl From<&DnsLookupError> for Status {
     }
 }
 
-impl From<trust_dns_resolver::error::ResolveError> for DnsLookupError {
-    fn from(value: trust_dns_resolver::error::ResolveError) -> Self {
-        use trust_dns_resolver::error::ResolveErrorKind;
+impl From<hickory_resolver::error::ResolveError> for DnsLookupError {
+    fn from(value: hickory_resolver::error::ResolveError) -> Self {
+        use hickory_resolver::error::ResolveErrorKind;
         match value.kind() {
             ResolveErrorKind::Message(message) => Self::Other((*message).to_string()),
             ResolveErrorKind::Msg(message) => Self::Other(message.clone()),

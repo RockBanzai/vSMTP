@@ -146,7 +146,7 @@ async fn get_public_key(
         Err(e)
             if matches!(
                 e.kind(),
-                vsmtp_common::trust_dns_resolver::error::ResolveErrorKind::NoRecordsFound { .. }
+                vsmtp_common::hickory_resolver::error::ResolveErrorKind::NoRecordsFound { .. }
             ) =>
         {
             Err(Value::PermFail)

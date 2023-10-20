@@ -64,8 +64,8 @@ mod dns {
     /// });
     /// ```
     ///
-    /// [`ResolverConfig`]: https://docs.rs/trust-dns-resolver/latest/trust_dns_resolver/config/struct.ResolverConfig.html
-    /// [`ResolverOpts`]: https://docs.rs/trust-dns-resolver/latest/trust_dns_resolver/config/struct.ResolverOpts.html
+    /// [`ResolverConfig`]: https://docs.rs/hickory-resolver/latest/hickory_resolver/config/struct.ResolverConfig.html
+    /// [`ResolverOpts`]: https://docs.rs/hickory-resolver/latest/hickory_resolver/config/struct.ResolverOpts.html
     /// # rhai-autodocs:index:2
     #[rhai_fn(return_raw)]
     pub fn resolver(params: &mut rhai::Dynamic) -> Result<DnsResolver> {

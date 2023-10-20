@@ -12,22 +12,22 @@
 #[allow(dead_code)]
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct DnsResolver {
-    config: trust_dns_resolver::config::ResolverConfig,
-    option: trust_dns_resolver::config::ResolverOpts,
+    config: hickory_resolver::config::ResolverConfig,
+    option: hickory_resolver::config::ResolverOpts,
     #[serde(skip)]
-    pub resolver: trust_dns_resolver::TokioAsyncResolver,
+    pub resolver: hickory_resolver::TokioAsyncResolver,
 }
 
 impl DnsResolver {
     #[must_use]
     pub fn google() -> Self {
-        let config = trust_dns_resolver::config::ResolverConfig::google();
-        let option = trust_dns_resolver::config::ResolverOpts::default();
+        let config = hickory_resolver::config::ResolverConfig::google();
+        let option = hickory_resolver::config::ResolverOpts::default();
 
         Self {
             config: config.clone(),
-            option,
-            resolver: trust_dns_resolver::TokioAsyncResolver::tokio(config, option),
+            option: option.clone(),
+            resolver: hickory_resolver::TokioAsyncResolver::tokio(config, option),
         }
     }
 }
@@ -40,8 +40,8 @@ impl<'de> serde::Deserialize<'de> for DnsResolver {
         let Inner { config, option } = Inner::deserialize(deserializer)?;
         Ok(Self {
             config: config.clone(),
-            option,
-            resolver: trust_dns_resolver::TokioAsyncResolver::tokio(config, option),
+            option: option.clone(),
+            resolver: hickory_resolver::TokioAsyncResolver::tokio(config, option),
         })
     }
 }
@@ -50,21 +50,21 @@ impl<'de> serde::Deserialize<'de> for DnsResolver {
 #[serde(deny_unknown_fields)]
 struct Inner {
     #[serde(default, deserialize_with = "deserialize_config")]
-    config: trust_dns_resolver::config::ResolverConfig,
+    config: hickory_resolver::config::ResolverConfig,
     #[serde(default)]
-    option: trust_dns_resolver::config::ResolverOpts,
+    option: hickory_resolver::config::ResolverOpts,
 }
 
 fn deserialize_config<'de, D>(
     deserialize: D,
-) -> Result<trust_dns_resolver::config::ResolverConfig, D::Error>
+) -> Result<hickory_resolver::config::ResolverConfig, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     struct Visitor;
 
     impl<'de> serde::de::Visitor<'de> for Visitor {
-        type Value = trust_dns_resolver::config::ResolverConfig;
+        type Value = hickory_resolver::config::ResolverConfig;
 
         fn expecting(
             &self,
@@ -90,7 +90,7 @@ where
         where
             A: serde::de::MapAccess<'de>,
         {
-            <trust_dns_resolver::config::ResolverConfig as serde::Deserialize>::deserialize(
+            <hickory_resolver::config::ResolverConfig as serde::Deserialize>::deserialize(
                 serde::de::value::MapAccessDeserializer::new(map),
             )
         }
@@ -110,7 +110,7 @@ enum BuildIn {
     Quad9Tls,
 }
 
-impl From<BuildIn> for trust_dns_resolver::config::ResolverConfig {
+impl From<BuildIn> for hickory_resolver::config::ResolverConfig {
     fn from(val: BuildIn) -> Self {
         match val {
             BuildIn::Google => Self::google(),

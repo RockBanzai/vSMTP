@@ -182,7 +182,7 @@ pub async fn send(
     let handler = Handler {
         client_name: ClientName::Domain(client_name.parse().unwrap()),
         sni: rustls::ServerName::try_from(domain.to_string().as_str())
-            .expect("valid domain from the trust-dns crate"),
+            .expect("valid domain from the hickory-dns crate"),
         message: message.to_vec(),
         mail_from: from,
         rcpt_to: to.clone(),

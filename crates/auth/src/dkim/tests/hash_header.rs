@@ -59,7 +59,7 @@ fn verify_file() {
     )
     .unwrap();
 
-    let txt_record = trust_dns_resolver::Resolver::default()
+    let txt_record = hickory_resolver::Resolver::default()
         .unwrap()
         .txt_lookup(dbg!(signature.get_dns_query()))
         .unwrap();

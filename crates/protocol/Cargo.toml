@@ -28,7 +28,7 @@ time = { workspace = true }
 tokio-rustls = { workspace = true }
 tokio-stream = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
-trust-dns-proto = { workspace = true }
+hickory-proto = { workspace = true }
 uuid = { workspace = true }
 
 [dependencies.tokio]

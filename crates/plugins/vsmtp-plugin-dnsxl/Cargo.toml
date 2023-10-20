@@ -25,11 +25,11 @@ rhai = { workspace = true }
 rhai-autodocs = { workspace = true }
 serde = { workspace = true }
 strum = { workspace = true }
-trust-dns-resolver = { workspace = true }
+hickory-resolver = { workspace = true }
 
 [dependencies]
 rhai = { workspace = true }
 serde = { workspace = true }
 strum = { workspace = true }
 tracing = { workspace = true }
-trust-dns-resolver = { workspace = true }
+hickory-resolver = { workspace = true }

@@ -58,15 +58,14 @@ impl DeliverySystem for Forward {
         assert!(self.target.scheme() == "smtp");
 
         let target = self.target.host_str().unwrap();
-        let sni = <trust_dns_resolver::Name as std::str::FromStr>::from_str(target).unwrap_or_else(
-            |_| {
+        let sni =
+            <hickory_resolver::Name as std::str::FromStr>::from_str(target).unwrap_or_else(|_| {
                 rcpt_to
                     .first()
                     .expect("there is always at least one recipient")
                     .forward_path
                     .domain()
-            },
-        );
+            });
 
         vec![
             send(

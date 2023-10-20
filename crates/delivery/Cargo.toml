@@ -10,7 +10,7 @@ rust-version.workspace = true
 workspace = true
 
 [features]
-trust-dns-resolver = ["dep:trust-dns-resolver"]
+hickory-resolver = ["dep:hickory-resolver"]
 
 [dependencies]
 async-trait = { workspace = true }
@@ -28,7 +28,7 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 tokio-stream = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
-trust-dns-resolver = { workspace = true, optional = true }
+hickory-resolver = { workspace = true, optional = true }
 url = { workspace = true }
 uzers = { workspace = true }
 vsmtp-auth = { workspace = true }
@@ -50,9 +50,9 @@ path = "src/bin/mbox.rs"
 [[bin]]
 name = "vsmtp-forward"
 path = "src/bin/forward.rs"
-required-features = ["trust-dns-resolver"]
+required-features = ["hickory-resolver"]
 
 [[bin]]
 name = "vsmtp-basic"
 path = "src/bin/basic.rs"
-required-features = ["trust-dns-resolver"]
+required-features = ["hickory-resolver"]

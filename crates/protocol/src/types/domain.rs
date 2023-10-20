@@ -10,7 +10,7 @@
  */
 
 /// A domain name.
-pub type Domain = trust_dns_proto::rr::Name;
+pub type Domain = hickory_proto::rr::Name;
 
 /*
 

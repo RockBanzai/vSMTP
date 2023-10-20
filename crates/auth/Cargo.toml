@@ -43,5 +43,5 @@ pretty_assertions = { workspace = true }
 rand = { workspace = true }
 test-log = { workspace = true }
 tracing-subscriber = { workspace = true }
-trust-dns-resolver = { workspace = true }
+hickory-resolver = { workspace = true }
 vsmtp-mail-parser = { workspace = true }

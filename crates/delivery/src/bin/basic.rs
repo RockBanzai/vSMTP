@@ -74,7 +74,7 @@ impl Basic {
             Err(e)
                 if matches!(
                     e.kind(),
-                    trust_dns_resolver::error::ResolveErrorKind::NoRecordsFound { .. }
+                    hickory_resolver::error::ResolveErrorKind::NoRecordsFound { .. }
                 ) =>
             {
                 return DeliveryAttempt::new_smtp(
@@ -88,7 +88,7 @@ impl Basic {
         };
 
         let mut records = mxs.into_iter().collect::<Vec<_>>();
-        records.sort_by_key(trust_dns_resolver::proto::rr::rdata::MX::preference);
+        records.sort_by_key(hickory_resolver::proto::rr::rdata::MX::preference);
 
         // TODO: null MX
 

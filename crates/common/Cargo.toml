@@ -27,7 +27,7 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 tracing-amqp = { workspace = true }
 tracing-subscriber = { workspace = true }
-trust-dns-resolver = { workspace = true }
+hickory-resolver = { workspace = true }
 uuid = { workspace = true, features = ["serde"] }
 vsmtp-auth = { workspace = true }
 vsmtp-config = { workspace = true }

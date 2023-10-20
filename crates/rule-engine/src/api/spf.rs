@@ -17,7 +17,7 @@ use rhai::plugin::{
     PluginFunction, RhaiResult, TypeId,
 };
 use vsmtp_auth::spf;
-use vsmtp_common::{dns_resolver::DnsResolver, trust_dns_resolver};
+use vsmtp_common::{dns_resolver::DnsResolver, hickory_resolver};
 use vsmtp_protocol::ClientName;
 
 pub use rhai_spf::*;
@@ -34,14 +34,12 @@ struct Params {
 
 struct Lookup(std::sync::Arc<DnsResolver>);
 
-fn to_lookup_error(error: trust_dns_resolver::error::ResolveError) -> viaspf::lookup::LookupError {
+fn to_lookup_error(error: hickory_resolver::error::ResolveError) -> viaspf::lookup::LookupError {
     match error.kind() {
-        trust_dns_resolver::error::ResolveErrorKind::NoRecordsFound { .. } => {
+        hickory_resolver::error::ResolveErrorKind::NoRecordsFound { .. } => {
             viaspf::lookup::LookupError::NoRecords
         }
-        trust_dns_resolver::error::ResolveErrorKind::Timeout => {
-            viaspf::lookup::LookupError::Timeout
-        }
+        hickory_resolver::error::ResolveErrorKind::Timeout => viaspf::lookup::LookupError::Timeout,
         _ => wrap_error(error),
     }
 }
@@ -54,8 +52,8 @@ fn wrap_error(
 
 fn to_trust_dns_name(
     name: &viaspf::lookup::Name,
-) -> viaspf::lookup::LookupResult<trust_dns_resolver::Name> {
-    trust_dns_resolver::Name::from_ascii(name).map_err(wrap_error)
+) -> viaspf::lookup::LookupResult<hickory_resolver::Name> {
+    hickory_resolver::Name::from_ascii(name).map_err(wrap_error)
 }
 
 #[async_trait::async_trait]
@@ -102,7 +100,7 @@ impl viaspf::lookup::Lookup for Lookup {
             .map_err(to_lookup_error)?
             .into_iter()
             .collect::<Vec<_>>();
-        mxs.sort_by_key(trust_dns_resolver::proto::rr::rdata::MX::preference);
+        mxs.sort_by_key(hickory_resolver::proto::rr::rdata::MX::preference);
         mxs.into_iter()
             .map(|mx| viaspf::lookup::Name::new(&mx.exchange().to_ascii()).map_err(wrap_error))
             .collect()

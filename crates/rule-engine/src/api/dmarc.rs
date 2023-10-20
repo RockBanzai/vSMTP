@@ -15,7 +15,7 @@ use rhai::plugin::{
     TypeId,
 };
 use vsmtp_auth::dmarc as backend;
-use vsmtp_common::{dns_resolver::DnsResolver, trust_dns_resolver};
+use vsmtp_common::{dns_resolver::DnsResolver, hickory_resolver};
 use vsmtp_mail_parser::{mail::headers::Header, Mail};
 
 pub use rhai_dmarc::*;
@@ -71,7 +71,7 @@ async fn get_dmarc_record(
             Err(e)
                 if matches!(
                     e.kind(),
-                    trust_dns_resolver::error::ResolveErrorKind::NoRecordsFound { .. }
+                    hickory_resolver::error::ResolveErrorKind::NoRecordsFound { .. }
                 ) =>
             {
                 tracing::debug!("No DMARC record found");
