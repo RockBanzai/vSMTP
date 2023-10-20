@@ -11,9 +11,9 @@
 
 use std::collections::HashMap;
 
-use crate::config::Config;
+use crate::{config::Config, logger::Logger};
 use clap::Parser;
-use config::LogFormat;
+use config::{LogFormat, LogInstanceType};
 use tokio_stream::{StreamExt, StreamMap};
 use tracing_amqp::{Event, LOG_EXCHANGER_NAME};
 use tracing_subscriber::{
@@ -56,30 +56,30 @@ fn instantiate_formatter(format: LogFormat) -> Box<dyn formatter::Formatter> {
 ///
 /// # Arguments:
 /// * `config` configuration of a logger instance
-fn instantiate_logger(config: config::LogInstanceType) -> Box<dyn logger::Logger> {
+fn instantiate_logger(config: LogInstanceType) -> Box<dyn logger::Logger> {
     match config {
-        config::LogInstanceType::Console { formatter } => {
+        LogInstanceType::Console { formatter } => {
             let mut logger = logger::Console::default();
             if let Some(formatter) = formatter {
                 logger.set_formatter(instantiate_formatter(formatter));
             }
             Box::new(logger)
         }
-        config::LogInstanceType::File {
+        LogInstanceType::File {
             folder,
             rotation,
             file_prefix,
         } => Box::new(logger::File::new(rotation, folder, file_prefix)),
-        config::LogInstanceType::Syslog {
+        LogInstanceType::Syslog {
             formatter,
             protocol,
             address,
         } => Box::new(logger::Syslog::new(
             protocol,
-            address,
+            address.to_string(),
             instantiate_formatter(formatter),
         )),
-        config::LogInstanceType::Journald => Box::new(logger::Journald::new()),
+        LogInstanceType::Journald => Box::new(logger::Journald::new()),
     }
 }
 
@@ -95,24 +95,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let conn = config.broker.connect().await?;
 
-    let mut consumers = StreamMap::new(); // rabbitmq consumers
-    let mut loggers = HashMap::<String, Vec<Box<dyn logger::Logger>>>::new();
-    for logger in config.loggers {
-        if !loggers.contains_key(&logger.topic) {
-            loggers.insert(logger.topic.clone(), Vec::new());
-        }
-        loggers
-            .get_mut(&logger.topic)
-            .unwrap()
-            .push(instantiate_logger(logger.config));
-        if consumers.contains_key(&logger.topic) {
-            continue;
-        }
+    let mut consumers = StreamMap::new();
+    let mut loggers = HashMap::<String, Vec<Box<dyn Logger>>>::new();
+
+    for (topic, sinks) in config.loggers {
+        let sinks = sinks
+            .into_iter()
+            .map(instantiate_logger)
+            .collect::<Vec<_>>();
+        loggers.insert(topic.clone(), sinks);
+
         let channel = conn.create_channel().await?;
         channel
             .confirm_select(lapin::options::ConfirmSelectOptions::default())
-            .await
-            .unwrap();
+            .await?;
 
         channel
             .exchange_declare(
@@ -124,64 +120,57 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 },
                 lapin::types::FieldTable::default(),
             )
-            .await
-            .unwrap();
+            .await?;
 
         let queue = channel
             .queue_declare(
-                format!("log-dispatcher-{}", logger.topic).as_str(),
+                format!("log-dispatcher-{topic}").as_str(),
                 lapin::options::QueueDeclareOptions {
                     durable: true,
                     ..Default::default()
                 },
                 lapin::types::FieldTable::default(),
             )
-            .await
-            .unwrap();
+            .await?;
 
         channel
             .queue_bind(
                 queue.name().as_str(),
                 LOG_EXCHANGER_NAME,
-                &logger.topic,
+                &topic,
                 lapin::options::QueueBindOptions::default(),
                 lapin::types::FieldTable::default(),
             )
-            .await
-            .unwrap();
+            .await?;
 
-        consumers.insert(
-            logger.topic,
-            channel
-                .basic_consume(
-                    queue.name().as_str(),
-                    LOG_EXCHANGER_NAME,
-                    lapin::options::BasicConsumeOptions::default(),
-                    lapin::types::FieldTable::default(),
-                )
-                .await?,
-        );
+        let consumer = channel
+            .basic_consume(
+                queue.name().as_str(),
+                LOG_EXCHANGER_NAME,
+                lapin::options::BasicConsumeOptions::default(),
+                lapin::types::FieldTable::default(),
+            )
+            .await?;
+
+        consumers.insert(topic, consumer);
     }
 
     tracing::info!("Log dispatcher has started");
     while let Some((topic, delivery)) = consumers.next().await {
-        if loggers.contains_key(&topic) {
-            let delivery = delivery.unwrap();
-            match serde_json::from_slice::<Event<'_>>(&delivery.data) {
-                Ok(event) => {
-                    delivery
-                        .ack(lapin::options::BasicAckOptions::default())
-                        .await
-                        .unwrap();
-                    if let Some(loggers) = loggers.get_mut(&topic) {
-                        for logger in loggers {
-                            logger.log(&event);
-                        }
-                    }
+        let delivery = delivery.unwrap();
+
+        match serde_json::from_slice::<Event<'_>>(&delivery.data) {
+            Ok(event) => {
+                delivery
+                    .ack(lapin::options::BasicAckOptions::default())
+                    .await?;
+
+                for logger in loggers.get_mut(&topic).expect("topic exists") {
+                    logger.log(&event);
                 }
-                Err(e) => {
-                    tracing::warn!("Failed to deserialized a log message: {}", e);
-                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to deserialized a log message: {}", e);
             }
         }
     }

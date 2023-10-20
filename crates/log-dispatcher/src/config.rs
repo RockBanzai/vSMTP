@@ -12,20 +12,21 @@
 pub use vsmtp_config::Config;
 
 /// Available formatters for logs
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "formatter", rename_all = "lowercase")]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum LogFormat {
     /// syslog formatter https://www.rfc-editor.org/rfc/rfc3164
     Rfc3164,
     /// syslog formatter https://www.rfc-editor.org/rfc/rfc5424
+    #[default]
     RFC5424,
 }
 
 /// Available protocol for syslog logger
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "protocol")]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub enum SyslogProtocol {
     /// Connect to syslog via Udp
+    #[default]
     #[serde(rename = "INET_STREAM")]
     Udp,
     /// Connect to syslog via Tcp
@@ -40,8 +41,8 @@ pub enum SyslogProtocol {
 }
 
 /// Rotation available for a log file
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "rotation", rename_all = "lowercase")]
+#[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum FileRotation {
     /// Rotate every minutes
     Minutely,
@@ -50,17 +51,18 @@ pub enum FileRotation {
     /// Rotate every days
     Daily,
     /// Never rotate the file
+    #[default]
     Never,
 }
 
 /// Type of logger available
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum LogInstanceType {
     /// Send logs to console
     Console {
         /// Formatter used, none by default
-        #[serde(default = "LogDispatcherConfig::default_log_format")]
+        #[serde(default)]
         formatter: Option<LogFormat>,
     },
     /// Send logs to log files
@@ -71,20 +73,20 @@ pub enum LogInstanceType {
         #[serde(default = "LogDispatcherConfig::default_file_prefix")]
         file_prefix: String,
         /// Rotation of logs in the files, no rotation by default.
-        #[serde(default = "LogDispatcherConfig::default_file_rotation")]
+        #[serde(default)]
         rotation: FileRotation,
     },
     /// Send logs to a syslog service
     Syslog {
         /// Formatter used, rfc 5424 by default.
-        #[serde(default = "LogDispatcherConfig::default_syslog_rfc")]
+        #[serde(default)]
         formatter: LogFormat,
         /// Protocol used, udp by default.
-        #[serde(default = "LogDispatcherConfig::default_syslog_protocol")]
+        #[serde(default)]
         protocol: SyslogProtocol,
         /// Address of the syslog service.
         #[serde(default = "LogDispatcherConfig::default_syslog_address")]
-        address: String,
+        address: Box<str>,
     },
     /// Send logs to journald
     Journald,
@@ -92,7 +94,6 @@ pub enum LogInstanceType {
 
 /// Configuration of a logger
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
 pub struct LogInstance {
     /// Name of the topic on which the logger will listen.
     pub topic: String,
@@ -107,9 +108,6 @@ pub struct LogInstance {
 pub struct LogDispatcherConfig {
     /// api version supported
     pub api_version: vsmtp_config::semver::VersionReq,
-    /// Name of the server. Used when identifying itself to the client.
-    #[serde(default = "LogDispatcherConfig::default_name")]
-    pub name: String,
     /// RabbitMQ client configuration.
     #[serde(default)]
     pub broker: vsmtp_config::Broker,
@@ -119,34 +117,54 @@ pub struct LogDispatcherConfig {
     #[serde(skip)]
     /// Path to the configuration script.
     pub path: std::path::PathBuf,
-    #[serde(default)] // FIXME: should be deserialized from "type" field
     /// all loggers used by the log dispatcher.
-    pub loggers: Vec<LogInstance>,
+    #[serde(default, with = "loggers")]
+    pub loggers: std::collections::HashMap<String, Vec<LogInstanceType>>,
+}
+
+mod loggers {
+    use super::{LogInstance, LogInstanceType};
+
+    pub fn serialize<S>(
+        value: &std::collections::HashMap<String, Vec<LogInstanceType>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut vec = Vec::new();
+        for (topic, instances) in value {
+            for instance in instances {
+                vec.push(LogInstance {
+                    topic: topic.clone(),
+                    config: instance.clone(),
+                });
+            }
+        }
+        serde::Serialize::serialize(&vec, serializer)
+    }
+
+    pub fn deserialize<'de, D>(
+        deserializer: D,
+    ) -> Result<std::collections::HashMap<String, Vec<LogInstanceType>>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        <Vec<LogInstance> as serde::Deserialize>::deserialize(deserializer).map(|v| {
+            let mut map = std::collections::HashMap::new();
+            for instance in v {
+                map.entry(instance.topic)
+                    .or_insert_with(Vec::new)
+                    .push(instance.config);
+            }
+            map
+        })
+    }
 }
 
 impl LogDispatcherConfig {
-    fn default_name() -> String {
-        "log-dispatcher".to_string()
-    }
-
-    const fn default_syslog_protocol() -> SyslogProtocol {
-        SyslogProtocol::Udp
-    }
-
-    const fn default_syslog_rfc() -> LogFormat {
-        LogFormat::RFC5424
-    }
-
-    const fn default_log_format() -> Option<LogFormat> {
-        None
-    }
-
-    const fn default_file_rotation() -> FileRotation {
-        FileRotation::Never
-    }
-
-    fn default_syslog_address() -> String {
-        "udp://localhost:514".to_string()
+    fn default_syslog_address() -> Box<str> {
+        "udp://localhost:514".into()
     }
 
     fn default_file_prefix() -> String {

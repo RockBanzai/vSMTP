@@ -192,7 +192,7 @@ where
 
         if let Ok(json) = json {
             if let Err(error) = self.sender.try_send(json) {
-                eprintln!("failed to send log message: {error}")
+                eprintln!("failed to send log message: {error}");
             }
         }
     }
