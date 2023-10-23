@@ -160,7 +160,7 @@ features = ["std", "provider", "config_builder", "anonymous", "plain", "login"]
 
 # "std" features exists but will add "indexmap_1" too
 [workspace.dependencies.serde_with]
-version = "3.3.0"
+version = "3.4.0"
 default-features = false
 features = ["macros", "base64", "indexmap_2"]
 
