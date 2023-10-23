@@ -78,7 +78,7 @@ sha1 = { version = "0.10.6", default-features = false, features = ["std", "oid"]
 strum = { version = "0.25.0", default-features = false, features = ["std", "derive"] }
 test-log = { version = "0.2.13", default-features = false, features = ["trace"] }
 thiserror = { version = "1.0.50", default-features = false }
-tracing = { version = "0.1.39", default-features = false, features = ["std", "attributes", "log"] }
+tracing = { version = "0.1.40", default-features = false, features = ["std", "attributes", "log"] }
 tracing-amqp = { path = "./crates/tracing-amqp" }
 tracing-appender = { version = "0.2.2", default-features = false }
 tracing-serde = { version = "0.1.3", default-features = false }
