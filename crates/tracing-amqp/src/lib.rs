@@ -9,7 +9,6 @@
  *
  */
 
-use tokio_stream::Stream;
 use tracing_serde::AsSerde;
 
 #[derive(Default)]
@@ -97,7 +96,7 @@ pub struct Event<'a> {
 }
 
 pub struct Layer {
-    sender: tokio::sync::mpsc::Sender<serde_json::Value>,
+    channel: lapin::Channel,
 }
 
 impl<S> tracing_subscriber::Layer<S> for Layer
@@ -153,17 +152,19 @@ where
 
         let mut fields = serde_json::Map::<String, serde_json::Value>::new();
         for field_name in event.metadata().fields() {
-            let filed_value = json_event.get(field_name.name());
-            if let Some(value) = filed_value {
+            if let Some(value) = json_event.get(field_name.name()) {
                 fields.insert(field_name.name().to_string(), value.clone());
             }
         }
-        if let Some(topic) = fields.remove("target_topic") {
-            fields.insert("topic".to_string(), topic);
-        }
-        if !fields.contains_key("topic") {
-            fields.insert("topic".to_string(), serde_json::json!("system"));
-        }
+
+        let topic = {
+            match fields.remove("topic") {
+                // Using `as_str` here because calling `to_string` on a json value
+                // messes up the formatting.
+                Some(topic) => topic.as_str().unwrap_or("system").to_string(),
+                None => "system".to_string(),
+            }
+        };
 
         // unfortunately, there is no kind getter
         let kind: u8 = if event.metadata().is_event() {
@@ -183,134 +184,56 @@ where
             file: event.metadata().file(),
             line: event.metadata().line(),
             kind,
-            topic: "system".to_string(), // this string will be replaced on serialization if needed
+            topic: topic.clone(),
             hostname: hostname::get().map_or(None, |hostname| hostname.into_string().ok()),
             fields,
             spans,
         };
-        let json = serde_json::to_value(event);
 
-        if let Ok(json) = json {
-            if let Err(error) = self.sender.try_send(json) {
-                eprintln!("failed to send log message: {error}");
-            }
-        }
-    }
-}
+        if let Ok(payload) = serde_json::to_vec(&event) {
+            let publish = self.channel.basic_publish(
+                LOG_EXCHANGER_NAME,
+                &topic,
+                lapin::options::BasicPublishOptions::default(),
+                payload.as_slice(),
+                lapin::BasicProperties::default()
+                    .with_content_type(lapin::types::ShortString::from("application/json")),
+            );
 
-type TaskOutput = Result<(), Box<dyn std::error::Error>>;
-type TaskFuture = Box<dyn std::future::Future<Output = TaskOutput> + Send + 'static>;
-
-pub struct BackgroundTask {
-    channel: lapin::Channel,
-    receiver: tokio_stream::wrappers::ReceiverStream<serde_json::Value>,
-    send_task: Option<std::pin::Pin<TaskFuture>>,
-    queue: Vec<serde_json::Value>,
-}
-
-use std::task::Poll;
-
-async fn make_sending_task(channel: lapin::Channel, queue: Vec<(String, Vec<u8>)>) -> TaskOutput {
-    let publishes = queue.iter().map(|(topic, payload)| {
-        channel.basic_publish(
-            LOG_EXCHANGER_NAME,
-            topic,
-            lapin::options::BasicPublishOptions::default(),
-            payload,
-            lapin::BasicProperties::default()
-                .with_content_type(lapin::types::ShortString::from("application/json")),
-        )
-    });
-    let publishes = futures_util::future::try_join_all(publishes)
-        .await?
-        .into_iter();
-    let confirms = futures_util::future::try_join_all(publishes).await?;
-
-    for i in confirms {
-        assert_eq!(
-            i,
-            lapin::publisher_confirm::Confirmation::Ack(None),
-            "{i:?}"
-        );
-    }
-
-    Ok(())
-}
-
-impl std::future::Future for BackgroundTask {
-    type Output = ();
-
-    fn poll(
-        mut self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> Poll<Self::Output> {
-        let mut receiver_done = false;
-
-        while let Poll::Ready(maybe_item) = std::pin::Pin::new(&mut self.receiver).poll_next(cx) {
-            if let Some(item) = maybe_item {
-                self.queue.push(item);
-            } else {
-                receiver_done = true;
-            }
-        }
-
-        let mut send_task_done = false;
-        loop {
-            if let Some(send_task) = &mut self.send_task {
-                match std::pin::Pin::new(send_task).poll(cx) {
-                    Poll::Pending => {}
-                    Poll::Ready(Err(e)) => todo!("{e:?}"),
-                    Poll::Ready(Ok(())) => {
-                        self.queue.clear();
-                        send_task_done = true;
+            // TODO: use a future instead.
+            match tokio::task::block_in_place(move || {
+                tokio::runtime::Handle::current().block_on(publish)
+            }) {
+                Ok(confirm) => {
+                    if tokio::task::block_in_place(move || {
+                        tokio::runtime::Handle::current().block_on(confirm)
+                    }) != Ok(lapin::publisher_confirm::Confirmation::Ack(None))
+                    {
+                        eprintln!(
+                            "failed to send log message, rabbitmq did not acknowledge the message"
+                        );
                     }
                 }
+                Err(error) => {
+                    eprintln!("failed to send log message: {error}");
+                }
             }
-            if send_task_done {
-                self.send_task = None;
-            }
-
-            if self.send_task.is_none() && !self.queue.is_empty() {
-                let queue = self
-                    .queue
-                    .iter()
-                    .map(|v| {
-                        (
-                            v.get("topic")
-                                .map_or("system", |topic| {
-                                    topic.as_str().expect("topic must be a string")
-                                })
-                                .to_string(),
-                            serde_json::to_vec(&v).unwrap(),
-                        )
-                    })
-                    .collect::<Vec<_>>();
-
-                self.send_task = Some(Box::pin(make_sending_task(self.channel.clone(), queue)));
-            } else {
-                break;
-            }
-        }
-
-        if receiver_done && send_task_done {
-            Poll::Ready(())
-        } else {
-            Poll::Pending
         }
     }
 }
 
 /// Instantiate a amqp tracing layer.
-/// This layer send received log events to a "log" exchanger
-/// The returns values are the Layer in itself and a background task to run in a `tokio::spawn`
+/// This layer send all logs emitted by tracing to a log dispatcher service.
 ///
 /// # Arguments
 ///
 /// * 'conn' - a connection to the server broker
-pub async fn layer(conn: &lapin::Connection) -> (Layer, BackgroundTask) {
-    let (tx, rx) = tokio::sync::mpsc::channel(512);
-
-    let layer = Layer { sender: tx };
+///
+/// # Return
+///
+/// A tracing layer.
+///
+pub async fn layer(conn: &lapin::Connection) -> Layer {
     let channel = conn.create_channel().await.unwrap();
     channel
         .confirm_select(lapin::options::ConfirmSelectOptions::default())
@@ -329,11 +252,5 @@ pub async fn layer(conn: &lapin::Connection) -> (Layer, BackgroundTask) {
         .await
         .unwrap();
 
-    let task = BackgroundTask {
-        channel,
-        receiver: rx.into(),
-        send_task: None,
-        queue: Vec::with_capacity(16),
-    };
-    (layer, task)
+    Layer { channel }
 }

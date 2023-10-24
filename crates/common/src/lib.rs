@@ -40,12 +40,11 @@ pub async fn init_logs(
         .with_targets(config.levels.clone())
         .with_default(config.default_level);
 
-    let (layer, task) = tracing_amqp::layer(conn).await;
+    let layer = tracing_amqp::layer(conn).await;
     tracing_subscriber::registry()
         .with(layer.with_filter(filter))
         .try_init()
         .unwrap();
-    tokio::spawn(task);
 
     std::panic::set_hook(Box::new(|e| {
         // TODO: check a way to improve formatting from this

@@ -14,6 +14,7 @@ use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
+use vsmtp_common::hickory_resolver::proto::rr::RecordType;
 
 pub use dns::*;
 
@@ -21,6 +22,7 @@ pub use dns::*;
 #[rhai::plugin::export_module]
 mod dns {
     /// DNS resolver instance created using `dns::resolver`.
+    /// Can be used to perform lookups and reverse lookups, see `dns::lookup` and `dns::rlookup`.
     ///
     /// # rhai-autodocs:index:1
     pub type DnsResolver = std::sync::Arc<vsmtp_common::dns_resolver::DnsResolver>;
@@ -81,7 +83,9 @@ mod dns {
     ///
     /// # Args
     ///
-    /// * `host` - A valid hostname to search.
+    /// * `host`   - A valid hostname to search.
+    /// * `record` - A valid record type to search as a string. (optional, default: "A"/"AAAA")
+    ///              Can be "A", "AAAA", "MX", "TXT", "TLSA", etc.
     ///
     /// # Return
     ///
@@ -104,15 +108,41 @@ mod dns {
     /// });
     ///
     /// // Logging all ip attached to the `google.com` domain.
+    /// // Calling `lookup` this way will search for A and AAAA records.
     /// for ip in google_dns.lookup("google.com") {
     ///     log("my_topic", "debug", ip);
+    /// }
+    ///
+    /// // Logging all mail exchangers attached to the `google.com` domain
+    /// // asking the resolver for MX records.
+    /// for mx in google_dns.lookup("google.com", "MX") {
+    ///     log("my_topic", "debug", mx);
     /// }
     /// ```
     ///
     /// # rhai-autodocs:index:3
-    #[rhai_fn(name = "lookup", return_raw)]
+    #[rhai_fn(global, name = "lookup", return_raw, pure)]
     pub fn lookup(dns_resolver: &mut DnsResolver, host: &str) -> Result<rhai::Array> {
         Ok(crate::block_on(dns_resolver.resolver.lookup_ip(host))
+            .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
+            .into_iter()
+            .map(|record| rhai::Dynamic::from(record.to_string()))
+            .collect::<rhai::Array>())
+    }
+
+    #[doc(hidden)]
+    #[rhai_fn(global, name = "lookup", return_raw, pure)]
+    pub fn lookup_record(
+        dns_resolver: &mut DnsResolver,
+        host: &str,
+        record: &str,
+    ) -> Result<rhai::Array> {
+        let record = <RecordType as std::str::FromStr>::from_str(record)
+            .map_err::<Box<rhai::EvalAltResult>, _>(|_| {
+                format!("Invalid record type {record}").into()
+            })?;
+
+        Ok(crate::block_on(dns_resolver.resolver.lookup(host, record))
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?
             .into_iter()
             .map(|record| rhai::Dynamic::from(record.to_string()))
@@ -152,7 +182,7 @@ mod dns {
     /// ```
     ///
     /// # rhai-autodocs:index:4
-    #[rhai_fn(name = "rlookup", return_raw)]
+    #[rhai_fn(global, name = "rlookup", return_raw)]
     pub fn rlookup(dns_resolver: &mut DnsResolver, ip: &str) -> Result<rhai::Array> {
         let ip = <std::net::IpAddr as std::str::FromStr>::from_str(ip)
             .map_err::<Box<rhai::EvalAltResult>, _>(|err| err.to_string().into())?;

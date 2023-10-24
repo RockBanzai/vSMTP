@@ -53,14 +53,15 @@ mod logging {
     #[rhai_fn(global, name = "log")]
     #[allow(clippy::cognitive_complexity)]
     pub fn log(target_topic: &str, level: &str, message: &str) {
+        // Rename field for tracing.
+        let topic = target_topic;
         match <tracing::Level as std::str::FromStr>::from_str(level) {
-            // 'target_topic' field is not called 'topic' to avoid overriding the topic of tracing API.
             Ok(level) => match level {
-                tracing::Level::TRACE => tracing::trace!(message, target_topic),
-                tracing::Level::DEBUG => tracing::debug!(message, target_topic),
-                tracing::Level::INFO => tracing::info!(message, target_topic),
-                tracing::Level::WARN => tracing::warn!(message, target_topic),
-                tracing::Level::ERROR => tracing::error!(message, target_topic),
+                tracing::Level::TRACE => tracing::trace!(message, topic),
+                tracing::Level::DEBUG => tracing::debug!(message, topic),
+                tracing::Level::INFO => tracing::info!(message, topic),
+                tracing::Level::WARN => tracing::warn!(message, topic),
+                tracing::Level::ERROR => tracing::error!(message, topic),
             },
             Err(e) => {
                 tracing::warn!(
@@ -94,7 +95,9 @@ mod logging {
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, name = "err")]
     pub fn err(target_topic: &str, message: &str) {
-        tracing::error!(message, target_topic);
+        // Rename field for tracing.
+        let topic = target_topic;
+        tracing::error!(message, topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -118,7 +121,9 @@ mod logging {
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, name = "warn")]
     pub fn warn(target_topic: &str, message: &str) {
-        tracing::warn!(message, target_topic);
+        // Rename field for tracing.
+        let topic = target_topic;
+        tracing::warn!(message, topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -142,7 +147,9 @@ mod logging {
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "info")]
     pub fn info(target_topic: &str, message: &str) {
-        tracing::info!(message, target_topic);
+        // Rename field for tracing.
+        let topic = target_topic;
+        tracing::info!(message, topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -166,7 +173,9 @@ mod logging {
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, name = "debug")]
     pub fn debug(target_topic: &str, message: &str) {
-        tracing::debug!(message, target_topic);
+        // Rename field for tracing.
+        let topic = target_topic;
+        tracing::debug!(message, topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -190,7 +199,9 @@ mod logging {
     /// # rhai-autodocs:index:6
     #[rhai_fn(global, name = "trace")]
     pub fn trace(target_topic: &str, message: &str) {
-        tracing::trace!(message, target_topic);
+        // Rename field for tracing.
+        let topic = target_topic;
+        tracing::trace!(message, topic);
     }
 
     #[doc(hidden)]
@@ -198,22 +209,21 @@ mod logging {
     #[allow(clippy::cognitive_complexity)]
     pub fn log_default_topic(level: &str, message: &str) {
         match <tracing::Level as std::str::FromStr>::from_str(level) {
-            // 'target_topic' field is not called 'topic' to avoid overriding the topic of tracing API.
             Ok(level) => match level {
                 tracing::Level::TRACE => {
-                    tracing::trace!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+                    tracing::trace!(message, topic = DEFAULT_USER_LOG_TOPIC);
                 }
                 tracing::Level::DEBUG => {
-                    tracing::debug!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+                    tracing::debug!(message, topic = DEFAULT_USER_LOG_TOPIC);
                 }
                 tracing::Level::INFO => {
-                    tracing::info!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+                    tracing::info!(message, topic = DEFAULT_USER_LOG_TOPIC);
                 }
                 tracing::Level::WARN => {
-                    tracing::warn!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+                    tracing::warn!(message, topic = DEFAULT_USER_LOG_TOPIC);
                 }
                 tracing::Level::ERROR => {
-                    tracing::error!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+                    tracing::error!(message, topic = DEFAULT_USER_LOG_TOPIC);
                 }
             },
             Err(e) => {
@@ -230,30 +240,30 @@ mod logging {
     #[doc(hidden)]
     #[rhai_fn(global, name = "err")]
     pub fn err_default_topic(message: &str) {
-        tracing::error!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+        tracing::error!(message, topic = DEFAULT_USER_LOG_TOPIC);
     }
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "warn")]
     pub fn warn_default_topic(message: &str) {
-        tracing::warn!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+        tracing::warn!(message, topic = DEFAULT_USER_LOG_TOPIC);
     }
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "info")]
     pub fn info_default_topic(message: &str) {
-        tracing::info!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+        tracing::info!(message, topic = DEFAULT_USER_LOG_TOPIC);
     }
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "debug")]
     pub fn debug_default_topic(message: &str) {
-        tracing::debug!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+        tracing::debug!(message, topic = DEFAULT_USER_LOG_TOPIC);
     }
 
     #[doc(hidden)]
     #[rhai_fn(global, name = "trace")]
     pub fn trace_default_topic(message: &str) {
-        tracing::trace!(message, target_topic = DEFAULT_USER_LOG_TOPIC);
+        tracing::trace!(message, topic = DEFAULT_USER_LOG_TOPIC);
     }
 }
