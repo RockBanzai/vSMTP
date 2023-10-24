@@ -22,14 +22,24 @@ use vsmtp_protocol::ClientName;
 
 pub use rhai_spf::*;
 
+use super::mailbox::Mailbox;
+
 #[derive(Debug, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Params {
     ip: std::net::IpAddr,
     helo: ClientName,
-    mail_from: Option<rhai::Dynamic>,
+    #[serde(
+        default = "default_mailbox",
+        deserialize_with = "super::mailbox::deserialize_mailbox_opt"
+    )]
+    mail_from: Option<Mailbox>,
     #[serde(deserialize_with = "super::deserialize_dns_resolver")]
     dns_resolver: std::sync::Arc<DnsResolver>,
+}
+
+fn default_mailbox() -> Option<Mailbox> {
+    None
 }
 
 struct Lookup(std::sync::Arc<DnsResolver>);
@@ -220,14 +230,10 @@ mod rhai_spf {
             ClientName::Domain(helo) => helo,
         };
 
-        // NOTE: if the `mail_from` is set, we check for the MAIL FROM identity.
-        if let Some(mail_from) = mail_from {
-            // NOTE: if the reverse path is null, message is assumed to be issued by the sender aka helo.
-            if mail_from
-                .clone()
-                .try_cast::<String>()
-                .is_some_and(|i| i == "<>")
-            {
+        // If the `mail_from` is set, we check for the MAIL FROM identity.
+        match mail_from {
+            // If the reverse path is null, message is assumed to be issued by the sender aka helo.
+            Some(Mailbox::Null) => {
                 let sender = viaspf::Sender::from_domain(&helo.to_string()).unwrap();
 
                 Ok(to_spf_result(
@@ -241,10 +247,10 @@ mod rhai_spf {
                     sender.domain().to_string(),
                 )
                 .into())
-
-                // NOTE: otherwise, we check for the MAIL FROM 's domain.
-            } else if let Some(mail_from) = mail_from.try_cast::<vsmtp_common::Mailbox>() {
-                let sender = viaspf::Sender::from_address(&mail_from.0.to_string()).unwrap();
+            }
+            // If not null, we check for the MAIL FROM's domain.
+            Some(Mailbox::Regular(mailbox)) => {
+                let sender = viaspf::Sender::from_address(&mailbox.0.to_string()).unwrap();
                 let helo = helo.to_string().parse().unwrap();
 
                 Ok(to_spf_result(
@@ -258,25 +264,23 @@ mod rhai_spf {
                     sender.domain().to_string(),
                 )
                 .into())
-            } else {
-                return Err("`mail_from` is not a valid mailbox".to_string().into());
             }
+            // Otherwise we check for the HELO identity.
+            None => {
+                let sender = viaspf::Sender::from_domain(&helo.to_string()).unwrap();
 
-        // NOTE: otherwise we check for the HELO identity.
-        } else {
-            let sender = viaspf::Sender::from_domain(&helo.to_string()).unwrap();
-
-            Ok(to_spf_result(
-                block_on(viaspf::evaluate_sender(
-                    &Lookup(dns_resolver),
-                    &viaspf::Config::builder().build(),
-                    ip,
-                    &sender,
-                    Some(sender.domain()),
-                )),
-                sender.domain().to_string(),
-            )
-            .into())
+                Ok(to_spf_result(
+                    block_on(viaspf::evaluate_sender(
+                        &Lookup(dns_resolver),
+                        &viaspf::Config::builder().build(),
+                        ip,
+                        &sender,
+                        Some(sender.domain()),
+                    )),
+                    sender.domain().to_string(),
+                )
+                .into())
+            }
         }
     }
 

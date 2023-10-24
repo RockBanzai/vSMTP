@@ -27,7 +27,7 @@ fn on_mail_from(ctx) {
         prelude::deny_unencrypted,
         prelude::deny_unauthenticated,
         rule "deny sender" |ctx| {
-            if !ctx.sender.is_null && ctx.sender.domain == "spammer.tld" {
+            if !ctx.sender.is_null() && ctx.sender.domain == "spammer.tld" {
                 status::deny("550 5.7.1 We don't like spammers here")
             } else {
                 status::next()

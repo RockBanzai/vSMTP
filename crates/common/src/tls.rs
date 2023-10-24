@@ -111,16 +111,14 @@ pub fn get_rustls_config(
     let mut cert_resolver = rustls::server::ResolvesServerCertUsingSni::new();
 
     for (domain, secret) in r#virtual {
-        cert_resolver
-            .add(&domain.to_string(), secret.to_rustls()?)
-            .map_err(Error::Protocol)?;
+        tracing::debug!(domain = %domain, "adding virtual certificate");
+        cert_resolver.add(&domain.to_string(), secret.to_rustls()?)?;
     }
 
     let mut tls_config = rustls::ServerConfig::builder()
         .with_cipher_suites(&to_supported_cipher_suite(cipher_suite))
         .with_kx_groups(&rustls::ALL_KX_GROUPS)
-        .with_protocol_versions(protocol_version)
-        .map_err(Error::Protocol)?
+        .with_protocol_versions(protocol_version)?
         .with_client_cert_verifier(rustls::server::NoClientAuth::boxed())
         .with_cert_resolver(std::sync::Arc::new(cert_resolver::CertResolver {
             sni_resolver: cert_resolver,

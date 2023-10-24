@@ -24,9 +24,9 @@ services:
         ipv4_address: 172.23.0.5
       mysql:
     ports:
-      - 127.0.0.1:11025:25 # Relay
-      - 127.0.0.1:11587:587 # Submission
-      - 127.0.0.1:11465:465 # SubmissionS
+      - 127.0.0.2:10025:25
+      - 127.0.0.2:10587:587
+      - 127.0.0.2:10465:465
     depends_on:
       broker:
         condition: service_healthy
@@ -110,10 +110,10 @@ services:
         RUN apt-get update && apt-get install -y openssl
         RUN useradd -p $(openssl passwd -1 jenny.doe) jenny.doe@mytarget.tld
     ports:
-      # - 127.0.0.1:11110:110 # POP3
-      # - 127.0.0.1:11995:995 # POP3S
-      - 127.0.0.1:11143:143 # IMAP
-      # - 127.0.0.1:11993:993 # IMAPS
+      # - 127.0.0.2:10110:110 # POP3
+      # - 127.0.0.2:10995:995 # POP3S
+      - 127.0.0.2:10143:143 # IMAP
+      # - 127.0.0.2:10993:993 # IMAPS
     volumes:
       - mytarget-maildir:/home:rw
       - ./dovecot.conf:/etc/dovecot/dovecot.conf:ro

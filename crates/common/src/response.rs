@@ -36,7 +36,7 @@ impl TryFrom<Reply> for Ehlo {
         let code = reply.code();
         if code.value() != 250 {
             return Err(Delivery::ReplyParsing {
-                with_source: Some("expect 250 on EHLO".to_owned()),
+                with_source: Some(format!("expect 250 on EHLO, got {}", code.value())),
             });
         }
 

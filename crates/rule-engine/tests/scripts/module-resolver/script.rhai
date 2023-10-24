@@ -32,7 +32,7 @@ fn on_helo(ctx) {
 }
 
 fn on_mail_from(ctx) {
-    let domain = if !ctx.sender.is_null {
+    let domain = if !ctx.sender.is_null() {
         ctx.sender.domain
     } else {
         ()

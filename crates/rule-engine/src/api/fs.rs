@@ -18,10 +18,9 @@ use rhai::plugin::{
 
 pub use fs::*;
 
-#[rhai::export_module]
 /// APIs to interact with the file system.
+#[rhai::export_module]
 mod fs {
-    use vsmtp_common::stateful_ctx_received::StateError;
 
     // TODO: handle canonicalization.
     // TODO: use config store path ?
@@ -73,8 +72,7 @@ mod fs {
                         format!("failed to write email at {}: {err}", dir.display()).into()
                     })
             })
-        })
-        .map_err::<Box<rhai::EvalAltResult>, _>(StateError::into)?
+        })?
     }
 
     // TODO: use config store path ?

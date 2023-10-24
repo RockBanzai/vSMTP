@@ -14,7 +14,7 @@ use vsmtp_protocol::rustls;
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("the key format is not supported for this usage")]
-    Ed25519UUnimplemented,
+    Ed25519Unimplemented,
     #[error("Failed to sign: {0}")]
     Sign(#[from] rustls::sign::SignError),
     #[error("Pkcs8 format error: {0}")]
@@ -22,7 +22,7 @@ pub enum Error {
     #[error("No requested TLS versions '{0}' are supported")]
     Versions(String),
     #[error("TLS protocol error: {0}")]
-    Protocol(rustls::Error),
+    Protocol(#[from] rustls::Error),
     #[error("Certificate path does not exist: {0}")]
     CertificatePath(std::path::PathBuf),
     #[error("Failed to read certificate: {0}")]

@@ -35,7 +35,7 @@ impl Secret {
 
             vsmtp_auth::dkim::PrivateKey::Ed25519(_) => {
                 // TODO: encode the key to DER for the rustls conversion
-                return Err(Error::Ed25519UUnimplemented);
+                return Err(Error::Ed25519Unimplemented);
             }
         };
 

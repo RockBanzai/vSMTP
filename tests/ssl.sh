@@ -2,7 +2,7 @@
 
 set -xe
 
-if [ "$#" -ne 1 ]
+if [ "$#" -lt 1 ]
 then
   echo "Error: No domain name argument provided"
   echo "Usage: Provide a domain name as an argument"
@@ -10,6 +10,7 @@ then
 fi
 
 DOMAIN=$1
+IP="${2:-"127.0.0.1"}"
 
 rm -rf $DOMAIN
 mkdir -p $DOMAIN
@@ -179,10 +180,7 @@ keyUsage = cRLSign, keyCertSign, digitalSignature, nonRepudiation, keyEncipherme
 
 [ alt_names ]
 DNS.1 = $DOMAIN
-IP.1 = 198.51.100.1
-DNS.2 = second.$DOMAIN
-IP.2 = 2001:db8::1
-DNS.3 = localhost
+IP.1 = $IP
 EOF
 
 for kt in rsa ecdsa eddsa ; do
@@ -193,7 +191,7 @@ for kt in rsa ecdsa eddsa ; do
     -CAkey $kt/ca.key \
     -sha256 \
     -days 3650 \
-    -set_serial 123 \
+    -set_serial $RANDOM \
     -extensions v3_inter -extfile openssl.cnf
 
   openssl x509 -req \
@@ -203,7 +201,7 @@ for kt in rsa ecdsa eddsa ; do
     -CAkey $kt/inter.key \
     -sha256 \
     -days 2000 \
-    -set_serial 456 \
+    -set_serial $RANDOM \
     -extensions v3_end -extfile openssl.cnf
 
   openssl x509 -req \
@@ -213,7 +211,7 @@ for kt in rsa ecdsa eddsa ; do
     -CAkey $kt/inter.key \
     -sha256 \
     -days 2000 \
-    -set_serial 789 \
+    -set_serial $RANDOM \
     -extensions v3_client -extfile openssl.cnf
 
   echo -n '' > index.txt

@@ -11,7 +11,6 @@
 
 use vsmtp_common::dns_resolver::DnsResolver;
 
-// mod fs;
 mod auth;
 mod dkim;
 mod dmarc;
@@ -21,6 +20,7 @@ mod fs;
 mod iprev;
 mod logging;
 mod mail_context;
+mod mailbox;
 mod message;
 mod net;
 mod sasl;
@@ -70,13 +70,6 @@ impl<T: std::fmt::Debug> State<T> {
     }
 }
 
-// TODO: add documentation of those objects in the `global` module.
-/// Type alias used to make the documentation easier to read.
-pub mod docs {
-    pub type Ctx = super::State<vsmtp_common::stateful_ctx_received::StatefulCtxReceived>;
-    pub type Mail = rhai::Shared<std::sync::RwLock<vsmtp_mail_parser::Mail>>;
-}
-
 // FIXME: This can lead to bugs if you try to replace the Arc within the state!
 //        Since the implementation of an arc/mutex for the context is only there because the
 //        Rhai engine needs it, a single rule engine is created per thread, so we don't
@@ -86,9 +79,16 @@ unsafe impl<T> Send for State<T> {}
 /// SAFETY: `State` contents are wrapped in thread safe primitives.
 unsafe impl<T> Sync for State<T> {}
 
+// TODO: add documentation of those objects in the `global` module.
+/// Type alias used to make the documentation easier to read.
+pub mod docs {
+    pub type Ctx = super::State<vsmtp_common::stateful_ctx_received::StatefulCtxReceived>;
+    pub type Mail = rhai::Shared<std::sync::RwLock<vsmtp_mail_parser::Mail>>;
+}
+
 /// Modules that enable access and mutation on the email and it's context.
 #[must_use]
-pub fn smtp_modules() -> [(String, rhai::Shared<rhai::Module>); 3] {
+pub fn smtp_modules() -> [(String, rhai::Shared<rhai::Module>); 4] {
     [
         (
             "message".to_string(),
@@ -101,6 +101,10 @@ pub fn smtp_modules() -> [(String, rhai::Shared<rhai::Module>); 3] {
         (
             "context".to_string(),
             rhai::Shared::new(rhai::exported_module!(mail_context)),
+        ),
+        (
+            "mailbox".to_string(),
+            rhai::Shared::new(rhai::exported_module!(mailbox)),
         ),
     ]
 }

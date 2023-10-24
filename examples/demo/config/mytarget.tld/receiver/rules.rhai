@@ -33,7 +33,7 @@ fn get_spf_policy(ctx) {
 
 const rules = #{
     "25": #{
-        connect: |ctx| {
+        connect:    |ctx| {
             // 70% of the time, we'll do a reverse DNS lookup
             ctx.run(if (rand() % 100) >= 30 {
                 [ prelude::iprev_rule ]
