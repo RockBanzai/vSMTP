@@ -27,7 +27,7 @@ mod logging {
     ///
     /// # Args
     ///
-    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
+    /// * `target_topic` (default: "user") - the routing key used to route the log message ("user" by default).
     /// * `level` - the level of the message, can be "trace", "debug", "info", "warn" or "error".
     /// * `message` - the message to log.
     ///
@@ -79,7 +79,7 @@ mod logging {
     ///
     /// # Args
     ///
-    /// * `target_topic` (default: "user") - the queue on which the log is sent .
+    /// * `target_topic` (default: "user") - the routing key used to route the log message.
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -105,7 +105,7 @@ mod logging {
     ///
     /// # Args
     ///
-    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
+    /// * `target_topic` (default: "user") - the routing key used to route the log message ("user" by default).
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -131,7 +131,7 @@ mod logging {
     ///
     /// # Args
     ///
-    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
+    /// * `target_topic` (default: "user") - the routing key used to route the log message ("user" by default).
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -157,7 +157,7 @@ mod logging {
     ///
     /// # Args
     ///
-    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
+    /// * `target_topic` (default: "user") - the routing key used to route the log message ("user" by default).
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
@@ -183,7 +183,7 @@ mod logging {
     ///
     /// # Args
     ///
-    /// * `target_topic` (default: "user") - the queue on which the log is sent ("user" by default).
+    /// * `target_topic` (default: "user") - the routing key used to route the log message ("user" by default).
     /// * `message` - the message to log.
     ///
     /// # SMTP stages
