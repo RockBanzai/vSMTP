@@ -67,7 +67,7 @@ rhai-dylib = { version = "0.1.11", default-features = false, features = ["libloa
 rsa = { version = "0.9.3", default-features = false, features = ["std", "pem", "u64_digit"] }
 rstest = { version = "0.18.2", default-features = false }
 rusqlite = { version = "0.29.0", default-features = false, features = ["bundled"] }
-rustls = { version = "0.21.7", default-features = false, features = ["tls12", "logging"] }
+rustls = { version = "0.21.8", default-features = false, features = ["tls12", "logging"] }
 rustls-pemfile = { version = "1.0.3", default-features = false }
 semver = { version = "1.0.20", default-features = false, features = ["std", "serde"] }
 serde = { version = "1.0.189", default-features = false, features = ["std", "derive", "rc"] }
