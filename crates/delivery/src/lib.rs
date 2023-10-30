@@ -81,6 +81,8 @@ fn should_produce_dsn(attempts: &[DeliveryAttempt]) -> bool {
 
 #[async_trait::async_trait]
 pub trait DeliverySystem: Send + Sync {
+    fn name(&self) -> &str;
+
     async fn deliver(self: Arc<Self>, ctx: &CtxDelivery) -> Vec<DeliveryAttempt>;
 
     fn routing_key(&self) -> DeliveryRoute;
@@ -353,6 +355,6 @@ pub async fn delivery_main(
     system: std::sync::Arc<impl DeliverySystem + Config + 'static>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let conn = system.broker().connect().await?;
-    vsmtp_common::init_logs(&conn, system.logs()).await?;
+    vsmtp_common::init_logs(&conn, system.logs(), system.name()).await?;
     start_delivery(system, &conn).await
 }

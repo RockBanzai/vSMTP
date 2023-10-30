@@ -25,7 +25,9 @@ impl Broker {
 
         lapin::Connection::connect_with_config(
             uri,
-            lapin::ConnectionProperties::default(),
+            lapin::ConnectionProperties::default()
+                .with_executor(tokio_executor_trait::Tokio::current())
+                .with_reactor(tokio_reactor_trait::Tokio),
             lapin::tcp::OwnedTLSConfig {
                 identity: None,
                 cert_chain: extra_root_ca

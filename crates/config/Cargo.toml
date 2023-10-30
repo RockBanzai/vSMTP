@@ -23,3 +23,5 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 vsmtp-auth = { workspace = true }
 vsmtp-rhai-utils = { workspace = true }
+tokio-executor-trait = { workspace = true }
+tokio-reactor-trait = { workspace = true }

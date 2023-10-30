@@ -31,6 +31,8 @@ use vsmtp_protocol::Domain;
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Basic {
+    #[serde(default = "default_service_name", skip)]
+    name: String,
     api_version: vsmtp_config::semver::VersionReq,
     dns: DnsResolver,
     tls: Tls,
@@ -132,6 +134,10 @@ impl Basic {
 
 #[async_trait::async_trait]
 impl DeliverySystem for Basic {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
     fn routing_key(&self) -> DeliveryRoute {
         DeliveryRoute::Basic
     }
@@ -162,6 +168,7 @@ impl DeliverySystem for Basic {
 impl Default for Basic {
     fn default() -> Self {
         Self {
+            name: default_service_name(),
             dns: DnsResolver::google(),
             api_version: vsmtp_config::semver::VersionReq::default(),
             broker: vsmtp_config::Broker::default(),
@@ -171,6 +178,10 @@ impl Default for Basic {
             extra_root_ca: None,
         }
     }
+}
+
+fn default_service_name() -> String {
+    "sender-basic".to_string()
 }
 
 impl Config for Basic {

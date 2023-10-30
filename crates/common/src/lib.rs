@@ -34,22 +34,26 @@ use vsmtp_protocol::{Address, Domain, NotifyOn, OriginalRecipient};
 pub async fn init_logs(
     conn: &lapin::Connection,
     config: &vsmtp_config::Logs,
+    service_name: &str,
 ) -> Result<(), Box<dyn std::error::Error>> {
     use tracing_subscriber::prelude::*;
     let filter = tracing_subscriber::filter::Targets::new()
         .with_targets(config.levels.clone())
         .with_default(config.default_level);
 
-    let layer = tracing_amqp::layer(conn).await;
+    let (layer, dispatcher) = tracing_amqp::layer(conn, service_name).await;
+
     tracing_subscriber::registry()
         .with(layer.with_filter(filter))
         .try_init()
         .unwrap();
+    tokio::spawn(dispatcher);
 
     std::panic::set_hook(Box::new(|e| {
-        // TODO: check a way to improve formatting from this
+        // TODO: check a way to improve formatting for this.
         tracing::error!(?e, "panic occurred");
     }));
+
     Ok(())
 }
 

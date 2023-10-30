@@ -27,6 +27,8 @@ enum UserLookup {
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 struct Maildir {
+    #[serde(skip, default = "default_maildir_hostname")]
+    name: String,
     api_version: vsmtp_config::semver::VersionReq,
     #[serde(default, with = "option_group")]
     group_local: Option<uzers::Group>,
@@ -38,6 +40,10 @@ struct Maildir {
     logs: vsmtp_config::Logs,
     #[serde(skip)]
     path: std::path::PathBuf,
+}
+
+fn default_maildir_hostname() -> String {
+    "maildir".to_string()
 }
 
 mod option_group {
@@ -142,6 +148,10 @@ const fn get_notification_supported() -> ShouldNotify {
 
 #[async_trait::async_trait]
 impl DeliverySystem for Maildir {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
     fn routing_key(&self) -> DeliveryRoute {
         DeliveryRoute::Maildir
     }

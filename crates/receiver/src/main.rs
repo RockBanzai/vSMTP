@@ -131,7 +131,7 @@ impl Receiver {
         let conn = config.broker().connect().await?;
         let conn = std::sync::Arc::new(conn);
 
-        vsmtp_common::init_logs(&conn, config.logs()).await?;
+        vsmtp_common::init_logs(&conn, config.logs(), "smtp-receiver").await?;
 
         let channel = conn.create_channel().await?;
         channel

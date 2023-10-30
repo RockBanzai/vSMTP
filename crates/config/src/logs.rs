@@ -27,6 +27,7 @@ pub struct Logs {
     ///
     /// See <https://docs.rs/tracing-subscriber/0.3.15/tracing_subscriber/filter/struct.EnvFilter.html>
     #[serde(
+        default,
         serialize_with = "Logs::serialize_levels",
         deserialize_with = "Logs::deserialize_levels"
     )]

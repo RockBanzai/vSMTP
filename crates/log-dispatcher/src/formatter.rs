@@ -94,7 +94,7 @@ impl Rfc5424Msg {
                 facility: DEFAULT_SYSLOG_FACILITY,
                 gravity: level_to_syslog_level(&event.level),
                 timestamp: event.timestamp.into(),
-                hostname: event.hostname.clone().unwrap_or("Unknown".to_string()), // TODO: IP address should be used if hostname is unknown
+                hostname: event.hostname.clone().unwrap_or("Unknown".to_string()), // TODO: IP address should be used if hostname is unknown,
                 app_name: "vSMTP".to_string(),
                 proc_id: event.target.to_string(),
                 content: rfc_formatted_msg,
@@ -187,7 +187,7 @@ impl Rfc3164Msg {
                 facility: DEFAULT_SYSLOG_FACILITY,
                 gravity: level_to_syslog_level(&event.level),
                 timestamp: event.timestamp.into(),
-                hostname: event.hostname.clone().unwrap_or("Unknown".to_string()), // TODO: IP address should be used if hostname is unknown
+                hostname: event.hostname.clone().unwrap_or("Unknown".to_string()), // TODO: IP address should be used if hostname is unknown,
                 tag: event.target.to_string(),
                 content: msg,
             })

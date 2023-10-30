@@ -117,7 +117,7 @@ impl Working {
             error
         })?;
         let conn = config.broker().connect().await?;
-        vsmtp_common::init_logs(&conn, config.logs()).await?;
+        vsmtp_common::init_logs(&conn, config.logs(), "working").await?;
 
         let channel = conn.create_channel().await?;
         channel

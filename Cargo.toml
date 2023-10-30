@@ -85,6 +85,8 @@ tracing-serde = { version = "0.1.3", default-features = false }
 tokio = { version = "1.33.0", default-features = false, features = ["macros", "rt-multi-thread"] }
 tokio-stream = { version = "0.1.14", default-features = false }
 tokio-rustls = { version = "0.24.1", default-features = false, features = ["logging", "tls12"] }
+tokio-executor-trait = { version = "2.1.1", default-features = false }
+tokio-reactor-trait = { version = "1.1.0", default-features = false }
 url = { version = "2.4.1", default-features = false, features = ["serde"] }
 uzers = { version = "0.11.3", default-features = false }
 uuid = { version = "1.5.0", default-features = false, features = ["std", "v4", "fast-rng"] }

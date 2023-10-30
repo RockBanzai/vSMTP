@@ -18,10 +18,21 @@ use vsmtp_delivery::{delivery_main, DeliverySystem};
 
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
-struct Mbox {}
+struct Mbox {
+    #[serde(skip, default = "default_mbox_hostname")]
+    name: String,
+}
+
+fn default_mbox_hostname() -> String {
+    "mbox".to_string()
+}
 
 #[async_trait::async_trait]
 impl DeliverySystem for Mbox {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
     fn routing_key(&self) -> DeliveryRoute {
         DeliveryRoute::Mbox
     }

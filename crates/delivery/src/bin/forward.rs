@@ -20,6 +20,8 @@ use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, Tls};
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Forward {
+    #[serde(default = "default_service_name", skip)]
+    name: String,
     api_version: vsmtp_config::semver::VersionReq,
     service: String,
     target: url::Url,
@@ -35,6 +37,10 @@ struct Forward {
 
 #[async_trait::async_trait]
 impl DeliverySystem for Forward {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
     fn routing_key(&self) -> DeliveryRoute {
         DeliveryRoute::Forward {
             service: self.service.clone(),
@@ -87,6 +93,7 @@ impl DeliverySystem for Forward {
 impl Default for Forward {
     fn default() -> Self {
         Self {
+            name: default_service_name(),
             target: url::Url::parse("smtp://localhost").unwrap(),
             service: String::default(),
             api_version: vsmtp_config::semver::VersionReq::default(),
@@ -97,6 +104,10 @@ impl Default for Forward {
             extra_root_ca: None,
         }
     }
+}
+
+fn default_service_name() -> String {
+    "forward".to_string()
 }
 
 impl Config for Forward {
