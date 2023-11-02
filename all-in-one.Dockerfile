@@ -1,5 +1,5 @@
 ##
-FROM rust:1.72.0-slim-buster AS chef
+FROM rust:1.73.0-slim-buster AS chef
 USER root
 RUN cargo install cargo-chef@0.1.61
 WORKDIR /app
