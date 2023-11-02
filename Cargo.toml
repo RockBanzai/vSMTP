@@ -62,8 +62,8 @@ pem-rfc7468 = { version = "0.7.0", default-features = false, features = ["std"] 
 pretty_assertions = { version = "1.4.0", default-features = false, features = ["std"] }
 r2d2 = { version = "0.8.10", default-features = false }
 rand = { version = "0.8.5", default-features = false, features = ["std", "std_rng"] }
-rhai-autodocs = { version = "0.2.3", default-features = false }
-rhai-dylib = { version = "0.1.11", default-features = false, features = ["libloading", "sync"] }
+rhai-autodocs = { version = "0.4.1", default-features = false }
+rhai-dylib = { version = "0.1.12", default-features = false, features = ["libloading", "sync"] }
 rsa = { version = "0.9.3", default-features = false, features = ["std", "pem", "u64_digit"] }
 rstest = { version = "0.18.2", default-features = false }
 rusqlite = { version = "0.29.0", default-features = false, features = ["bundled"] }
@@ -141,12 +141,12 @@ default-features = false
 features = ["acl", "streams", "geospatial", "script", "keep-alive"]
 
 [workspace.dependencies.rhai]
-version = "1.16.2"
+version = "1.16.3"
 default-features = false
 features = ["std", "unchecked", "sync", "internals", "no_closure", "metadata"]
 
 [workspace.dependencies.rhai-rand]
-version = "0.1.5"
+version = "0.1.6"
 default-features = false
 features = ["float", "array", "metadata"]
 

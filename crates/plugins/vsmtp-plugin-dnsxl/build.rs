@@ -23,8 +23,8 @@ fn main() {
         let docs = rhai_autodocs::options()
             .format_sections_with(rhai_autodocs::SectionFormat::Tabs)
             .include_standard_packages(false)
-            .order_functions_with(rhai_autodocs::FunctionOrder::ByIndex)
-            .for_markdown_processor(rhai_autodocs::options::MarkdownProcessor::Docusaurus)
+            .order_items_with(rhai_autodocs::ItemsOrder::ByIndex)
+            .for_markdown_processor(rhai_autodocs::MarkdownProcessor::Docusaurus)
             .generate(&engine)
             .expect("failed to generate documentation");
 

@@ -2940,9 +2940,9 @@ dependencies = [
 
 [[package]]
 name = "rhai"
-version = "1.16.2"
+version = "1.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "206cee941730eaf90a22c84235b25193df661393688162e15551164f92f09eca"
+checksum = "e3625f343d89990133d013e39c46e350915178cf94f1bec9f49b0cbef98a3e3c"
 dependencies = [
  "ahash 0.8.6",
  "bitflags 2.4.1",
@@ -2958,9 +2958,9 @@ dependencies = [
 
 [[package]]
 name = "rhai-autodocs"
-version = "0.2.3"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0857b70dabf87f2b89904d836429b056122ee8a4224d5843a2386825f502ff9a"
+checksum = "3326b3632ab9d6bb020cc1171ed1cd6a49f8db04c885e78b53f40c3522884a26"
 dependencies = [
  "rhai",
  "serde",
@@ -2969,9 +2969,9 @@ dependencies = [
 
 [[package]]
 name = "rhai-dylib"
-version = "0.1.11"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff0e617ac88a351fc8ac49bd5083c1448d0e013b820e66db5268a2b6dd113adb"
+checksum = "4895b6a04aee4cacf9418af7b3c1850146f45f3b6e883064b0483d82d2bf13c5"
 dependencies = [
  "libloading 0.8.1",
  "rhai",
@@ -2979,9 +2979,9 @@ dependencies = [
 
 [[package]]
 name = "rhai-rand"
-version = "0.1.5"
+version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e522e2e40423976c52e856efd08b2aa4b4a2b476b6332a76195eafd573dc4c37"
+checksum = "4314e7e2a1f5d5de224ae3bc9ce2af4c0146d07d3c3aadf9840f08d80ef28800"
 dependencies = [
  "rand",
  "rhai",
