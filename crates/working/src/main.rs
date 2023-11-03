@@ -14,6 +14,8 @@ use rules::{stage::WorkingStage, status::WorkingStatus};
 use vsmtp_common::{
     api::{write_to_delivery, write_to_quarantine},
     broker::{Exchange, Queue},
+    ctx::Ctx,
+    ctx_delivery::CtxDelivery,
     ctx_received::CtxReceived,
     stateful_ctx_received::StatefulCtxReceived,
 };
@@ -105,7 +107,7 @@ struct Working {
     channel: lapin::Channel,
     from_receiver: lapin::Consumer,
     rule_engine_config:
-        std::sync::Arc<RuleEngineConfig<StatefulCtxReceived, WorkingStatus, WorkingStage>>,
+        std::sync::Arc<RuleEngineConfig<Ctx<StatefulCtxReceived>, WorkingStatus, WorkingStage>>,
 }
 
 impl Working {
@@ -168,23 +170,28 @@ impl Working {
     }
 
     /// Run the service.
-    #[tracing::instrument(name = "working_", skip_all, fields(uuid = ?ctx.mail_from.message_uuid.to_string()[0..8]))]
-    async fn run(&mut self, ctx: CtxReceived) {
-        let rule_engine = RuleEngine::from_config_with_state(
-            self.rule_engine_config.clone(),
-            StatefulCtxReceived::Complete(ctx),
-        );
+    #[tracing::instrument(name = "working_", skip_all)]
+    async fn run(&mut self, ctx: Ctx<StatefulCtxReceived>) {
+        let rule_engine = RuleEngine::from_config_with_state(self.rule_engine_config.clone(), ctx);
 
         match rule_engine.run(&WorkingStage::PostQueue) {
             WorkingStatus::Next | WorkingStatus::Success => {
-                let CtxReceived {
-                    connect: _,
-                    helo: _,
-                    mail_from,
-                    rcpt_to,
-                    mail,
-                    complete: _,
-                } = Self::get_context(rule_engine);
+                let Ctx {
+                    variables,
+                    internal,
+                    metadata:
+                        StatefulCtxReceived::Complete(CtxReceived {
+                            connect: _,
+                            helo: _,
+                            mail_from,
+                            rcpt_to,
+                            mail,
+                            complete: _,
+                        }),
+                } = rule_engine.take_state()
+                else {
+                    unreachable!("the working service always use a complete email")
+                };
 
                 let deliveries = rcpt_to
                     .recipient
@@ -200,12 +207,17 @@ impl Working {
                     })
                     .collect::<Vec<_>>();
 
-                for ctx_processed in deliveries {
+                for ctx_delivery in deliveries {
+                    let ctx_processed = Ctx::<CtxDelivery> {
+                        variables: variables.clone(),
+                        internal: internal.clone(),
+                        metadata: ctx_delivery,
+                    };
                     let payload = ctx_processed.to_json().unwrap();
-                    tracing::info!(queue = %ctx_processed.routing_key, "Sending to delivery");
+                    tracing::info!(queue = %ctx_processed.metadata.routing_key, "Sending to delivery");
                     write_to_delivery(
                         &self.channel,
-                        &ctx_processed.routing_key.to_string(),
+                        &ctx_processed.metadata.routing_key.to_string(),
                         payload,
                     )
                     .await;
@@ -214,21 +226,11 @@ impl Working {
             WorkingStatus::Quarantine(name) => {
                 tracing::trace!(queue = name, "Sending to quarantine");
 
-                let ctx = Self::get_context(rule_engine);
+                let ctx = rule_engine.take_state();
                 let payload = ctx.to_json().unwrap();
                 write_to_quarantine(&self.channel, &name, payload).await;
             }
         }
-    }
-
-    fn get_context(
-        rule_engine: RuleEngine<StatefulCtxReceived, WorkingStatus, WorkingStage>,
-    ) -> CtxReceived {
-        let StatefulCtxReceived::Complete(ctx) = rule_engine.take_state() else {
-            unreachable!("the working service always use a complete email")
-        };
-
-        ctx
     }
 }
 
@@ -248,7 +250,7 @@ async fn main() {
         let delivery = delivery.expect("error in consumer");
 
         let lapin::message::Delivery { data, .. } = &delivery;
-        let ctx = match CtxReceived::from_json(data) {
+        let ctx = match Ctx::<StatefulCtxReceived>::from_json(data) {
             Ok(ctx) => ctx,
             Err(e) => {
                 todo!("handle invaliding payload {e:?}");

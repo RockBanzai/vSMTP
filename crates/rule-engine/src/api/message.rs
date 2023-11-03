@@ -15,7 +15,6 @@ use rhai::plugin::{
     mem, Dynamic, FnAccess, FnNamespace, ImmutableString, Module, NativeCallContext,
     PluginFunction, RhaiResult, TypeId,
 };
-use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
 use vsmtp_mail_parser::mail::headers::Header;
 
 pub use message::*;
@@ -39,7 +38,7 @@ mod message {
     /// # rhai-autodocs:index:1
     #[rhai_fn(global, get = "mail_str", return_raw)]
     pub fn mail_str(ctx: &mut Ctx) -> Result<String> {
-        Ok(ctx.read(|ctx| ctx.get_mail(ToString::to_string))?)
+        Ok(ctx.read(|ctx| ctx.metadata.get_mail(ToString::to_string))?)
     }
 
     /// Get a reference to the email.
@@ -50,7 +49,7 @@ mod message {
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, get = "mail", return_raw)]
     pub fn mail_object(ctx: &mut Ctx) -> Result<Mail> {
-        Ok(ctx.read(StatefulCtxReceived::get_mail_arc)?)
+        Ok(ctx.read(|ctx| ctx.metadata.get_mail_arc())?)
     }
 
     /// Return a debug string of the email.
@@ -87,7 +86,10 @@ mod message {
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "has_header", return_raw)]
     pub fn has_header(ctx: &mut Ctx, header: &str) -> Result<bool> {
-        Ok(ctx.read(|ctx| ctx.get_mail(|mail| mail.get_header(header).is_some()))?)
+        Ok(ctx.read(|ctx| {
+            ctx.metadata
+                .get_mail(|mail| mail.get_header(header).is_some())
+        })?)
     }
 
     /// Count the number of headers with the given name.
@@ -118,7 +120,7 @@ mod message {
     #[rhai_fn(global, name = "count_header", return_raw)]
     pub fn count_header(ctx: &mut Ctx, header: &str) -> Result<rhai::INT> {
         ctx.read(|ctx| {
-            ctx.get_mail(|mail| {
+            ctx.metadata.get_mail(|mail| {
                 mail.count_header(header.as_ref())
                     .try_into()
                     .map_err::<Box<rhai::EvalAltResult>, _>(|_| "header count overflowed".into())
@@ -158,7 +160,7 @@ mod message {
     #[rhai_fn(global, index_get, return_raw)]
     pub fn get_header(ctx: &mut Ctx, header: &str) -> Result<rhai::Dynamic> {
         ctx.read(|ctx| {
-            ctx.get_mail(|mail| {
+            ctx.metadata.get_mail(|mail| {
                 Ok(mail
                     .get_header(header)
                     .map_or_else(|| ().into(), |header| header.body.clone().into()))
@@ -190,7 +192,7 @@ mod message {
     #[rhai_fn(global, get = "headers", return_raw)]
     pub fn get_all_headers(ctx: &mut Ctx) -> Result<rhai::Array> {
         Ok(ctx.read(|ctx| {
-            ctx.get_mail(|mail| {
+            ctx.metadata.get_mail(|mail| {
                 mail.headers
                     .iter()
                     .map(|header| rhai::Dynamic::from(header.to_string()))
@@ -227,7 +229,7 @@ mod message {
     #[rhai_fn(global, name = "headers", return_raw)]
     pub fn get_all_headers_str(ctx: &mut Ctx, name: &str) -> Result<rhai::Array> {
         Ok(ctx.read(|ctx| {
-            ctx.get_mail(|mail| {
+            ctx.metadata.get_mail(|mail| {
                 mail.get_headers(name)
                     .map(|header| rhai::Dynamic::from(header.to_string()))
                     .collect::<rhai::Array>()
@@ -261,7 +263,10 @@ mod message {
     /// # rhai-autodocs:index:10
     #[rhai_fn(global, name = "append_header", return_raw)]
     pub fn append_header(ctx: &mut Ctx, name: &str, body: &str) -> Result<()> {
-        Ok(ctx.write(|ctx| ctx.mut_mail(|mail| mail.append_headers([Header::new(name, body)])))?)
+        Ok(ctx.write(|ctx| {
+            ctx.metadata
+                .mut_mail(|mail| mail.append_headers([Header::new(name, body)]))
+        })?)
     }
 
     /// Add a new header on top all other headers in the message.
@@ -290,8 +295,10 @@ mod message {
     /// # rhai-autodocs:index:11
     #[rhai_fn(global, name = "prepend_header", return_raw)]
     pub fn prepend_header(ctx: &mut Ctx, header: &str, value: &str) -> Result<()> {
-        Ok(ctx
-            .write(|ctx| ctx.mut_mail(|mail| mail.prepend_headers([Header::new(header, value)])))?)
+        Ok(ctx.write(|ctx| {
+            ctx.metadata
+                .mut_mail(|mail| mail.prepend_headers([Header::new(header, value)]))
+        })?)
     }
 
     /// Replace an existing header value by a new value, or append a new header
@@ -323,7 +330,10 @@ mod message {
     /// # rhai-autodocs:index:12
     #[rhai_fn(global, index_set, return_raw)]
     pub fn set_header(ctx: &mut Ctx, header: &str, value: &str) -> Result<()> {
-        Ok(ctx.write(|ctx| ctx.mut_mail(|mail| mail.set_header(header.as_ref(), value.as_ref())))?)
+        Ok(ctx.write(|ctx| {
+            ctx.metadata
+                .mut_mail(|mail| mail.set_header(header.as_ref(), value.as_ref()))
+        })?)
     }
 
     /// Replace an existing header name by a new value.
@@ -351,7 +361,8 @@ mod message {
     #[rhai_fn(global, name = "rename_header", return_raw)]
     pub fn rename_header(ctx: &mut Ctx, old_name: &str, new_name: &str) -> Result<()> {
         Ok(ctx.write(|ctx| {
-            ctx.mut_mail(|mail| mail.rename_header(old_name.as_ref(), new_name.as_ref()))
+            ctx.metadata
+                .mut_mail(|mail| mail.rename_header(old_name.as_ref(), new_name.as_ref()))
         })?)
     }
 
@@ -382,7 +393,10 @@ mod message {
     /// # rhai-autodocs:index:14
     #[rhai_fn(global, name = "remove_header", return_raw)]
     pub fn remove_header(ctx: &mut Ctx, header: &str) -> Result<bool> {
-        Ok(ctx.write(|ctx| ctx.mut_mail(|mail| mail.remove_header(header.as_ref())))?)
+        Ok(ctx.write(|ctx| {
+            ctx.metadata
+                .mut_mail(|mail| mail.remove_header(header.as_ref()))
+        })?)
     }
 
     /// Change the sender's address in the `From` header of the message.
@@ -408,7 +422,7 @@ mod message {
     #[rhai_fn(global, name = "rewrite_mail_from_message", return_raw)]
     pub fn rewrite_mail_from_message_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         Ok(ctx.write(|ctx| {
-            ctx.mut_mail(|mail| {
+            ctx.metadata.mut_mail(|mail| {
                 mail.rewrite_mail_from(new_addr.as_ref());
             })
         })?)
@@ -442,7 +456,7 @@ mod message {
         new_addr: &str,
     ) -> Result<()> {
         Ok(ctx.write(|ctx| {
-            ctx.mut_mail(|mail| {
+            ctx.metadata.mut_mail(|mail| {
                 mail.rewrite_rcpt(old_addr, new_addr);
             })
         })?)
@@ -471,7 +485,7 @@ mod message {
     #[rhai_fn(global, name = "add_rcpt_message", return_raw)]
     pub fn add_rcpt_message_str(ctx: &mut Ctx, new_addr: &str) -> Result<()> {
         Ok(ctx.write(|ctx| {
-            ctx.mut_mail(|mail| {
+            ctx.metadata.mut_mail(|mail| {
                 mail.add_rcpt(new_addr);
             })
         })?)
@@ -499,7 +513,7 @@ mod message {
     /// # rhai-autodocs:index:18
     #[rhai_fn(global, name = "remove_rcpt_message", return_raw)]
     pub fn remove_rcpt_message_str(ctx: &mut Ctx, addr: &str) -> Result<()> {
-        Ok(ctx.write(|ctx| ctx.mut_mail(|mail| mail.remove_rcpt(addr)))?)
+        Ok(ctx.write(|ctx| ctx.metadata.mut_mail(|mail| mail.remove_rcpt(addr)))?)
     }
 
     /// Get the body of the email as a string.
@@ -520,6 +534,6 @@ mod message {
     /// # rhai-autodocs:index:19
     #[rhai_fn(global, get = "body", return_raw)]
     pub fn body_string(ctx: &mut Ctx) -> Result<String> {
-        Ok(ctx.write(|ctx| ctx.get_mail(|mail| mail.body.to_string()))?)
+        Ok(ctx.write(|ctx| ctx.metadata.get_mail(|mail| mail.body.to_string()))?)
     }
 }

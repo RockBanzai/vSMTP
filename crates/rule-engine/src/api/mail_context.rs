@@ -17,7 +17,6 @@ use rhai::plugin::{
     PluginFunction, RhaiResult, TypeId,
 };
 use vsmtp_common::delivery_route::DeliveryRoute;
-use vsmtp_common::stateful_ctx_received::StatefulCtxReceived;
 
 pub use mail_context::*;
 
@@ -51,7 +50,7 @@ mod mail_context {
         let path = path.parse::<DeliveryRoute>().map_err(|e| e.to_string())?;
 
         ctx.write(|ctx| {
-            let map = &mut ctx.mut_rcpt_to()?.recipient;
+            let map = &mut ctx.metadata.mut_rcpt_to()?.recipient;
 
             for (previous_routing_key, r, idx) in map
                 .iter_mut()
@@ -93,7 +92,7 @@ mod mail_context {
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, get = "client_address")]
     pub fn client_address(ctx: &mut Ctx) -> String {
-        ctx.read(|ctx| ctx.get_connect().client_addr.to_string())
+        ctx.read(|ctx| ctx.metadata.get_connect().client_addr.to_string())
     }
 
     /// Get the ip address of the client.
@@ -115,7 +114,7 @@ mod mail_context {
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, get = "client_ip")]
     pub fn client_ip(ctx: &mut Ctx) -> String {
-        ctx.read(|ctx| ctx.get_connect().client_addr.ip().to_string())
+        ctx.read(|ctx| ctx.metadata.get_connect().client_addr.ip().to_string())
     }
 
     /// Get the ip port of the client.
@@ -137,7 +136,7 @@ mod mail_context {
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, get = "client_port")]
     pub fn client_port(ctx: &mut Ctx) -> rhai::INT {
-        ctx.read(|ctx| ctx.get_connect().client_addr.port() as rhai::INT)
+        ctx.read(|ctx| ctx.metadata.get_connect().client_addr.port() as rhai::INT)
     }
 
     /// Get the full server address.
@@ -159,7 +158,7 @@ mod mail_context {
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, get = "server_address")]
     pub fn server_address(ctx: &mut Ctx) -> String {
-        ctx.read(|ctx| ctx.get_connect().server_addr.to_string())
+        ctx.read(|ctx| ctx.metadata.get_connect().server_addr.to_string())
     }
 
     /// Get the server's ip.
@@ -181,7 +180,7 @@ mod mail_context {
     /// # rhai-autodocs:index:6
     #[rhai_fn(global, get = "server_ip")]
     pub fn server_ip(ctx: &mut Ctx) -> String {
-        ctx.read(|ctx| ctx.get_connect().server_addr.ip().to_string())
+        ctx.read(|ctx| ctx.metadata.get_connect().server_addr.ip().to_string())
     }
 
     /// Get the server's port.
@@ -203,7 +202,7 @@ mod mail_context {
     /// # rhai-autodocs:index:7
     #[rhai_fn(global, get = "server_port")]
     pub fn server_port(ctx: &mut Ctx) -> rhai::INT {
-        ctx.read(|ctx| ctx.get_connect().server_addr.port() as rhai::INT)
+        ctx.read(|ctx| ctx.metadata.get_connect().server_addr.port() as rhai::INT)
     }
 
     /// Get a the timestamp of the client's connection time.
@@ -225,7 +224,7 @@ mod mail_context {
     /// # rhai-autodocs:index:8
     #[rhai_fn(global, get = "connection_timestamp")]
     pub fn connection_timestamp(ctx: &mut Ctx) -> vsmtp_common::time::OffsetDateTime {
-        ctx.read(|ctx| ctx.get_connect().connect_timestamp)
+        ctx.read(|ctx| ctx.metadata.get_connect().connect_timestamp)
     }
 
     /// Get the name of the server.
@@ -247,7 +246,7 @@ mod mail_context {
     /// # rhai-autodocs:index:9
     #[rhai_fn(global, get = "server_name")]
     pub fn server_name(ctx: &mut Ctx) -> String {
-        ctx.read(|ctx| ctx.get_connect().server_name.to_string())
+        ctx.read(|ctx| ctx.metadata.get_connect().server_name.to_string())
     }
 
     /// Has the connection been secured under the encryption protocol SSL/TLS.
@@ -269,7 +268,7 @@ mod mail_context {
     /// # rhai-autodocs:index:10
     #[rhai_fn(global, name = "is_secured")]
     pub fn is_secured(ctx: &mut Ctx) -> bool {
-        ctx.read(StatefulCtxReceived::is_secured)
+        ctx.read(|ctx| ctx.metadata.is_secured())
     }
 
     /// Get the time of reception of the email.
@@ -294,7 +293,7 @@ mod mail_context {
     /// # rhai-autodocs:index:11
     #[rhai_fn(global, get = "mail_timestamp", return_raw)]
     pub fn mail_timestamp(ctx: &mut Ctx) -> Result<vsmtp_common::time::OffsetDateTime> {
-        ctx.read(|ctx| Ok(ctx.get_mail_from()?.mail_timestamp))
+        ctx.read(|ctx| Ok(ctx.metadata.get_mail_from()?.mail_timestamp))
     }
 
     /// Get the unique id of the received message.
@@ -319,7 +318,7 @@ mod mail_context {
     /// # rhai-autodocs:index:12
     #[rhai_fn(global, get = "message_id", return_raw)]
     pub fn message_id(ctx: &mut Ctx) -> Result<String> {
-        ctx.read(|ctx| Ok(ctx.get_mail_from()?.message_uuid.to_string()))
+        ctx.read(|ctx| Ok(ctx.metadata.get_mail_from()?.message_uuid.to_string()))
     }
 
     /// Transform the context to a debug string.
@@ -348,7 +347,7 @@ mod mail_context {
     /// # rhai-autodocs:index:14
     #[rhai_fn(global, get = "helo", return_raw)]
     pub fn helo(ctx: &mut Ctx) -> Result<String> {
-        ctx.read(|ctx| Ok(ctx.get_helo()?.client_name.to_string()))
+        ctx.read(|ctx| Ok(ctx.metadata.get_helo()?.client_name.to_string()))
     }
 
     /// Get the value of the `MAIL FROM` command sent by the client.
@@ -372,6 +371,7 @@ mod mail_context {
     pub fn sender(ctx: &mut Ctx) -> Result<Mailbox> {
         ctx.read(|ctx| {
             Ok(ctx
+                .metadata
                 .get_mail_from()?
                 .reverse_path
                 .clone()
@@ -402,6 +402,7 @@ mod mail_context {
     pub fn recipients(ctx: &mut Ctx) -> Result<rhai::Array> {
         ctx.read(|ctx| {
             Ok(ctx
+                .metadata
                 .get_rcpt_to()?
                 .recipient
                 .values()
@@ -410,5 +411,88 @@ mod mail_context {
                 .map(rhai::Dynamic::from)
                 .collect::<rhai::Array>())
         })
+    }
+
+    /// Store a custom variable into the context that can be
+    /// fetched from any state in any service.
+    ///
+    /// # Args
+    ///
+    /// * `variable` - The name of the variable that will be set in the context.
+    /// * `value`    - The value of the variable. Can be anything.
+    ///
+    /// # SMTP stages
+    ///
+    /// Any stage.
+    ///
+    /// # Example
+    ///
+    /// ```js
+    /// // Called on the smtp receiver service.
+    /// fn on_connect(ctx) {
+    ///     ctx.set_variable("job", "1");
+    ///
+    ///     status::next();
+    /// }
+    ///
+    /// // Called on the working service.
+    /// fn on_post_queue(ctx) {
+    ///     if ctx.get_variable("job") == "1" {
+    ///         // ...
+    ///     }
+    ///
+    ///     status::next();
+    /// }
+    /// ```
+    ///
+    /// # rhai-autodocs:index:17
+    #[rhai_fn(global)]
+    pub fn set_variable(ctx: &mut Ctx, variable: &str, value: rhai::Dynamic) -> rhai::Dynamic {
+        ctx.write(|ctx| {
+            ctx.variables
+                .insert(variable.to_string(), value)
+                .unwrap_or_default()
+        })
+    }
+
+    /// Get a custom variable that as been stored in the context by
+    /// a `ctx.set_variable` call in any stage or service.
+    ///
+    /// # Args
+    ///
+    /// * `variable` - The name of the variable to fetch from the context.
+    ///
+    /// # Return
+    ///
+    /// The desired value if it exists, a `()` rhai unit otherwise.
+    ///
+    /// # SMTP stages
+    ///
+    /// Any stage.
+    ///
+    /// # Example
+    ///
+    /// ```js
+    /// // Called on the smtp receiver service.
+    /// fn on_connect(ctx) {
+    ///     ctx.set_variable("job", "1");
+    ///
+    ///     status::next();
+    /// }
+    ///
+    /// // Called on the working service.
+    /// fn on_post_queue(ctx) {
+    ///     if ctx.get_variable("job") == "1" {
+    ///         // ...
+    ///     }
+    ///
+    ///     status::next();
+    /// }
+    /// ```
+    ///
+    /// # rhai-autodocs:index:18
+    #[rhai_fn(global)]
+    pub fn get_variable(ctx: &mut Ctx, variable: &str) -> rhai::Dynamic {
+        ctx.read(|ctx| ctx.variables.get(variable).cloned().unwrap_or_default())
     }
 }

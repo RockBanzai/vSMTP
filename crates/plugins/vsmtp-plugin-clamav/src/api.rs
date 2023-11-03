@@ -316,7 +316,8 @@ pub mod clamav {
         ctx: Ctx,
     ) -> Result<bool, Box<rhai::EvalAltResult>> {
         ctx.read(|ctx| {
-            ctx.get_mail(ToString::to_string)
+            ctx.metadata
+                .get_mail(ToString::to_string)
                 .map(|mail| antivirus.0.scan(mail.as_bytes()))
         })
         .map_err::<Box<rhai::EvalAltResult>, _>(StateError::into)?

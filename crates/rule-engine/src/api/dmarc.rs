@@ -183,17 +183,19 @@ mod rhai_dmarc {
         let Params { dns_resolver } = rhai::serde::from_dynamic(&params)?;
 
         let (rfc5322_from_domain, spf, dkim) =
-            ctx.read(|ctx| match ctx.get_mail(get_rfc5322_from_domain) {
+            ctx.read(|ctx| match ctx.metadata.get_mail(get_rfc5322_from_domain) {
                 Err(e) => Err(e.to_string()),
                 Ok(Err(e)) => Err(e),
                 Ok(Ok(rfc5322_from_domain)) => Ok((
                     rfc5322_from_domain,
-                    ctx.get_mail_from()
+                    ctx.metadata
+                        .get_mail_from()
                         .map_err(|e| e.to_string())?
                         .spf_mail_from_identity
                         .clone()
                         .ok_or("SPF on MAIL FROM identity must be called first")?,
-                    ctx.get_complete()
+                    ctx.metadata
+                        .get_complete()
                         .map_err(|e| e.to_string())?
                         .dkim
                         .clone()
@@ -243,7 +245,7 @@ mod rhai_dmarc {
     #[rhai_fn(global, pure, return_raw)]
     pub fn store(ctx: &mut Ctx, dmarc_result: DmarcResult) -> Result<(), Box<rhai::EvalAltResult>> {
         ctx.write(|ctx| {
-            ctx.mut_complete()?.dmarc = Some(dmarc_result);
+            ctx.metadata.mut_complete()?.dmarc = Some(dmarc_result);
             Ok(())
         })
     }

@@ -58,7 +58,7 @@ mod envelop {
         let mailbox = mailbox(new_addr)?;
 
         ctx.write(|ctx| {
-            ctx.mut_mail_from()?.reverse_path = Some(mailbox);
+            ctx.metadata.mut_mail_from()?.reverse_path = Some(mailbox);
             Ok(())
         })
     }
@@ -90,7 +90,9 @@ mod envelop {
         let new_addr = mailbox(new_addr)?;
 
         ctx.write(|ctx| {
-            ctx.mut_rcpt_to()?.rewrite_recipient(&old_addr, new_addr);
+            ctx.metadata
+                .mut_rcpt_to()?
+                .rewrite_recipient(&old_addr, new_addr);
             Ok(())
         })
     }
@@ -121,7 +123,8 @@ mod envelop {
         let new_addr = mailbox(new_addr)?;
 
         ctx.write(|ctx| {
-            ctx.mut_rcpt_to()?
+            ctx.metadata
+                .mut_rcpt_to()?
                 .add_recipient_with_route(new_addr, DeliveryRoute::Basic);
             Ok(())
         })
@@ -161,7 +164,7 @@ mod envelop {
         let addr = mailbox(addr)?;
 
         ctx.write(|ctx| {
-            ctx.mut_rcpt_to()?.remove_recipient(&addr);
+            ctx.metadata.mut_rcpt_to()?.remove_recipient(&addr);
             Ok(())
         })
     }

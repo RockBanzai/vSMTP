@@ -9,10 +9,7 @@
  *
  */
 
-use crate::{
-    broker::{Exchange, Queue},
-    ctx_delivery::CtxDelivery,
-};
+use crate::broker::{Exchange, Queue};
 use lapin::protocol::{AMQPErrorKind, AMQPSoftError};
 
 // TODO: Can be merged into a broker crate, with the rest of lapin abstraction.
@@ -97,9 +94,7 @@ pub async fn write_to_deferred(
     );
 }
 
-pub async fn write_to_report_dsn(channel: &lapin::Channel, payload: &CtxDelivery) {
-    let payload = payload.to_json().unwrap();
-
+pub async fn write_to_report_dsn(channel: &lapin::Channel, payload: Vec<u8>) {
     let confirm = channel
         .basic_publish(
             "",

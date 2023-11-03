@@ -16,7 +16,7 @@ use super::{
 use futures_util::stream::TryStreamExt;
 use vsmtp_common::{
     api::{write_to_quarantine, write_to_working},
-    ctx_received::CtxReceived,
+    ctx::Ctx,
     delivery_route::DeliveryRoute,
     extensions::Extension,
     stateful_ctx_received::{ConnectProps, SaslAuthProps, StatefulCtxReceived},
@@ -30,7 +30,8 @@ use vsmtp_protocol::{
 use vsmtp_rule_engine::{RuleEngine, RuleEngineConfig};
 
 pub struct Handler {
-    rule_engine: std::sync::Arc<RuleEngine<StatefulCtxReceived, ReceiverStatus, ReceiverStage>>,
+    rule_engine:
+        std::sync::Arc<RuleEngine<Ctx<StatefulCtxReceived>, ReceiverStatus, ReceiverStage>>,
     going_to_quarantine: Option<String>,
     channel: lapin::Channel,
     config: std::sync::Arc<SMTPReceiverConfig>,
@@ -77,7 +78,7 @@ impl Handler {
             ..
         }: AcceptArgs,
         rule_engine_config: std::sync::Arc<
-            RuleEngineConfig<StatefulCtxReceived, ReceiverStatus, ReceiverStage>,
+            RuleEngineConfig<Ctx<StatefulCtxReceived>, ReceiverStatus, ReceiverStage>,
         >,
         channel: lapin::Channel,
         config: std::sync::Arc<SMTPReceiverConfig>,
@@ -93,16 +94,20 @@ impl Handler {
 
         let rule_engine = RuleEngine::from_config_with_state(
             rule_engine_config,
-            StatefulCtxReceived::new(ConnectProps {
-                client_addr,
-                server_addr,
-                server_name: server_name.clone(),
-                connect_timestamp: timestamp,
-                connect_uuid: uuid,
-                sasl: None,
-                iprev: None,
-                tls: None,
-            }),
+            Ctx {
+                variables: std::collections::HashMap::default(),
+                internal: std::collections::HashMap::default(),
+                metadata: StatefulCtxReceived::new(ConnectProps {
+                    client_addr,
+                    server_addr,
+                    server_name: server_name.clone(),
+                    connect_timestamp: timestamp,
+                    connect_uuid: uuid,
+                    sasl: None,
+                    iprev: None,
+                    tls: None,
+                }),
+            },
         );
 
         let default = || reply(format!("220 {server_name} Service ready\r\n"));
@@ -150,7 +155,8 @@ impl Handler {
 }
 
 struct RsaslSessionCallback {
-    rule_engine: std::sync::Arc<RuleEngine<StatefulCtxReceived, ReceiverStatus, ReceiverStage>>,
+    rule_engine:
+        std::sync::Arc<RuleEngine<Ctx<StatefulCtxReceived>, ReceiverStatus, ReceiverStage>>,
 }
 
 pub struct SaslValidation;
@@ -193,8 +199,8 @@ impl rsasl::callback::SessionCallback for RsaslSessionCallback {
             })?;
 
         validate.with::<SaslValidation, _>(|| {
-            self.rule_engine.write_state(|i| {
-                i.mut_connect().sasl = Some(SaslAuthProps {
+            self.rule_engine.write_state(|state| {
+                state.metadata.mut_connect().sasl = Some(SaslAuthProps {
                     mechanism: session_data.mechanism().to_string().parse().unwrap(),
                     cancel_count: 0,
                     is_authenticated: false,
@@ -218,10 +224,11 @@ impl rsasl::callback::SessionCallback for RsaslSessionCallback {
 
 #[async_trait::async_trait]
 impl vsmtp_protocol::ReceiverHandler for Handler {
-    type Item = (CtxReceived, Option<String>);
+    type Item = (Ctx<StatefulCtxReceived>, Option<String>);
 
     fn get_stage(&self) -> Stage {
-        self.rule_engine.read_state(StatefulCtxReceived::get_stage)
+        self.rule_engine
+            .read_state(|state| state.metadata.get_stage())
     }
 
     fn generate_sasl_callback(&self) -> vsmtp_protocol::CallbackWrap {
@@ -248,6 +255,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
 
         match self.rule_engine.write_state(|state| {
             state
+                .metadata
                 .set_secured(
                     sni,
                     protocol_version,
@@ -255,7 +263,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
                     peer_certificates,
                     alpn_protocol,
                 )
-                .map(|()| state.server_name().clone())
+                .map(|()| state.metadata.server_name().clone())
         }) {
             Ok(server_name) => reply(format!("220 {server_name} Service ready\r\n")),
             Err(error) => {
@@ -269,7 +277,10 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         if !self.config.esmtp.starttls {
             // https://www.ietf.org/rfc/rfc5321.txt#4.2.4
             reply("502 Command not implemented\r\n")
-        } else if self.rule_engine.read_state(StatefulCtxReceived::is_secured) {
+        } else if self
+            .rule_engine
+            .read_state(|state| state.metadata.is_secured())
+        {
             reply("554 5.5.1 Error: TLS already active\r\n")
         } else {
             match (self.rustls_config.as_ref(), self.config.tls.as_ref()) {
@@ -304,7 +315,8 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         match result {
             Ok(()) => {
                 self.rule_engine.write_state(|i| {
-                    i.mut_connect()
+                    i.metadata
+                        .mut_connect()
                         .sasl
                         .as_mut()
                         .expect("auth props has been set before/during the SASL handshake")
@@ -322,6 +334,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
             }
             Err(AuthError::Canceled) => self.rule_engine.write_state(|i| {
                 let auth_props = i
+                    .metadata
                     .mut_connect()
                     .sasl
                     .as_mut()
@@ -370,13 +383,17 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
     ) -> Reply {
         let default = {
             let client_name = client_name.clone();
-            let server_name = self.rule_engine.read_state(|i| i.server_name().clone());
+            let server_name = self
+                .rule_engine
+                .read_state(|state| state.metadata.server_name().clone());
 
             move || reply(format!("250 {server_name} Greetings {client_name}\r\n"))
         };
 
-        if let Err(error) = self.rule_engine.write_state(|i| {
-            i.set_helo(ClientName::Domain(client_name), true)
+        if let Err(error) = self.rule_engine.write_state(|state| {
+            state
+                .metadata
+                .set_helo(ClientName::Domain(client_name), true)
                 .map(|_| ())
         }) {
             tracing::debug!(?error, "Client sent bad HELO/EHLO command");
@@ -435,8 +452,11 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
             |reverse_path| format!("250 sender <{reverse_path}> Ok"),
         ));
 
-        self.rule_engine.write_state(|i| {
-            i.set_mail_from(reverse_path, envelop_id, ret).unwrap();
+        self.rule_engine.write_state(|state| {
+            state
+                .metadata
+                .set_mail_from(reverse_path, envelop_id, ret)
+                .unwrap();
         });
 
         match self.rule_engine.run(&ReceiverStage::MailFrom) {
@@ -468,16 +488,18 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         let default = reply(format!("250 recipient <{forward_path}> Ok"));
 
         let route = DeliveryRoute::Basic;
-        self.rule_engine.write_state(|i| {
-            i.set_rcpt_to(
-                route,
-                Recipient {
-                    forward_path: Mailbox(forward_path),
-                    original_forward_path,
-                    notify_on,
-                },
-            )
-            .unwrap();
+        self.rule_engine.write_state(|state| {
+            state
+                .metadata
+                .set_rcpt_to(
+                    route,
+                    Recipient {
+                        forward_path: Mailbox(forward_path),
+                        original_forward_path,
+                        notify_on,
+                    },
+                )
+                .unwrap();
         });
 
         match self.rule_engine.run(&ReceiverStage::RcptTo) {
@@ -495,7 +517,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
     }
 
     async fn on_rset(&mut self) -> Reply {
-        self.rule_engine.write_state(StatefulCtxReceived::reset);
+        self.rule_engine.write_state(|state| state.metadata.reset());
         self.going_to_quarantine = None;
 
         reply("250 Ok\r\n")
@@ -529,8 +551,8 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         // TODO: add headers from preq rules
 
         let message_size = mail.to_string().len();
-        self.rule_engine.write_state(|i| {
-            i.set_complete(mail).unwrap();
+        self.rule_engine.write_state(|state| {
+            state.metadata.set_complete(mail).unwrap();
         });
 
         let default = || reply(format!("250 message of {message_size} bytes Ok"));
@@ -556,8 +578,8 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
             rustls_config: _,
         } = self;
 
-        let ctx: CtxReceived =
-            rule_engine.write_state(|i| std::mem::replace(i, i.produce_new()).try_into().unwrap());
+        let ctx: Ctx<StatefulCtxReceived> =
+            rule_engine.write_state(|i| std::mem::replace(i, i.produce_new()));
         let going_to_quarantine = std::mem::take(going_to_quarantine);
 
         (
@@ -574,10 +596,10 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         let payload = ctx.to_json().unwrap();
 
         if let Some(quarantine) = going_to_quarantine {
-            tracing::debug!("Sending to quarantine('{}')...", quarantine);
+            tracing::debug!(queue = quarantine, "sending to quarantine");
             write_to_quarantine(&self.channel, &quarantine, payload).await;
         } else {
-            tracing::debug!("Sending to working...");
+            tracing::debug!("sending to working");
             write_to_working(&self.channel, payload).await;
         }
 
@@ -599,8 +621,8 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
 
 impl Handler {
     fn build_ehlo_reply(&mut self, client_name: &ClientName) -> Reply {
-        self.rule_engine.write_state(|i| {
-            if let Err(error) = i.set_helo(client_name.clone(), false) {
+        self.rule_engine.write_state(|state| {
+            if let Err(error) = state.metadata.set_helo(client_name.clone(), false) {
                 tracing::debug!(?error, "Client sent bad HELO/EHLO command");
                 return reply("503 Bad sequence of commands\r\n");
             }
@@ -616,7 +638,7 @@ impl Handler {
             let helo_reply = [
                 Some(format!(
                     "250-{} Greetings {}\r\n",
-                    i.server_name(),
+                    state.metadata.server_name(),
                     client_name
                 )),
                 Some(format!("250-{}\r\n", Extension::EnhancedStatusCodes)),

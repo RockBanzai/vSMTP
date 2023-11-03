@@ -111,13 +111,6 @@ impl StatefulCtxReceived {
         &self.get_connect().server_name
     }
 
-    #[must_use]
-    pub fn produce_new(&self) -> Self {
-        let mut new_instance = self.clone();
-        new_instance.reset();
-        new_instance
-    }
-
     pub fn set_helo(
         &mut self,
         client_name: ClientName,

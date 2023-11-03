@@ -290,11 +290,15 @@ mod rhai_spf {
     pub fn store(ctx: &mut Ctx, identity: &str, spf_result: SpfResult) -> Result<()> {
         match identity {
             "helo" => ctx.write(|ctx| {
-                ctx.mut_helo().map_err(|e| e.to_string())?.spf_helo_identity = Some(spf_result);
+                ctx.metadata
+                    .mut_helo()
+                    .map_err(|e| e.to_string())?
+                    .spf_helo_identity = Some(spf_result);
                 Ok(())
             }),
             "mail_from" => ctx.write(|ctx| {
-                ctx.mut_mail_from()
+                ctx.metadata
+                    .mut_mail_from()
                     .map_err(|e| e.to_string())?
                     .spf_mail_from_identity = Some(spf_result);
                 Ok(())

@@ -96,7 +96,7 @@ mod iprev {
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, pure)]
     pub fn store(ctx: &mut Ctx, iprev: IpRevResult) {
-        ctx.write(|ctx| ctx.mut_connect().iprev = Some(iprev));
+        ctx.write(|ctx| ctx.metadata.mut_connect().iprev = Some(iprev));
     }
 
     /// Result of a IpRev verification run with `iprev::check`.

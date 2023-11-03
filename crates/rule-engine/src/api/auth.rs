@@ -187,7 +187,7 @@ mod auth {
     ) -> Result<String, Box<rhai::EvalAltResult>> {
         const AUTH_RES_VERSION: i32 = 1;
         let Params { auth_serv_id } = rhai::serde::from_dynamic(&params)?;
-        let mechanisms = ctx.read(|ctx| Into::<AuthMechanism>::into(ctx));
+        let mechanisms = ctx.read(|ctx| Into::<AuthMechanism>::into(&ctx.metadata));
 
         Ok(AuthMechanism::make_header(
             mechanisms,
@@ -223,7 +223,7 @@ mod auth {
         let body = create_header(ctx, params)?;
 
         ctx.write(|ctx| {
-            ctx.mut_mail(|mail| {
+            ctx.metadata.mut_mail(|mail| {
                 mail.prepend_headers([Header::new("Authentication-Results", body)]);
             })
         })

@@ -25,6 +25,7 @@ use tokio_stream::StreamExt;
 use vsmtp_common::{
     api::{write_to_dead, write_to_deferred, write_to_report_dsn},
     broker::{Exchange, Queue},
+    ctx::Ctx,
     ctx_delivery::CtxDelivery,
     delivery_attempt::{Action, DeliveryAttempt, ShouldNotify},
     delivery_route::DeliveryRoute,
@@ -104,28 +105,29 @@ pub trait DeliverySystem: Send + Sync {
     }
 
     #[tracing::instrument(skip_all, fields(
-        uuid = ?ctx.uuid.to_string()[0..8],
-        retry = ctx.attempt.len()),
+        uuid = ?ctx.metadata.uuid.to_string()[0..8],
+        retry = ctx.metadata.attempt.len()),
     )]
-    async fn do_delivery(self: Arc<Self>, channel: &lapin::Channel, mut ctx: CtxDelivery) {
-        let attempts = self.deliver(&ctx).await;
-        ctx.last_deliveries = attempts;
+    async fn do_delivery(self: Arc<Self>, channel: &lapin::Channel, mut ctx: Ctx<CtxDelivery>) {
+        let attempts = self.deliver(&ctx.metadata).await;
+        ctx.metadata.last_deliveries = attempts;
 
-        let should_produce_dsn = should_produce_dsn(&ctx.last_deliveries, &ctx.rcpt_to);
+        let should_produce_dsn =
+            should_produce_dsn(&ctx.metadata.last_deliveries, &ctx.metadata.rcpt_to);
         if should_produce_dsn {
             tracing::debug!("Message should produce DSN, emitting a report request");
-            write_to_report_dsn(channel, &ctx).await;
+            write_to_report_dsn(channel, ctx.to_json().unwrap()).await;
         } else {
             tracing::debug!("Message should not produce DSN");
         }
-        let last_deliveries = std::mem::take(&mut ctx.last_deliveries);
-        ctx.attempt.extend(last_deliveries);
+        let last_deliveries = std::mem::take(&mut ctx.metadata.last_deliveries);
+        ctx.metadata.attempt.extend(last_deliveries);
 
         // FIXME: how to determine the correct threshold?
         // one domain will produce one attempt, meaning mails with multiple domains will inevitably reach this threshold
-        let status = if ctx.is_fully_delivered() {
+        let status = if ctx.metadata.is_fully_delivered() {
             DeliveryOutcome::Success
-        } else if ctx.attempt.len() > 10 {
+        } else if ctx.metadata.attempt.len() > 10 {
             DeliveryOutcome::Dead
         } else {
             DeliveryOutcome::Delayed
@@ -136,7 +138,7 @@ pub trait DeliverySystem: Send + Sync {
                 tracing::debug!("Message has been sent successfully, dropping it");
             }
             DeliveryOutcome::Delayed => {
-                let delay = ctx.get_delayed_duration();
+                let delay = ctx.metadata.get_delayed_duration();
 
                 tracing::debug!(
                     "Message delivery failed, will retry after {}",
@@ -144,7 +146,7 @@ pub trait DeliverySystem: Send + Sync {
                 );
 
                 let payload = ctx.to_json().unwrap();
-                let routing_key = ctx.routing_key.to_string();
+                let routing_key = ctx.metadata.routing_key.to_string();
 
                 write_to_deferred(channel, &routing_key, delay, payload).await;
             }
@@ -333,19 +335,17 @@ pub async fn start_delivery(
 
     while let Some((_, item)) = consumer.next().await {
         let system = system.clone();
-        // FIXME: everything inside the `channel` is an Arc, so we should be able to clone it
-        // should be used `conn.create_channel()` instead of `.clone()` ?
         let channel = channel.clone();
 
         tokio::spawn(async move {
             let item = item.unwrap();
             let lapin::message::Delivery { data, .. } = &item;
-            let ctx = match CtxDelivery::from_json(data) {
+            let ctx = match Ctx::<CtxDelivery>::from_json(data) {
                 Err(e) => {
                     tracing::debug!("handle invaliding payload {}", e);
                     return;
                 }
-                Ok(ctx) if !system.routing_key().matches(&ctx.routing_key) => {
+                Ok(ctx) if !system.routing_key().matches(&ctx.metadata.routing_key) => {
                     tracing::debug!("handle invaliding routing");
                     return;
                 }

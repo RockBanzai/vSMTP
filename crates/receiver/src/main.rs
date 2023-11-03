@@ -10,11 +10,18 @@
  */
 
 use futures_util::TryFutureExt;
-use vsmtp_common::broker::{Exchange, Queue};
+use vsmtp_common::{
+    broker::{Exchange, Queue},
+    ctx::Ctx,
+    stateful_ctx_received::StatefulCtxReceived,
+};
 use vsmtp_config::Config;
 use vsmtp_protocol::ConnectionKind;
 use vsmtp_receiver::smtp::{
-    config::SMTPReceiverConfig, rules::api, server::Server, session::Handler,
+    config::SMTPReceiverConfig,
+    rules::{api, stages::ReceiverStage, status::ReceiverStatus},
+    server::Server,
+    session::Handler,
 };
 use vsmtp_rule_engine::{
     api::{msa_modules, net_modules, server_auth, utils_modules},
@@ -107,9 +114,9 @@ struct Receiver {
     channel: lapin::Channel,
     rule_engine_config: std::sync::Arc<
         vsmtp_rule_engine::RuleEngineConfig<
-            vsmtp_common::stateful_ctx_received::StatefulCtxReceived,
-            vsmtp_receiver::smtp::rules::status::ReceiverStatus,
-            vsmtp_receiver::smtp::rules::stages::ReceiverStage,
+            Ctx<StatefulCtxReceived>,
+            ReceiverStatus,
+            ReceiverStage,
         >,
     >,
 }

@@ -351,7 +351,7 @@ mod dkim {
     #[rhai_fn(global, pure, return_raw)]
     pub fn store(ctx: &mut Ctx, dkim_result: VerificationResult) -> Result<()> {
         ctx.write(|ctx| {
-            ctx.mut_complete()?.dkim = Some(dkim_result);
+            ctx.metadata.mut_complete()?.dkim = Some(dkim_result);
             Ok(())
         })
     }

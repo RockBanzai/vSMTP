@@ -24,7 +24,8 @@ mod sasl_rhai {
     #[rhai_fn(global, get = "is_authenticated")]
     pub fn is_authenticated(ctx: &mut Ctx) -> bool {
         ctx.read(|ctx| {
-            ctx.get_connect()
+            ctx.metadata
+                .get_connect()
                 .sasl
                 .as_ref()
                 .is_some_and(|sasl| sasl.is_authenticated)
@@ -35,7 +36,7 @@ mod sasl_rhai {
     #[rhai_fn(global, get = "sasl", return_raw)]
     pub fn get_sasl_props(ctx: &mut Ctx) -> Result<SaslAuthProps, Box<rhai::EvalAltResult>> {
         ctx.read(|ctx| {
-            ctx.get_connect().sasl.as_ref().map_or_else(
+            ctx.metadata.get_connect().sasl.as_ref().map_or_else(
                 || Err("SASL not initialized".into()),
                 |sasl| Ok(sasl.clone()),
             )
@@ -44,14 +45,14 @@ mod sasl_rhai {
 
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, get = "mechanism")]
-    pub fn get_sasl_mechanism(ctx: &mut SaslAuthProps) -> String {
-        ctx.mechanism.to_string()
+    pub fn get_sasl_mechanism(sasl: &mut SaslAuthProps) -> String {
+        sasl.mechanism.to_string()
     }
 
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, get = "authid")]
-    pub fn get_authid(ctx: &mut SaslAuthProps) -> String {
-        match &ctx.credentials {
+    pub fn get_authid(sasl: &mut SaslAuthProps) -> String {
+        match &sasl.credentials {
             Credentials::Verify {
                 authid,
                 authpass: _,
@@ -62,8 +63,8 @@ mod sasl_rhai {
 
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, get = "password")]
-    pub fn get_authpass(ctx: &mut SaslAuthProps) -> String {
-        match &ctx.credentials {
+    pub fn get_authpass(sasl: &mut SaslAuthProps) -> String {
+        match &sasl.credentials {
             Credentials::Verify {
                 authid: _,
                 authpass: password,

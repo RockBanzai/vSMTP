@@ -76,8 +76,8 @@ mod mailbox_rhai {
     /// ```
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, pure, get = "domain")]
-    pub fn recipient_domain(ctx: &mut Recipient) -> String {
-        ctx.forward_path.domain().to_string()
+    pub fn recipient_domain(rcpt: &mut Recipient) -> String {
+        rcpt.forward_path.domain().to_string()
     }
 
     /// Get a recipient's address local part.
@@ -95,8 +95,8 @@ mod mailbox_rhai {
     /// ```
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, pure, get = "local_part")]
-    pub fn recipient_local_part(ctx: &mut Recipient) -> String {
-        ctx.forward_path.local_part().to_string()
+    pub fn recipient_local_part(rcpt: &mut Recipient) -> String {
+        rcpt.forward_path.local_part().to_string()
     }
 
     /// Get a recipient's address.
@@ -114,8 +114,8 @@ mod mailbox_rhai {
     /// ```
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, pure, get = "address")]
-    pub fn recipient_address(ctx: &mut Recipient) -> String {
-        ctx.forward_path.to_string()
+    pub fn recipient_address(rcpt: &mut Recipient) -> String {
+        rcpt.forward_path.to_string()
     }
 
     #[doc(hidden)]

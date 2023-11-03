@@ -82,7 +82,9 @@ unsafe impl<T> Sync for State<T> {}
 // TODO: add documentation of those objects in the `global` module.
 /// Type alias used to make the documentation easier to read.
 pub mod docs {
-    pub type Ctx = super::State<vsmtp_common::stateful_ctx_received::StatefulCtxReceived>;
+    pub type Ctx = super::State<
+        vsmtp_common::ctx::Ctx<vsmtp_common::stateful_ctx_received::StatefulCtxReceived>,
+    >;
     pub type Mail = rhai::Shared<std::sync::RwLock<vsmtp_mail_parser::Mail>>;
 }
 

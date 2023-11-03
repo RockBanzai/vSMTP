@@ -52,9 +52,9 @@ mod fs {
     #[rhai_fn(return_raw)]
     pub fn write(ctx: &mut Ctx, dir: &str) -> Result<()> {
         ctx.read(|ctx| {
-            ctx.get_mail(|mail| {
+            ctx.metadata.get_mail(|mail| {
                 let mut dir = std::path::PathBuf::from(dir);
-                let message_id = ctx.get_mail_from().map(|mf| mf.message_uuid)?;
+                let message_id = ctx.metadata.get_mail_from().map(|mf| mf.message_uuid)?;
 
                 std::fs::create_dir_all(&dir).map_err::<Box<rhai::EvalAltResult>, _>(|err| {
                     format!("failed to write email at {}: {err}", dir.display()).into()
@@ -103,7 +103,7 @@ mod fs {
     pub fn dump(ctx: &mut Ctx, dir: &str) -> Result<()> {
         ctx.read(|ctx| {
             let mut dir = std::path::PathBuf::from(dir);
-            let message_id = ctx.get_mail_from().map(|mf| mf.message_uuid)?;
+            let message_id = ctx.metadata.get_mail_from().map(|mf| mf.message_uuid)?;
 
             std::fs::create_dir_all(&dir).map_err::<Box<rhai::EvalAltResult>, _>(|err| {
                 format!("failed to write email at {}: {err}", dir.display()).into()
