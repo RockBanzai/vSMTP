@@ -177,17 +177,14 @@ impl Working {
 
         match rule_engine.run(&WorkingStage::PostQueue) {
             WorkingStatus::Next | WorkingStatus::Success => {
-                let StatefulCtxReceived::Complete(CtxReceived {
+                let CtxReceived {
                     connect: _,
                     helo: _,
                     mail_from,
                     rcpt_to,
                     mail,
                     complete: _,
-                }) = rule_engine.take_state()
-                else {
-                    unreachable!("the working service always use a complete email")
-                };
+                } = Self::get_context(rule_engine);
 
                 let deliveries = rcpt_to
                     .recipient
@@ -205,7 +202,7 @@ impl Working {
 
                 for ctx_processed in deliveries {
                     let payload = ctx_processed.to_json().unwrap();
-                    tracing::warn!("Sending to delivery at: {}", ctx_processed.routing_key);
+                    tracing::info!(queue = %ctx_processed.routing_key, "Sending to delivery");
                     write_to_delivery(
                         &self.channel,
                         &ctx_processed.routing_key.to_string(),
@@ -214,17 +211,24 @@ impl Working {
                     .await;
                 }
             }
-            WorkingStatus::Fail => unimplemented!(),
             WorkingStatus::Quarantine(name) => {
-                tracing::trace!("Putting in quarantine: {}", name);
-                let StatefulCtxReceived::Complete(ctx) = rule_engine.take_state() else {
-                    unreachable!("the working service always use a complete email")
-                };
+                tracing::trace!(queue = name, "Sending to quarantine");
 
+                let ctx = Self::get_context(rule_engine);
                 let payload = ctx.to_json().unwrap();
                 write_to_quarantine(&self.channel, &name, payload).await;
             }
         }
+    }
+
+    fn get_context(
+        rule_engine: RuleEngine<StatefulCtxReceived, WorkingStatus, WorkingStage>,
+    ) -> CtxReceived {
+        let StatefulCtxReceived::Complete(ctx) = rule_engine.take_state() else {
+            unreachable!("the working service always use a complete email")
+        };
+
+        ctx
     }
 }
 

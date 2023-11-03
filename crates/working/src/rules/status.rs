@@ -17,7 +17,6 @@ use vsmtp_rule_engine::{DirectiveError, Stage, Status};
 pub enum WorkingStatus {
     Next,
     Success,
-    Fail,
     Quarantine(String),
 }
 
@@ -25,7 +24,7 @@ pub enum WorkingStatus {
 /// for each status.
 impl Status for WorkingStatus {
     fn no_rules(_: impl Stage) -> Self {
-        Self::Fail
+        Self::Quarantine("working-failure".to_string())
     }
 
     fn error(error: DirectiveError) -> Self {
@@ -34,7 +33,7 @@ impl Status for WorkingStatus {
             rule = error.directive,
             error = %error.kind
         );
-        Self::Fail
+        Self::Quarantine("working-failure".to_string())
     }
 
     fn next() -> Self {

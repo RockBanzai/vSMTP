@@ -12,9 +12,11 @@
 use vsmtp_protocol::Reply;
 use vsmtp_rule_engine::{DirectiveError, Stage, Status};
 
+use crate::smtp::session::{default_accept, default_deny};
+
 /// Custom status for this rule engine.
 #[allow(dead_code)]
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(PartialEq, Eq, Clone)]
 pub enum ReceiverStatus {
     Next,
     // TODO:  Faccept(Option<vsmtp_common::Reply>),
@@ -22,6 +24,30 @@ pub enum ReceiverStatus {
     Deny(Option<Reply>),
     // TODO: Reject(Option<vsmtp_common::Reply>),
     Quarantine(String, Option<Reply>),
+}
+
+impl std::fmt::Debug for ReceiverStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Next => write!(f, "Next"),
+            Self::Accept(arg0) => f
+                .debug_tuple("Accept")
+                .field(&arg0.as_ref().unwrap_or(&default_accept()).to_string())
+                .finish(),
+            Self::Deny(arg0) => f
+                .debug_tuple("Deny")
+                .field(&arg0.as_ref().unwrap_or(&default_deny()).to_string())
+                .finish(),
+            Self::Quarantine(arg0, arg1) => f
+                .debug_struct("Quarantine")
+                .field("directory", arg0)
+                .field(
+                    "reply",
+                    &arg1.as_ref().unwrap_or(&default_accept()).to_string(),
+                )
+                .finish(),
+        }
+    }
 }
 
 /// Implement the [`Status`] trait and defining our own rules

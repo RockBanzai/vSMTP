@@ -150,7 +150,7 @@ impl<CONTEXT: 'static + std::fmt::Debug, STATUS: Status, STAGE: Stage>
 
     /// Run a stage hook function and returns a status.
     #[must_use]
-    #[tracing::instrument(skip(self), ret, fields(hook = %stage.hook()))]
+    #[tracing::instrument(level = "info", skip(self), fields(hook = %stage.hook()))]
     pub fn run(&self, stage: &STAGE) -> STATUS {
         let hook = stage.hook();
 
@@ -172,12 +172,18 @@ impl<CONTEXT: 'static + std::fmt::Debug, STATUS: Status, STAGE: Stage>
                 }
                 _ => Err(error),
             }) {
-            Ok(status) => status,
-            Err(error) => STATUS::error(DirectiveError {
-                kind: DirectiveErrorKind::Runtime(error),
-                stage: Some(stage.to_string()),
-                directive: None,
-            }),
+            Ok(status) => {
+                tracing::info!(stage = hook, ?status, "Rule engine was successful");
+                status
+            }
+            Err(error) => {
+                tracing::error!(stage = hook, ?error, "Rule engine found an error");
+                STATUS::error(DirectiveError {
+                    kind: DirectiveErrorKind::Runtime(error),
+                    stage: Some(stage.to_string()),
+                    directive: None,
+                })
+            }
         }
     }
 

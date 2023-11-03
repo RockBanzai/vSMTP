@@ -41,11 +41,11 @@ fn reply(message: impl AsRef<str>) -> Reply {
     message.as_ref().parse::<Reply>().unwrap()
 }
 
-fn default_deny() -> Reply {
+pub(crate) fn default_deny() -> Reply {
     reply("554 permanent problems with the remote server\r\n")
 }
 
-fn default_accept() -> Reply {
+pub(crate) fn default_accept() -> Reply {
     reply("250 Ok\r\n")
 }
 

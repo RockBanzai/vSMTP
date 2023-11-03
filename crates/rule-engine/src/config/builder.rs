@@ -497,7 +497,7 @@ impl<CONTEXT: 'static, STATUS: Status, STAGE: Stage + 'static>
             std::fs::read_to_string(path).map_or_else(
                 |error| Err(RuleEngineConfigBuilderError::LoadScript(error.to_string())),
                 |sources| {
-                    tracing::debug!("compiling rhai script {}", path_ptr.display());
+                    tracing::debug!(path = ?path_ptr, "compiling rhai script");
                     Ok(sources)
                 },
             )?
