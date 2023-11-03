@@ -54,14 +54,13 @@ mod logging {
     #[allow(clippy::cognitive_complexity)]
     pub fn log(target_topic: &str, level: &str, message: &str) {
         // Rename field for tracing.
-        let topic = target_topic;
         match <tracing::Level as std::str::FromStr>::from_str(level) {
             Ok(level) => match level {
-                tracing::Level::TRACE => tracing::trace!(message, topic),
-                tracing::Level::DEBUG => tracing::debug!(message, topic),
-                tracing::Level::INFO => tracing::info!(message, topic),
-                tracing::Level::WARN => tracing::warn!(message, topic),
-                tracing::Level::ERROR => tracing::error!(message, topic),
+                tracing::Level::TRACE => tracing::trace!(message, topic = target_topic),
+                tracing::Level::DEBUG => tracing::debug!(message, topic = target_topic),
+                tracing::Level::INFO => tracing::info!(message, topic = target_topic),
+                tracing::Level::WARN => tracing::warn!(message, topic = target_topic),
+                tracing::Level::ERROR => tracing::error!(message, topic = target_topic),
             },
             Err(e) => {
                 tracing::warn!(
@@ -95,9 +94,7 @@ mod logging {
     /// # rhai-autodocs:index:2
     #[rhai_fn(global, name = "err")]
     pub fn err(target_topic: &str, message: &str) {
-        // Rename field for tracing.
-        let topic = target_topic;
-        tracing::error!(message, topic);
+        tracing::error!(message, topic = target_topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -121,9 +118,7 @@ mod logging {
     /// # rhai-autodocs:index:3
     #[rhai_fn(global, name = "warn")]
     pub fn warn(target_topic: &str, message: &str) {
-        // Rename field for tracing.
-        let topic = target_topic;
-        tracing::warn!(message, topic);
+        tracing::warn!(message, topic = target_topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -147,9 +142,7 @@ mod logging {
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "info")]
     pub fn info(target_topic: &str, message: &str) {
-        // Rename field for tracing.
-        let topic = target_topic;
-        tracing::info!(message, topic);
+        tracing::info!(message, topic = target_topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -173,9 +166,7 @@ mod logging {
     /// # rhai-autodocs:index:5
     #[rhai_fn(global, name = "debug")]
     pub fn debug(target_topic: &str, message: &str) {
-        // Rename field for tracing.
-        let topic = target_topic;
-        tracing::debug!(message, topic);
+        tracing::debug!(message, topic = target_topic);
     }
 
     /// Log information to a rabbitmq queue which can be retrieve via the log-dispatcher service.
@@ -199,9 +190,7 @@ mod logging {
     /// # rhai-autodocs:index:6
     #[rhai_fn(global, name = "trace")]
     pub fn trace(target_topic: &str, message: &str) {
-        // Rename field for tracing.
-        let topic = target_topic;
-        tracing::trace!(message, topic);
+        tracing::trace!(message, topic = target_topic);
     }
 
     #[doc(hidden)]

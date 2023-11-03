@@ -136,14 +136,8 @@ impl Maildir {
     }
 }
 
-const fn get_notification_supported() -> ShouldNotify {
-    ShouldNotify {
-        on_success: true,
-        on_failure: true,
-        on_delay: true,
-        on_expanded: false,
-        on_relayed: false,
-    }
+fn get_notification_supported() -> ShouldNotify {
+    ShouldNotify::Success | ShouldNotify::Failure | ShouldNotify::Delay
 }
 
 #[async_trait::async_trait]
@@ -172,7 +166,7 @@ impl DeliverySystem for Maildir {
                 None => {
                     tracing::error!(user, "User does not exist, cannot process delivery");
                     attempt.push(DeliveryAttempt::new_local(
-                        i.clone(),
+                        i.forward_path.clone(),
                         LocalInformation::NotFound,
                         get_notification_supported(),
                     ));
@@ -180,7 +174,7 @@ impl DeliverySystem for Maildir {
                 Some(Err(e)) => {
                     tracing::error!(user, "Error while writing maildir: {}", e);
                     attempt.push(DeliveryAttempt::new_local(
-                        i.clone(),
+                        i.forward_path.clone(),
                         e.into(),
                         get_notification_supported(),
                     ));
@@ -188,7 +182,7 @@ impl DeliverySystem for Maildir {
                 Some(Ok(())) => {
                     tracing::info!(user, "Message written to maildir successfully");
                     attempt.push(DeliveryAttempt::new_local(
-                        i.clone(),
+                        i.forward_path.clone(),
                         LocalInformation::Success,
                         get_notification_supported(),
                     ));

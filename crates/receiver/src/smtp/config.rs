@@ -11,9 +11,7 @@
 
 use vsmtp_common::tls::{secret::Secret, CipherSuite, ProtocolVersion};
 use vsmtp_config::{logs, semver, Broker, Config, Logs};
-use vsmtp_protocol::{rustls, Domain};
-
-pub const SUBMIT_TO: &str = "working";
+use vsmtp_protocol::{auth::Mechanism, rustls, Domain};
 
 /// Configuration for the SMTP receiver.
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -164,7 +162,7 @@ pub struct Tls {
     #[serde(default = "Tls::default_handshake_timeout", with = "humantime_serde")]
     pub handshake_timeout: std::time::Duration,
     /// TLS protocol supported.
-    #[serde(default)]
+    #[serde(default = "Tls::default_protocol_version")]
     pub protocol_version: Vec<ProtocolVersion>,
     /// TLS cipher suite supported.
     #[serde(default = "Tls::default_cipher_suite")]
@@ -182,7 +180,7 @@ impl Default for Tls {
         Self {
             preempt_cipherlist: Default::default(),
             handshake_timeout: Self::default_handshake_timeout(),
-            protocol_version: Vec::default(),
+            protocol_version: Self::default_protocol_version(),
             cipher_suite: Self::default_cipher_suite(),
             root: Option::default(),
             r#virtual: std::collections::BTreeMap::default(),
@@ -210,17 +208,32 @@ impl Tls {
         .collect::<Vec<_>>()
     }
 
+    fn default_protocol_version() -> Vec<ProtocolVersion> {
+        vec![
+            ProtocolVersion(rustls::ProtocolVersion::TLSv1_2),
+            ProtocolVersion(rustls::ProtocolVersion::TLSv1_3),
+        ]
+    }
+
     pub(crate) const fn default_handshake_timeout() -> std::time::Duration {
         std::time::Duration::from_secs(1)
     }
 }
 
 /// Scripts location and parameters.
-#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Scripts {
     #[serde(default = "Scripts::default_script_path")]
     pub path: std::path::PathBuf,
+}
+
+impl Default for Scripts {
+    fn default() -> Self {
+        Self {
+            path: Self::default_script_path(),
+        }
+    }
 }
 
 impl Scripts {
@@ -340,49 +353,6 @@ impl Auth {
 
     pub(crate) const fn default_attempt_count_max() -> i64 {
         -1
-    }
-}
-
-/// Available mechanisms for authentication.
-#[derive(Debug, serde::Deserialize, serde::Serialize)]
-pub enum Mechanism {
-    /// Common, but for interoperability
-    Plain,
-    /// Obsolete
-    Login,
-    /// Limited
-    CramMd5,
-    /// Common
-    /// See <https://datatracker.ietf.org/doc/html/rfc4505>
-    Anonymous,
-    /*
-    - EXTERNAL
-    - SECURID
-    - DIGEST-MD5
-    - SCRAM-SHA-1
-    - SCRAM-SHA-1-PLUS
-    - SCRAM-SHA-256
-    - SCRAM-SHA-256-PLUS
-    - SAML20
-    - OPENID20
-    - GSSAPI
-    - GS2-KRB5
-    - XOAUTH-2
-    */
-}
-
-impl std::fmt::Display for Mechanism {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Plain => "PLAIN",
-                Self::Login => "LOGIN",
-                Self::CramMd5 => "CRAM-MD5",
-                Self::Anonymous => "ANONYMOUS",
-            }
-        )
     }
 }
 

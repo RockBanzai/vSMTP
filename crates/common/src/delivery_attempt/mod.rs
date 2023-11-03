@@ -9,76 +9,109 @@
  *
  */
 
-use crate::Recipient;
+use crate::{Mailbox, Recipient};
 
 mod local_information;
 mod remote_information;
 
-pub use self::local_information::LocalInformation;
-pub use self::remote_information::{RemoteInformation, RemoteMailExchange, RemoteServer};
+pub use local_information::LocalInformation;
+pub use remote_information::{
+    EitherEhloOrError, EitherGreetingsOrError, EitherRemoteServerOrError, RemoteInformation,
+    RemoteMailExchange, RemoteServer,
+};
 
 pub struct Status(pub String);
 
-// NOTE: should be implemented as a bitmask
-#[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
-pub struct ShouldNotify {
-    pub on_success: bool,
-    pub on_failure: bool,
-    pub on_delay: bool,
-    pub on_expanded: bool,
-    pub on_relayed: bool,
+bitflags::bitflags! {
+    #[derive(Debug, PartialEq, Eq, Copy, Clone, serde::Serialize, serde::Deserialize,)]
+    #[serde(transparent)]
+    pub struct ShouldNotify: u32 {
+        const Success  = 1 << 0;
+        const Failure  = 1 << 1;
+        const Delay    = 1 << 2;
+        const Expanded = 1 << 3;
+        const Relayed  = 1 << 4;
+    }
+}
+
+struct ShouldNotifyFaker;
+impl fake::Dummy<ShouldNotifyFaker> for ShouldNotify {
+    fn dummy_with_rng<R: rand::Rng + ?Sized>(_: &ShouldNotifyFaker, rng: &mut R) -> Self {
+        let mut should_notify = Self::empty();
+        if rng.gen_bool(0.5) {
+            should_notify |= Self::Success;
+        }
+        if rng.gen_bool(0.5) {
+            should_notify |= Self::Failure;
+        }
+        if rng.gen_bool(0.5) {
+            should_notify |= Self::Delay;
+        }
+        if rng.gen_bool(0.5) {
+            should_notify |= Self::Expanded;
+        }
+        if rng.gen_bool(0.5) {
+            should_notify |= Self::Relayed;
+        }
+        should_notify
+    }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct DeliveryAttempt {
-    // a list a rcpt which this delivery concerns,
+    // the list of recipient concerned by this attempt
     // NOTE: could be Vec<&>, but it is annoying to handle the lifetime
-    rcpt_to: Vec<Recipient>,
-    delivery_type: DeliveryType,
-    pub should_notify: ShouldNotify,
+    recipients: Vec<Mailbox>,
+    #[dummy(faker = "ShouldNotifyFaker")]
+    should_notify: ShouldNotify,
+    inner: DeliveryType,
 }
 
 impl DeliveryAttempt {
     #[must_use]
-    pub fn new_smtp(
-        rcpt_to: Vec<Recipient>,
+    pub fn new_remote(
+        rcpt_to: Vec<Mailbox>,
         remote_info: RemoteInformation,
         should_notify: ShouldNotify,
     ) -> Self {
         Self {
-            rcpt_to,
-            delivery_type: DeliveryType::RemoteSmtp(Box::new(remote_info)),
+            recipients: rcpt_to,
+            inner: DeliveryType::RemoteSmtp(Box::new(remote_info)),
             should_notify,
         }
     }
 
     #[must_use]
     pub fn new_local(
-        rcpt_to: Recipient,
+        rcpt_to: Mailbox,
         local_info: LocalInformation,
         should_notify: ShouldNotify,
     ) -> Self {
         Self {
-            rcpt_to: vec![rcpt_to],
-            delivery_type: DeliveryType::Local(local_info),
+            recipients: vec![rcpt_to],
+            inner: DeliveryType::Local(local_info),
             should_notify,
         }
     }
 
     #[must_use]
+    pub const fn should_notify_on(&self, on: ShouldNotify) -> bool {
+        self.should_notify.contains(on)
+    }
+
+    #[must_use]
     pub fn get_status(&self, rcpt_idx: usize) -> Status {
-        match &self.delivery_type {
+        match &self.inner {
             DeliveryType::Local(local) => local.into(),
             DeliveryType::RemoteSmtp(remote_information) => {
-                (remote_information.as_ref(), rcpt_idx).into()
+                remote_information.as_ref().get_status(rcpt_idx).unwrap()
             }
         }
     }
 
     #[must_use]
     pub fn get_action(&self, rcpt_idx: usize) -> Action {
-        match &self.delivery_type {
+        match &self.inner {
             DeliveryType::Local(local) => local.get_action(),
             DeliveryType::RemoteSmtp(remote_information) => remote_information.get_action(rcpt_idx),
         }
@@ -86,15 +119,18 @@ impl DeliveryAttempt {
 
     #[must_use]
     pub fn get_rcpt_index(&self, recipient: &Recipient) -> Option<usize> {
-        self.rcpt_to.iter().position(|r| r == recipient)
+        self.recipients
+            .iter()
+            .position(|r| r.0 == recipient.forward_path.0)
     }
 
-    pub fn recipients(&self) -> impl Iterator<Item = &Recipient> + '_ {
-        self.rcpt_to.iter()
+    pub fn recipients(&self) -> impl Iterator<Item = &Mailbox> + '_ {
+        self.recipients.iter()
     }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, fake::Dummy)]
+#[serde(tag = "type")]
 enum DeliveryType {
     Local(LocalInformation),
     RemoteSmtp(Box<RemoteInformation>),

@@ -102,7 +102,7 @@ pub enum MimeBodyType {
 /// Only applies to DSNs that indicate delivery failure for at least one recipient.
 /// If a DSN contains no indications of delivery failure, only the headers of the message should be returned.
 #[allow(clippy::exhaustive_enums)]
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
 #[serde(rename_all = "lowercase")]
 pub enum DsnReturn {
     /// Complete message

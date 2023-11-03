@@ -11,7 +11,7 @@
 
 #[derive(Debug, serde_with::SerializeDisplay, serde_with::DeserializeFromStr)]
 pub struct Frequency {
-    raw: String,
+    raw: Box<str>,
     frequency: std::time::Duration,
 }
 
@@ -41,7 +41,7 @@ impl std::str::FromStr for Frequency {
 
         Ok(Self {
             frequency: per_unit.div_f64(tick),
-            raw: s.to_string(),
+            raw: s.into(),
         })
     }
 }

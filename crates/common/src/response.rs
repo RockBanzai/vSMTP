@@ -10,13 +10,18 @@
  */
 
 use crate::extensions::{self, Extension};
-use crate::faker::ReplyFaker;
-use crate::transfer_error::Delivery;
-use vsmtp_protocol::Reply;
+use vsmtp_protocol::{Reply, ReplyCode};
+
+#[derive(Debug, thiserror::Error)]
+pub enum EhloParsingError {
+    #[error("missing `servername` while parsing EHLO reply")]
+    MissingServerName,
+    #[error("reply code is supposed to be `250` for EHLO, got `{0}`")]
+    InvalidReplyCode(ReplyCode),
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct Ehlo {
-    #[dummy(faker = "ReplyFaker")]
     reply: Reply,
     server_name: String,
     extensions: Vec<(Extension, String)>,
@@ -24,28 +29,24 @@ pub struct Ehlo {
 
 impl Ehlo {
     #[must_use]
-    pub fn contains(&self, extension: &Extension) -> bool {
-        self.extensions.iter().any(|(e, _)| e == extension)
+    pub fn contains(&self, extension: Extension) -> bool {
+        self.extensions.iter().any(|(e, _)| *e == extension)
     }
 }
 
 impl TryFrom<Reply> for Ehlo {
-    type Error = Delivery;
+    type Error = EhloParsingError;
 
     fn try_from(reply: Reply) -> Result<Self, Self::Error> {
         let code = reply.code();
         if code.value() != 250 {
-            return Err(Delivery::ReplyParsing {
-                with_source: Some(format!("expect 250 on EHLO, got {}", code.value())),
-            });
+            return Err(EhloParsingError::InvalidReplyCode(code.clone()));
         }
 
         let mut lines = reply.lines();
         let server_name = lines
             .next()
-            .ok_or(Delivery::ReplyParsing {
-                with_source: Some("servername missing from ehlo response".to_owned()),
-            })?
+            .ok_or(EhloParsingError::MissingServerName)?
             .clone();
 
         let extensions = lines

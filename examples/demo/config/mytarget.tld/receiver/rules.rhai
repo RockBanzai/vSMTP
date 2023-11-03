@@ -1,4 +1,4 @@
-import "prelude" as prelude;
+import "/prelude" as prelude;
 import "/etc/vsmtp/plugins/libvsmtp_plugin_mysql" as mysql;
 
 const MY_DOMAINS = ["mytarget.tld"];

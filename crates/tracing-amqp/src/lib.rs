@@ -15,7 +15,6 @@ pub use dispatcher::Dispatcher;
 pub use layer::Event;
 pub use layer::Layer;
 
-pub const QUEUE_NAME: &str = "log";
 pub const LOG_EXCHANGER_NAME: &str = "log";
 
 type Topic = String;

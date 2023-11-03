@@ -9,20 +9,18 @@
  *
  */
 
-use std::task::Poll;
-
-use futures_util::Stream;
-
 use crate::{Topic, LOG_EXCHANGER_NAME};
+use futures_util::Stream;
+use std::task::Poll;
 
 type DispatcherOutput = Result<(), Box<dyn std::error::Error>>;
 type DispatcherFuture = Box<dyn std::future::Future<Output = DispatcherOutput> + Send + 'static>;
 
 pub struct Dispatcher {
-    pub channel: lapin::Channel,
-    pub receiver: tokio_stream::wrappers::ReceiverStream<(Topic, Vec<u8>)>,
-    pub send_task: Option<std::pin::Pin<DispatcherFuture>>,
-    pub queue: Vec<(Topic, Vec<u8>)>,
+    pub(crate) channel: lapin::Channel,
+    pub(crate) receiver: tokio_stream::wrappers::ReceiverStream<(Topic, Vec<u8>)>,
+    pub(crate) send_task: Option<std::pin::Pin<DispatcherFuture>>,
+    pub(crate) queue: Vec<(Topic, Vec<u8>)>,
 }
 
 async fn make_sending_task(

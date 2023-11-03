@@ -12,7 +12,7 @@
 use crate::{
     ctx_received::CtxReceived,
     delivery_route::DeliveryRoute,
-    faker::{ClientNameFaker, DsnReturnFaker, IpFaker, NameFaker, RcptToFaker},
+    faker::{IpFaker, RcptToFaker},
     tls::TlsProps,
     Mailbox, Recipient,
 };
@@ -433,7 +433,6 @@ impl StatefulCtxReceived {
 pub struct SaslAuthProps {
     pub cancel_count: usize,
     pub is_authenticated: bool,
-    #[dummy(faker = "MechanismFaker")]
     pub mechanism: vsmtp_protocol::auth::Mechanism,
     #[dummy(faker = "CredentialsFaker")]
     pub credentials: vsmtp_protocol::auth::Credentials,
@@ -448,7 +447,6 @@ pub struct ConnectProps {
     pub client_addr: std::net::SocketAddr,
     #[dummy(faker = "IpFaker")]
     pub server_addr: std::net::SocketAddr,
-    #[dummy(faker = "NameFaker")]
     pub server_name: Domain,
     pub sasl: Option<SaslAuthProps>,
     pub iprev: Option<IpRevResult>,
@@ -464,16 +462,8 @@ impl fake::Dummy<CredentialsFaker> for vsmtp_protocol::auth::Credentials {
     }
 }
 
-struct MechanismFaker;
-impl fake::Dummy<MechanismFaker> for vsmtp_protocol::auth::Mechanism {
-    fn dummy_with_rng<R: rand::Rng + ?Sized>(_: &MechanismFaker, _: &mut R) -> Self {
-        todo!()
-    }
-}
-
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct HeloProps {
-    #[dummy(faker = "ClientNameFaker")]
     pub client_name: ClientName,
     pub using_deprecated: bool,
     pub spf_helo_identity: Option<std::sync::Arc<spf::Result>>,
@@ -500,7 +490,6 @@ pub struct MailFromProps {
     pub message_uuid: uuid::Uuid,
     pub envelop_id: Option<String>,
     pub spf_mail_from_identity: Option<std::sync::Arc<spf::Result>>,
-    #[dummy(faker = "DsnReturnFaker")]
     pub ret: Option<DsnReturn>,
 }
 

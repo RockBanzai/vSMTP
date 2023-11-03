@@ -87,6 +87,7 @@ def! {
         strum::EnumIter,
         serde_with::SerializeDisplay,
         serde_with::DeserializeFromStr,
+        fake::Dummy,
     )]
     pub enum ErrorKind {
         NotFound,
@@ -116,6 +117,7 @@ def! {
 ///
 /// The [`serde::Deserialize`] store the value as a string.
 #[derive(Debug, serde::Deserialize)]
+#[serde(untagged)]
 enum Opaque<E: std::fmt::Display> {
     /// deserialize marked as skipped, but really *should* be unreachable
     #[serde(skip_deserializing)]
@@ -125,7 +127,6 @@ enum Opaque<E: std::fmt::Display> {
 
 impl<E: std::fmt::Display> std::fmt::Display for Opaque<E> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        #[allow(clippy::pattern_type_mismatch)] // false positive
         match self {
             Self::Clear(c) => write!(f, "{c}"),
             Self::Opaque(o) => write!(f, "{o}"),
@@ -135,7 +136,6 @@ impl<E: std::fmt::Display> std::fmt::Display for Opaque<E> {
 
 impl<E: std::fmt::Display> serde::Serialize for Opaque<E> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        #[allow(clippy::pattern_type_mismatch)] // false positive
         match self {
             Self::Clear(e) => serializer.serialize_str(&e.to_string()),
             Self::Opaque(s) => serializer.serialize_str(s),
@@ -144,10 +144,11 @@ impl<E: std::fmt::Display> serde::Serialize for Opaque<E> {
 }
 
 ///
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize, fake::Dummy)]
 pub struct Error {
     kind: ErrorKind,
     raw_os_error: Option<i32>,
+    #[dummy(expr = "None")]
     inner: Option<Opaque<Box<dyn std::error::Error + Send + Sync>>>,
     // Note: store description / source / backtrace too ?
 }

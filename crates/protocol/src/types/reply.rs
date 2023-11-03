@@ -14,7 +14,7 @@ use crate::ReplyCode;
 
 /// SMTP message send by the server to the client as defined in RFC5321#4.2
 #[must_use]
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, fake::Dummy)]
 pub struct Reply {
     code: ReplyCode,
     text: Vec<String>,

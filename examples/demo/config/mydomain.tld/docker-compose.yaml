@@ -22,7 +22,7 @@ services:
     volumes:
       - ../prelude.rhai:/prelude.rhai:ro
       - ./receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
-      - ./receiver/rules-pre-av.rhai:/rules.rhai:ro
+      - ./receiver/rules.rhai:/etc/vsmtp/receiver-smtp/filter.rhai:ro
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./receiver/generated/mydomain.tld.crt:/etc/ssl/certs/mydomain.tld.crt:ro
       - ./receiver/generated/mydomain.tld.key:/etc/ssl/certs/mydomain.tld.key:ro
@@ -43,14 +43,13 @@ services:
 
   mydomain-working:
     image: vsmtp-working:dev
-    command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
     volumes:
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
-      - ./working/rules.rhai:/rules.rhai:ro
-      - ./working/rsa-private-key.pem:/rsa-private-key.pem:ro
-      - ./working/ed25519-private-key.pem:/ed25519-private-key.pem:ro
-      - ./working/dkim-private-key.rhai:/dkim-private-key.rhai:ro
+      - ./working/rules.rhai:/etc/vsmtp/working/script.rhai:ro
+      - ./working/rsa-private-key.pem:/etc/vsmtp/dkim-private-key/rsa-private-key.pem:ro
+      - ./working/ed25519-private-key.pem:/etc/vsmtp/dkim-private-key/ed25519-private-key.pem:ro
+      - ./working/dkim-private-key.rhai:/etc/vsmtp/dkim-private-key/mod.rhai:ro
     networks: [ net ]
     depends_on:
       broker:

@@ -15,7 +15,7 @@ services:
     volumes:
       - ../prelude.rhai:/prelude.rhai:ro
       - ./receiver/config.rhai:/etc/vsmtp/receiver-smtp/conf.d/config.rhai:ro
-      - ./receiver/rules.rhai:/rules.rhai:ro
+      - ./receiver/rules.rhai:/etc/vsmtp/receiver-smtp/filter.rhai:ro
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
       - ./receiver/generated/mytarget.tld.crt:/etc/ssl/certs/mytarget.tld.crt:ro
       - ./receiver/generated/mytarget.tld.key:/etc/ssl/certs/mytarget.tld.key:ro
@@ -52,11 +52,10 @@ services:
 
   mytarget-working:
     image: vsmtp-working:dev
-    command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
     volumes:
       - ./working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
       - ../broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
-      - ./working/rules.rhai:/rules.rhai:ro
+      - ./working/rules.rhai:/etc/vsmtp/working/script.rhai:ro
     networks: [ net ]
     depends_on:
       broker:

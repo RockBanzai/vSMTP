@@ -372,7 +372,7 @@ pub mod csv_api {
     ///
     /// // If the file contains a row with `x, value1, value2`, for example:
     /// database.get("x") == ["value1", "value2"];
-    /// ```        
+    /// ```
     /// # rhai-autodocs:index:4
     #[rhai_fn(global, name = "get", return_raw, pure)]
     pub fn query(file: &mut CsvFile, key: &str) -> Result<rhai::Array, Box<rhai::EvalAltResult>> {
@@ -435,10 +435,10 @@ mod test {
         assert_eq!(
             csv_api::query(&mut db, "id")
                 .unwrap()
-                .get(0)
+                .first()
                 .unwrap()
                 .to_string(),
-            expected.get(0).unwrap().to_string()
+            expected.first().unwrap().to_string()
         );
     }
 }

@@ -81,7 +81,7 @@ mod iprev {
                 return IpRevResult {
                     value: Value::Pass,
                     ip,
-                    fqdn: Some(record.0),
+                    fqdn: Some(record.0.into()),
                 };
             }
         }

@@ -42,6 +42,7 @@
     strum::EnumString,
     serde_with::SerializeDisplay,
     serde_with::DeserializeFromStr,
+    fake::Dummy,
 )]
 #[strum(serialize_all = "SCREAMING-KEBAB-CASE")]
 pub enum Mechanism {

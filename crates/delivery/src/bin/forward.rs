@@ -12,10 +12,14 @@
 use std::sync::Arc;
 use vsmtp_auth::TlsCertificate;
 use vsmtp_common::{
-    ctx_delivery::CtxDelivery, delivery_attempt::DeliveryAttempt, delivery_route::DeliveryRoute,
+    ctx_delivery::CtxDelivery,
+    delivery_attempt::{DeliveryAttempt, RemoteInformation, RemoteMailExchange, ShouldNotify},
+    delivery_route::DeliveryRoute,
+    dns_resolver::DnsResolver,
 };
 use vsmtp_config::Config;
-use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, Tls};
+use vsmtp_delivery::{delivery_main, send, DeliverySystem, Tls};
+use vsmtp_protocol::ClientName;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -26,6 +30,7 @@ struct Forward {
     service: String,
     target: url::Url,
     tls: Tls,
+    dns: DnsResolver,
     #[serde(default)]
     broker: vsmtp_config::Broker,
     #[serde(default)]
@@ -64,6 +69,29 @@ impl DeliverySystem for Forward {
         assert!(self.target.scheme() == "smtp");
 
         let target = self.target.host_str().unwrap();
+        let target_ip = match target.parse() {
+            Ok(x) => x,
+            Err(_) => match self.dns.resolver.lookup_ip(target).await {
+                Ok(records) => records.into_iter().next().unwrap(),
+                Err(error) => {
+                    return vec![DeliveryAttempt::new_remote(
+                        rcpt_to.iter().map(|x| x.forward_path.clone()).collect(),
+                        RemoteInformation::DnsMxIpLookup {
+                            mx: RemoteMailExchange {
+                                mx_priority: 0,
+                                mx: target.parse().unwrap(),
+                            },
+                            error: error.into(),
+                        },
+                        ShouldNotify::Failure
+                            | ShouldNotify::Delay
+                            | ShouldNotify::Expanded
+                            | ShouldNotify::Relayed,
+                    )]
+                }
+            },
+        };
+
         let sni =
             <hickory_resolver::Name as std::str::FromStr>::from_str(target).unwrap_or_else(|_| {
                 rcpt_to
@@ -71,18 +99,19 @@ impl DeliverySystem for Forward {
                     .expect("there is always at least one recipient")
                     .forward_path
                     .domain()
+                    .into()
             });
 
         vec![
             send(
-                target,
-                sni,
-                self.target.port().unwrap_or(25),
-                &hostname::get().unwrap().to_string_lossy(),
+                std::net::SocketAddr::new(target_ip, self.target.port().unwrap_or(25)),
+                sni.into(),
+                ClientName::Domain(hostname::get().unwrap().to_string_lossy().parse().unwrap()),
                 mail_from.clone(),
                 rcpt_to.clone(),
+                None,
                 message_str.as_bytes(),
-                &self.tls,
+                self.tls.clone(),
                 self.extra_root_ca.clone(),
             )
             .await,
@@ -96,6 +125,7 @@ impl Default for Forward {
             name: default_service_name(),
             target: url::Url::parse("smtp://localhost").unwrap(),
             service: String::default(),
+            dns: DnsResolver::google(),
             api_version: vsmtp_config::semver::VersionReq::default(),
             broker: vsmtp_config::Broker::default(),
             logs: vsmtp_config::Logs::default(),

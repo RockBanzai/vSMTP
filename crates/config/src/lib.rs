@@ -15,7 +15,7 @@ pub mod logs;
 
 pub use broker::Broker;
 pub use error::ConfigError;
-pub use logs::{Logs, LogsFacility, SyslogTransport};
+pub use logs::Logs;
 pub use semver;
 
 /// Result type for configuration operations.

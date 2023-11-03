@@ -152,8 +152,6 @@ where
             .unwrap()
             .clone();
 
-        // dbg!(&json_event);
-
         let mut fields = serde_json::Map::<String, serde_json::Value>::new();
         for field_name in event.metadata().fields() {
             if let Some(value) = json_event.get(field_name.name()) {
@@ -161,14 +159,12 @@ where
             }
         }
 
-        let topic = {
-            match fields.remove("topic") {
-                // Using `as_str` here because calling `to_string` on a json value
-                // messes up the formatting.
-                Some(topic) => topic.as_str().unwrap_or("system").to_string(),
-                None => "system".to_string(),
-            }
-        };
+        // Using `as_str` here because calling `to_string` on a json value
+        // messes up the formatting.
+        let topic = fields.remove("topic").map_or_else(
+            || "system".to_string(),
+            |topic| topic.as_str().unwrap_or("system").to_string(),
+        );
 
         // unfortunately, there is no kind getter
         let kind: u8 = if event.metadata().is_event() {
@@ -195,10 +191,10 @@ where
             spans,
         };
 
-        if let Ok(payload) = serde_json::to_vec(&event) {
-            if let Err(error) = self.sender.try_send((topic, payload)) {
-                eprintln!("failed to send log message: {error}");
-            }
+        let payload = serde_json::to_vec(&event).unwrap();
+
+        if let Err(error) = self.sender.try_send((topic, payload)) {
+            eprintln!("failed to send log message: {error}");
         }
     }
 }

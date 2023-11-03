@@ -33,19 +33,20 @@ pub struct Handler {
     rule_engine: std::sync::Arc<RuleEngine<StatefulCtxReceived, ReceiverStatus, ReceiverStage>>,
     going_to_quarantine: Option<String>,
     channel: lapin::Channel,
-    // receiver config
     config: std::sync::Arc<SMTPReceiverConfig>,
     rustls_config: Option<std::sync::Arc<rustls::ServerConfig>>,
 }
 
+fn reply(message: impl AsRef<str>) -> Reply {
+    message.as_ref().parse::<Reply>().unwrap()
+}
+
 fn default_deny() -> Reply {
-    "554 permanent problems with the remote server\r\n"
-        .parse::<Reply>()
-        .unwrap()
+    reply("554 permanent problems with the remote server\r\n")
 }
 
 fn default_accept() -> Reply {
-    "250 Ok\r\n".parse::<Reply>().unwrap()
+    reply("250 Ok\r\n")
 }
 
 fn convert_error(e: Error) -> ParserError {
@@ -104,11 +105,7 @@ impl Handler {
             }),
         );
 
-        let default = || {
-            format!("220 {server_name} Service ready\r\n")
-                .parse::<Reply>()
-                .unwrap()
-        };
+        let default = || reply(format!("220 {server_name} Service ready\r\n"));
 
         let status = rule_engine.run(&ReceiverStage::Connect);
 
@@ -246,9 +243,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
             .transpose()
         else {
             tracing::warn!("SNI is not a valid domain");
-            return "501 5.5.4 Syntax error in parameters or arguments\r\n"
-                .parse::<Reply>()
-                .unwrap();
+            return reply("501 5.5.4 Syntax error in parameters or arguments\r\n");
         };
 
         match self.rule_engine.write_state(|state| {
@@ -262,14 +257,10 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
                 )
                 .map(|()| state.server_name().clone())
         }) {
-            Ok(server_name) => format!("220 {server_name} Service ready\r\n")
-                .parse::<Reply>()
-                .unwrap(),
+            Ok(server_name) => reply(format!("220 {server_name} Service ready\r\n")),
             Err(error) => {
                 tracing::warn!(%error, "Post TLS handshake called during a wrong stage");
-                "451 Requested action aborted: error in processing.\r\n"
-                    .parse::<Reply>()
-                    .unwrap()
+                reply("451 Requested action aborted: error in processing.\r\n")
             }
         }
     }
@@ -277,20 +268,16 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
     async fn on_starttls(&mut self, ctx: &mut ReceiverContext) -> Reply {
         if !self.config.esmtp.starttls {
             // https://www.ietf.org/rfc/rfc5321.txt#4.2.4
-            "502 Command not implemented\r\n".parse::<Reply>().unwrap()
+            reply("502 Command not implemented\r\n")
         } else if self.rule_engine.read_state(StatefulCtxReceived::is_secured) {
-            "554 5.5.1 Error: TLS already active\r\n"
-                .parse::<Reply>()
-                .unwrap()
+            reply("554 5.5.1 Error: TLS already active\r\n")
         } else {
             match (self.rustls_config.as_ref(), self.config.tls.as_ref()) {
                 (Some(rustls_config), Some(tls_config)) => {
                     ctx.upgrade_tls(rustls_config.clone(), tls_config.handshake_timeout);
-                    "220 Ready to start TLS\r\n".parse::<Reply>().unwrap()
+                    reply("220 Ready to start TLS\r\n")
                 }
-                _ => "454 TLS not available due to temporary reason\r\n"
-                    .parse::<Reply>()
-                    .unwrap(),
+                _ => reply("454 TLS not available due to temporary reason\r\n"),
             }
         }
     }
@@ -324,20 +311,14 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
                         .is_authenticated = true;
                 });
 
-                "235 2.7.0 Authentication succeeded\r\n"
-                    .parse::<Reply>()
-                    .unwrap()
+                reply("235 2.7.0 Authentication succeeded\r\n")
             }
             Err(AuthError::ClientMustNotStart) => {
-                "501 5.7.0 Client must not start with this mechanism\r\n"
-                    .parse::<Reply>()
-                    .unwrap()
+                reply("501 5.7.0 Client must not start with this mechanism\r\n")
             }
             Err(AuthError::ValidationError(..)) => {
                 ctx.deny();
-                "535 5.7.8 Authentication credentials invalid\r\n"
-                    .parse::<Reply>()
-                    .unwrap()
+                reply("535 5.7.8 Authentication credentials invalid\r\n")
             }
             Err(AuthError::Canceled) => self.rule_engine.write_state(|i| {
                 let auth_props = i
@@ -365,26 +346,18 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
                     ctx.deny();
                 }
 
-                "501 Authentication canceled by client\r\n"
-                    .parse::<Reply>()
-                    .unwrap()
+                reply("501 Authentication canceled by client\r\n")
             }),
-            Err(AuthError::Base64 { .. }) => "501 5.5.2 Invalid, not base64\r\n"
-                .parse::<Reply>()
-                .unwrap(),
+            Err(AuthError::Base64 { .. }) => reply("501 5.5.2 Invalid, not base64\r\n"),
             Err(AuthError::SessionError(e)) => {
                 tracing::warn!(%e, "auth error");
                 ctx.deny();
-                "454 4.7.0 Temporary authentication failure\r\n"
-                    .parse::<Reply>()
-                    .unwrap()
+                reply("454 4.7.0 Temporary authentication failure\r\n")
             }
             Err(AuthError::IO(e)) => todo!("io auth error {e}"),
             Err(AuthError::ConfigError(rsasl::prelude::SASLError::NoSharedMechanism)) => {
                 ctx.deny();
-                "504 5.5.4 Mechanism is not supported\r\n"
-                    .parse::<Reply>()
-                    .unwrap()
+                reply("504 5.5.4 Mechanism is not supported\r\n")
             }
             Err(AuthError::ConfigError(e)) => todo!("handle non_exhaustive pattern: {e}"),
         }
@@ -399,11 +372,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
             let client_name = client_name.clone();
             let server_name = self.rule_engine.read_state(|i| i.server_name().clone());
 
-            move || {
-                format!("250 {server_name} Greetings {client_name}\r\n",)
-                    .parse()
-                    .unwrap()
-            }
+            move || reply(format!("250 {server_name} Greetings {client_name}\r\n"))
         };
 
         if let Err(error) = self.rule_engine.write_state(|i| {
@@ -411,7 +380,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
                 .map(|_| ())
         }) {
             tracing::debug!(?error, "Client sent bad HELO/EHLO command");
-            return "503 Bad sequence of commands\r\n".parse().unwrap();
+            return reply("503 Bad sequence of commands\r\n");
         }
 
         // NOTE: do we want to allow the user to override the reply on helo?
@@ -461,14 +430,10 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         }: MailFromArgs,
     ) -> Reply {
         let reverse_path = reverse_path.map(Mailbox);
-        let default: Reply = reverse_path
-            .as_ref()
-            .map_or_else(
-                || "250 sender <> Ok".to_string(),
-                |reverse_path| format!("250 sender <{reverse_path}> Ok"),
-            )
-            .parse()
-            .unwrap();
+        let default = reply(reverse_path.as_ref().map_or_else(
+            || "250 sender <> Ok".to_string(),
+            |reverse_path| format!("250 sender <{reverse_path}> Ok"),
+        ));
 
         self.rule_engine.write_state(|i| {
             i.set_mail_from(reverse_path, envelop_id, ret).unwrap();
@@ -500,9 +465,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
     ) -> Reply {
         // TODO: add too much rcpt
 
-        let default = format!("250 recipient <{forward_path}> Ok")
-            .parse::<Reply>()
-            .unwrap();
+        let default = reply(format!("250 recipient <{forward_path}> Ok"));
 
         let route = DeliveryRoute::Basic;
         self.rule_engine.write_state(|i| {
@@ -535,7 +498,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         self.rule_engine.write_state(StatefulCtxReceived::reset);
         self.going_to_quarantine = None;
 
-        "250 Ok\r\n".parse::<Reply>().unwrap()
+        reply("250 Ok\r\n")
     }
 
     async fn on_message(
@@ -553,9 +516,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
                 Ok(mail) => mail,
                 Err(ParserError::BufferTooLong { .. }) => {
                     return (
-                        "552 4.3.1 Message size exceeds fixed maximum message size\r\n"
-                            .parse::<Reply>()
-                            .unwrap(),
+                        reply("552 4.3.1 Message size exceeds fixed maximum message size\r\n"),
                         None,
                     );
                 }
@@ -572,11 +533,7 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
             i.set_complete(mail).unwrap();
         });
 
-        let default = || {
-            format!("250 message of {message_size} bytes Ok")
-                .parse()
-                .unwrap()
-        };
+        let default = || reply(format!("250 message of {message_size} bytes Ok"));
 
         let (reply, should_return) = match self.rule_engine.run(&ReceiverStage::PreQueue) {
             ReceiverStatus::Next => (default(), true),
@@ -627,13 +584,9 @@ impl vsmtp_protocol::ReceiverHandler for Handler {
         None
     }
 
-    async fn on_hard_error(&mut self, ctx: &mut ReceiverContext, reply: Reply) -> Reply {
+    async fn on_hard_error(&mut self, ctx: &mut ReceiverContext, first: Reply) -> Reply {
         ctx.deny();
-        reply.extended(
-            &"451 Too many errors from the client\r\n"
-                .parse::<Reply>()
-                .unwrap(),
-        )
+        first.extended(&reply("451 Too many errors from the client\r\n"))
     }
 
     async fn on_soft_error(&mut self, _: &mut ReceiverContext, reply: Reply) -> Reply {
@@ -649,7 +602,7 @@ impl Handler {
         self.rule_engine.write_state(|i| {
             if let Err(error) = i.set_helo(client_name.clone(), false) {
                 tracing::debug!(?error, "Client sent bad HELO/EHLO command");
-                return "503 Bad sequence of commands\r\n".parse().unwrap();
+                return reply("503 Bad sequence of commands\r\n");
             }
 
             let Esmtp {
@@ -660,7 +613,7 @@ impl Handler {
                 dsn,
             } = &self.config.esmtp;
 
-            [
+            let helo_reply = [
                 Some(format!(
                     "250-{} Greetings {}\r\n",
                     i.server_name(),
@@ -694,9 +647,9 @@ impl Handler {
             ]
             .into_iter()
             .flatten()
-            .collect::<String>()
-            .parse()
-            .expect("EHLO must be valid")
+            .collect::<String>();
+
+            reply(helo_reply)
         })
     }
 }

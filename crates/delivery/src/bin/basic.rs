@@ -19,8 +19,8 @@ use vsmtp_common::{
     Recipient,
 };
 use vsmtp_config::Config;
-use vsmtp_delivery::{delivery_main, smtp::send, DeliverySystem, Tls};
-use vsmtp_protocol::Domain;
+use vsmtp_delivery::{delivery_main, send, DeliverySystem, Tls};
+use vsmtp_protocol::{ClientName, Domain};
 
 /// The [`Basic`] implementation of the delivery system.
 ///
@@ -45,15 +45,8 @@ struct Basic {
     extra_root_ca: Option<std::sync::Arc<TlsCertificate>>,
 }
 
-const fn get_notification_supported() -> ShouldNotify {
-    ShouldNotify {
-        // false only if the DSN has been transferred to the next hop
-        on_success: false,
-        on_failure: true,
-        on_delay: true,
-        on_expanded: false,
-        on_relayed: false,
-    }
+fn get_notification_supported() -> ShouldNotify {
+    ShouldNotify::Failure | ShouldNotify::Delay
 }
 
 impl Basic {
@@ -71,7 +64,12 @@ impl Basic {
         rcpt_to: Vec<&Recipient>,
         mail: &[u8],
     ) -> DeliveryAttempt {
-        let mxs = match self.dns.resolver.mx_lookup(domain.clone()).await {
+        let mxs = match self
+            .dns
+            .resolver
+            .mx_lookup::<hickory_resolver::Name>(domain.clone().into())
+            .await
+        {
             Ok(records) => records,
             Err(e)
                 if matches!(
@@ -79,9 +77,12 @@ impl Basic {
                     hickory_resolver::error::ResolveErrorKind::NoRecordsFound { .. }
                 ) =>
             {
-                return DeliveryAttempt::new_smtp(
-                    rcpt_to.into_iter().cloned().collect::<Vec<_>>(),
-                    RemoteInformation::MxLookupError { error: e.into() },
+                return DeliveryAttempt::new_remote(
+                    rcpt_to
+                        .into_iter()
+                        .map(|i| i.forward_path.clone())
+                        .collect::<Vec<_>>(),
+                    RemoteInformation::DnsMxLookup { error: e.into() },
                     get_notification_supported(),
                 );
             }
@@ -100,11 +101,14 @@ impl Basic {
         let ips = match self.dns.resolver.lookup_ip(mx.exchange().clone()).await {
             Ok(records) => records,
             Err(e) => {
-                return DeliveryAttempt::new_smtp(
-                    rcpt_to.into_iter().cloned().collect::<Vec<_>>(),
-                    RemoteInformation::MxLookup {
+                return DeliveryAttempt::new_remote(
+                    rcpt_to
+                        .into_iter()
+                        .map(|i| i.forward_path.clone())
+                        .collect::<Vec<_>>(),
+                    RemoteInformation::DnsMxIpLookup {
                         mx: RemoteMailExchange {
-                            mx: mx.exchange().clone(),
+                            mx: mx.exchange().clone().into(),
                             mx_priority: mx.preference(),
                         },
                         error: e.into(),
@@ -118,14 +122,17 @@ impl Basic {
         let ip = ips.iter().next().unwrap();
 
         send(
-            &ip.to_string(),
+            std::net::SocketAddr::new(ip, 25),
             domain,
-            25,
-            &hostname::get().unwrap().to_string_lossy(),
+            ClientName::Domain(hostname::get().unwrap().to_string_lossy().parse().unwrap()),
             mail_from.clone(),
             rcpt_to.into_iter().cloned().collect::<Vec<_>>(),
+            Some(RemoteMailExchange {
+                mx: mx.exchange().clone().into(),
+                mx_priority: mx.preference(),
+            }),
             mail,
-            &self.tls,
+            self.tls.clone(),
             self.extra_root_ca.clone(),
         )
         .await

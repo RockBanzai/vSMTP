@@ -13,8 +13,6 @@ use vsmtp_config::{logs, semver, Broker, Config, Logs};
 
 pub mod cli;
 
-pub const SUBMIT_TO: &str = "delivery";
-
 /// Configuration for the SMTP receiver.
 #[derive(Default, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -44,11 +42,19 @@ impl WorkingConfig {
 }
 
 /// Scripts location and parameters.
-#[derive(Default, serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Scripts {
     #[serde(default = "Scripts::default_script_path")]
     pub path: std::path::PathBuf,
+}
+
+impl Default for Scripts {
+    fn default() -> Self {
+        Self {
+            path: Self::default_script_path(),
+        }
+    }
 }
 
 impl Scripts {

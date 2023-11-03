@@ -85,8 +85,8 @@ fn instantiate_logger(config: LogInstanceType) -> Box<dyn logger::Logger> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = <Args as clap::Parser>::parse();
-    let config = config::LogDispatcherConfig::from_rhai_file(&args.config)?;
+    let Args { config } = <Args as clap::Parser>::parse();
+    let config = config::LogDispatcherConfig::from_rhai_file(&config)?;
     // for internal logs
     let filter = tracing_subscriber::filter::Targets::new()
         .with_target("vsmtp_log_dispatcher", tracing::Level::TRACE);

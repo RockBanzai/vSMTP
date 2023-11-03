@@ -22,7 +22,6 @@ pub mod libc;
 pub mod response;
 pub mod stateful_ctx_received;
 pub mod tls;
-pub mod transfer_error;
 
 pub use hickory_resolver;
 pub use time;

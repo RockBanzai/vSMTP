@@ -13,7 +13,16 @@ use crate::Domain;
 
 /// Identity of the client.
 #[derive(
-    Debug, Clone, PartialOrd, Ord, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize,
+    Debug,
+    Clone,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Hash,
+    serde::Serialize,
+    serde::Deserialize,
+    fake::Dummy,
 )]
 #[serde(untagged)]
 pub enum ClientName {

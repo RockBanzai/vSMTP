@@ -15,7 +15,7 @@ use vsmtp_auth::TlsCertificate;
 pub struct Broker {
     // FIXME: Which default should be used ?
     /// AMQP endpoint.
-    pub uri: String,
+    pub uri: Box<str>,
     pub extra_root_ca: Option<std::sync::Arc<TlsCertificate>>,
 }
 

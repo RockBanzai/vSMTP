@@ -52,6 +52,13 @@
             "read": ".*"
         },
         {
+            "user": "admin",
+            "vhost": "sink-mytarget",
+            "configure": ".*",
+            "write": ".*",
+            "read": ".*"
+        },
+        {
             "user": "vsmtp-dev",
             "vhost": "vsmtp-dev",
             "configure": ".*",
@@ -60,13 +67,6 @@
         },
         {
             "user": "sink-mytarget",
-            "vhost": "sink-mytarget",
-            "configure": ".*",
-            "write": ".*",
-            "read": ".*"
-        },
-        {
-            "user": "admin",
             "vhost": "sink-mytarget",
             "configure": ".*",
             "write": ".*",

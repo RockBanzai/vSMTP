@@ -18,6 +18,10 @@ use tokio_rustls::rustls;
 // NOTE: could have 3 trait to make the implementation easier
 // PreTransactionHandler + TransactionHandler + PostTransactionHandler
 
+fn reply(message: impl AsRef<str>) -> Reply {
+    message.as_ref().parse::<Reply>().unwrap()
+}
+
 /// Trait to implement to handle the SMTP commands in pair with the [`Receiver`](crate::Receiver).
 #[async_trait::async_trait]
 pub trait ReceiverHandler {
@@ -93,35 +97,25 @@ pub trait ReceiverHandler {
     /// Called after receiving a [`Verb::Data`] command.
     #[inline]
     async fn on_data(&mut self) -> Reply {
-        #[allow(clippy::expect_used)]
-        "354 Start mail input; end with <CRLF>.<CRLF>\r\n"
-            .parse()
-            .expect("valid syntax")
+        reply("354 Start mail input; end with <CRLF>.<CRLF>\r\n")
     }
 
     /// Called after receiving a [`Verb::Quit`] command.
     #[inline]
     async fn on_quit(&mut self) -> Reply {
-        #[allow(clippy::expect_used)]
-        "221 Service closing transmission channel"
-            .parse()
-            .expect("valid syntax")
+        reply("221 Service closing transmission channel")
     }
 
     /// Called after receiving a [`Verb::Noop`] command.
     #[inline]
     async fn on_noop(&mut self) -> Reply {
-        #[allow(clippy::expect_used)]
-        "250 Ok\r\n".parse().expect("valid syntax")
+        reply("250 Ok\r\n")
     }
 
     /// Called after receiving a [`Verb::Help`] command.
     #[inline]
     async fn on_help(&mut self, _: UnparsedArgs) -> Reply {
-        #[allow(clippy::expect_used)]
-        "214 https://viridit.com/support"
-            .parse()
-            .expect("valid syntax")
+        reply("214 https://viridit.com/support")
     }
 
     /// Called after receiving an unknown command (unrecognized or unimplemented).
@@ -137,13 +131,9 @@ pub trait ReceiverHandler {
                     .expect("range checked before")
                     .eq_ignore_ascii_case(c)
         }) {
-            "502 Command not implemented\r\n"
-                .parse()
-                .expect("valid syntax")
+            reply("502 Command not implemented\r\n")
         } else {
-            "500 Syntax error command unrecognized\r\n"
-                .parse()
-                .expect("valid syntax")
+            reply("500 Syntax error command unrecognized\r\n")
         }
     }
 
@@ -152,32 +142,19 @@ pub trait ReceiverHandler {
     #[inline]
     async fn on_bad_sequence(&mut self, (command, stage): (Verb, Stage)) -> Reply {
         tracing::trace!(?command, ?stage, "Bad sequence of commands");
-        #[allow(clippy::expect_used)]
-        "503 Bad sequence of commands\r\n"
-            .parse()
-            .expect("valid syntax")
+        reply("503 Bad sequence of commands\r\n")
     }
 
     /// Called when an argument of a command is invalid.
     #[inline]
     async fn on_args_error(&mut self, error: &ParseArgsError) -> Reply {
-        #[allow(
-            clippy::expect_used,
-            clippy::wildcard_enum_match_arm,
-            clippy::pattern_type_mismatch
-        )]
+        #[allow(clippy::wildcard_enum_match_arm, clippy::pattern_type_mismatch)]
         match error {
-            ParseArgsError::InvalidMailAddress { mail } => {
-                format!("553 5.1.7 The address <{mail}> is not a valid RFC-5321 address\r\n")
-                    .parse()
-                    .expect("valid syntax")
-            }
-            ParseArgsError::EmailUnavailable => {
-                "550 mailbox unavailable\r\n".parse().expect("valid syntax")
-            }
-            _other => "501 Syntax error in parameters or arguments\r\n"
-                .parse()
-                .expect("valid syntax"),
+            ParseArgsError::InvalidMailAddress { mail } => reply(format!(
+                "553 5.1.7 The address <{mail}> is not a valid RFC-5321 address\r\n"
+            )),
+            ParseArgsError::EmailUnavailable => reply("550 mailbox unavailable\r\n"),
+            _other => reply("501 Syntax error in parameters or arguments\r\n"),
         }
     }
 }

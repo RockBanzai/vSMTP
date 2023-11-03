@@ -1,5 +1,4 @@
 fn on_config(config) {
-    config.name = "smtp-msa.mydomain.tld";
     config.interfaces = #{
         addr: ["0.0.0.0:25"],
         addr_submission: ["0.0.0.0:587"],
@@ -8,7 +7,6 @@ fn on_config(config) {
 
     config.broker.uri = env::variable("BROKER");
     config.broker.extra_root_ca = crypto::load_cert("/etc/ssl/certs/ca-certificates.crt");
-    config.scripts.path = "/rules.rhai";
 
     config.logs.default_level = "trace";
     config.logs.levels = #{
@@ -41,7 +39,7 @@ fn on_config(config) {
         dsn: true,
         starttls: true,
         auth: #{
-            mechanisms: ["Plain", "Login"],
+            mechanisms: ["PLAIN", "LOGIN"],
         }
     };
 

@@ -87,11 +87,10 @@ services:
 
   working:
     image: vsmtp-working:dev
-    command: vsmtp-working --config /etc/vsmtp/working/conf.d/config.rhai
     volumes:
       - ./config/working/config.rhai:/etc/vsmtp/working/conf.d/config.rhai:ro
       - ./config/working/clamav-service.rhai:/clamav-service.rhai
-      - ./config/working/rules.rhai:/rules.rhai:ro
+      - ./config/working/rules.rhai:/etc/vsmtp/working/script.rhai:ro
       - ./config/broker/generated/rootCA.crt:/etc/ssl/certs/ca-certificates.crt:ro
     env_file:
       - ./config/services.env

@@ -12,12 +12,13 @@
 pub mod smtp {
     mod exchange;
     mod handler;
-    mod send;
 
     pub use exchange::Sender;
     pub use handler::{SenderHandler, UpgradeTls};
-    pub use send::send;
 }
+
+mod send;
+pub use send::send;
 
 use std::sync::Arc;
 use tokio_stream::StreamExt;
@@ -25,8 +26,9 @@ use vsmtp_common::{
     api::{write_to_dead, write_to_deferred, write_to_report_dsn},
     broker::{Exchange, Queue},
     ctx_delivery::CtxDelivery,
-    delivery_attempt::{Action, DeliveryAttempt},
+    delivery_attempt::{Action, DeliveryAttempt, ShouldNotify},
     delivery_route::DeliveryRoute,
+    Recipient,
 };
 use vsmtp_config::Config;
 use vsmtp_protocol::NotifyOn;
@@ -48,9 +50,13 @@ pub enum DeliveryOutcome {
 ///
 /// Return true if only one recipient should produce a DSN.
 #[allow(clippy::cognitive_complexity)] // tracing
-fn should_produce_dsn(attempts: &[DeliveryAttempt]) -> bool {
+fn should_produce_dsn(attempts: &[DeliveryAttempt], recipients: &[Recipient]) -> bool {
     for attempt in attempts {
         for (idx, rcpt) in attempt.recipients().enumerate() {
+            let Some(rcpt) = recipients.iter().find(|i| i.forward_path.0 == rcpt.0) else {
+                continue;
+            };
+
             match rcpt.notify_on {
                 NotifyOn::Never => continue,
                 NotifyOn::Some {
@@ -58,13 +64,19 @@ fn should_produce_dsn(attempts: &[DeliveryAttempt]) -> bool {
                     failure,
                     delay,
                 } => match attempt.get_action(idx) {
-                    Action::Failed { .. } if failure && attempt.should_notify.on_failure => {
+                    Action::Failed { .. }
+                        if failure && attempt.should_notify_on(ShouldNotify::Failure) =>
+                    {
                         return true
                     }
-                    Action::Delayed { .. } if delay && attempt.should_notify.on_delay => {
+                    Action::Delayed { .. }
+                        if delay && attempt.should_notify_on(ShouldNotify::Delay) =>
+                    {
                         return true
                     }
-                    Action::Delivered if success && attempt.should_notify.on_success => {
+                    Action::Delivered
+                        if success && attempt.should_notify_on(ShouldNotify::Success) =>
+                    {
                         return true
                     }
                     // TODO:
@@ -99,7 +111,7 @@ pub trait DeliverySystem: Send + Sync {
         let attempts = self.deliver(&ctx).await;
         ctx.last_deliveries = attempts;
 
-        let should_produce_dsn = should_produce_dsn(&ctx.last_deliveries);
+        let should_produce_dsn = should_produce_dsn(&ctx.last_deliveries, &ctx.rcpt_to);
         if should_produce_dsn {
             tracing::debug!("Message should produce DSN, emitting a report request");
             write_to_report_dsn(channel, &ctx).await;

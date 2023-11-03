@@ -1,4 +1,4 @@
-import "prelude" as prelude;
+import "/prelude" as prelude;
 
 fn on_connect(ctx)   { ctx.run([ prelude::debug_ctx ]) }
 fn on_helo(ctx)      { ctx.run([ prelude::debug_ctx ]) }

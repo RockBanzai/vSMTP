@@ -1,7 +1,6 @@
 fn on_config(config) {
     config.broker.uri = env::variable("BROKER");
     config.broker.extra_root_ca = crypto::load_cert("/etc/ssl/certs/ca-certificates.crt");
-    config.scripts.path = "/rules.rhai";
 
     config.logs.default_level = "trace";
     config.logs.levels = #{

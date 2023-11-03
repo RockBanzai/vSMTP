@@ -11,10 +11,7 @@
 
 use super::SenderHandler;
 use crate::smtp::handler::UpgradeTls;
-use futures_util::TryStreamExt;
-use vsmtp_common::delivery_attempt::DeliveryAttempt;
-use vsmtp_common::transfer_error::Delivery;
-use vsmtp_common::{response::Ehlo, stateful_ctx_received::MailFromProps, Recipient};
+use vsmtp_common::{stateful_ctx_received::MailFromProps, Recipient};
 use vsmtp_protocol::{DsnReturn, NotifyOn, Reader, Reply, Verb, Writer};
 
 pub struct Sender<H: SenderHandler> {
@@ -22,7 +19,6 @@ pub struct Sender<H: SenderHandler> {
     writer: Writer<Box<dyn tokio::io::AsyncWrite + Unpin + Send + Sync>>,
     handler: H,
 }
-
 impl<H: SenderHandler + Sync + Send> Sender<H> {
     pub fn new(
         reader: Reader<Box<dyn tokio::io::AsyncRead + Unpin + Send + Sync>>,
@@ -40,114 +36,173 @@ impl<H: SenderHandler + Sync + Send> Sender<H> {
         &mut self.handler
     }
 
-    pub async fn quit(&mut self) -> Result<(), Delivery> {
-        self.writer.write_all(Verb::Quit.as_ref()).await?;
+    pub async fn quit(&mut self) -> Result<(), ()> {
+        if let Err(e) = self.writer.write_all(Verb::Quit.as_ref()).await {
+            self.handler.on_io_error(e.into());
+            return Err(());
+        }
 
-        let replies = reply_stream(&mut self.reader);
+        let replies = self.reader.as_reply_stream();
         tokio::pin!(replies);
-        let reply = next_reply(&mut replies).await?;
 
-        self.handler.on_quit(reply).await
+        match Self::next_reply(&mut replies).await {
+            Ok(reply) => self.handler.on_quit(reply).await,
+            Err(e) => {
+                self.handler.on_io_error(e);
+                Err(())
+            }
+        }
     }
 
-    pub async fn noop(&mut self) -> Result<(), Delivery> {
-        self.writer.write_all(Verb::Noop.as_ref()).await?;
+    pub async fn noop(&mut self) -> Result<(), ()> {
+        if let Err(e) = self.writer.write_all(Verb::Noop.as_ref()).await {
+            self.handler.on_io_error(e.into());
+            return Err(());
+        }
 
-        let replies = reply_stream(&mut self.reader);
+        let replies = self.reader.as_reply_stream();
         tokio::pin!(replies);
-        let reply = next_reply(&mut replies).await?;
 
-        self.handler.on_noop(reply).await
+        match Self::next_reply(&mut replies).await {
+            Ok(reply) => self.handler.on_noop(reply).await,
+            Err(e) => {
+                self.handler.on_io_error(e);
+                Err(())
+            }
+        }
     }
 
-    pub async fn pre_transaction(&mut self) -> Result<UpgradeTls, Delivery> {
-        let replies = reply_stream(&mut self.reader);
+    pub async fn pre_transaction(&mut self) -> Result<UpgradeTls, ()> {
+        let replies = self.reader.as_reply_stream();
         tokio::pin!(replies);
 
         self.handler.on_connect().await?;
         if self.handler.has_just_connected() {
-            self.handler
-                .on_greetings(next_reply(&mut replies).await?)
-                .await?;
+            let greetings = match Self::next_reply(&mut replies).await {
+                Ok(reply) => reply,
+                Err(e) => {
+                    self.handler.on_io_error(e);
+                    return Err(());
+                }
+            };
+            self.handler.on_greetings(greetings).await?;
         }
 
         let client_name = self.handler.get_client_name();
 
         // TODO: handle unsupported EHLO (fallback on HELO)
-        self.writer
+        if let Err(e) = self
+            .writer
             .write_all(&format!("EHLO {client_name}\r\n"))
-            .await?;
-        self.handler
-            .on_ehlo(Ehlo::try_from(next_reply(&mut replies).await?)?)
             .await
+        {
+            self.handler.on_io_error(e.into());
+            return Err(());
+        }
+
+        let ehlo_reply = match Self::next_reply(&mut replies).await {
+            Ok(reply) => reply,
+            Err(e) => {
+                self.handler.on_io_error(e);
+                return Err(());
+            }
+        };
+        self.handler.on_ehlo(ehlo_reply).await
     }
 
     #[tracing::instrument(skip_all, ret)]
-    pub async fn send(&mut self) -> DeliveryAttempt {
+    pub async fn send(&mut self) -> H::Result {
         let Self {
             reader,
             writer,
             handler,
         } = self;
 
-        let replies = reply_stream(reader);
+        let replies = reader.as_reply_stream();
         tokio::pin!(replies);
 
         // TODO: handle the case where DSN is not supported by the remote server, BUT a rcpt required a
         // DSN on success or delayed.
-        let envelop_result = if handler.has_pipelining() {
-            send_envelop_pipelining(handler, &mut replies, writer).await
-        } else {
-            send_envelop_without_pipelining(handler, &mut replies, writer).await
-        };
-        if let Err(e) = envelop_result {
-            return e;
+        {
+            let envelope = if handler.has_pipelining() {
+                Self::send_envelop_pipelining(handler, &mut replies, writer).await
+            } else {
+                Self::send_envelop_without_pipelining(handler, &mut replies, writer).await
+            };
+            if envelope == Err(()) {
+                return handler.take_result();
+            }
         }
 
         // TODO: handle CHUNKING ?
-        writer.write_all(Verb::Data.as_ref()).await.unwrap();
-        handler
-            .on_data_start(next_reply(&mut replies).await.unwrap())
-            .await
-            .unwrap();
+        if let Err(e) = writer.write_all(Verb::Data.as_ref()).await {
+            self.handler.on_io_error(e.into());
+            return self.handler.take_result();
+        }
 
-        writer
-            .write_all_bytes(&handler.get_message())
-            .await
-            .unwrap();
+        let data_start_reply = match Self::next_reply(&mut replies).await {
+            Ok(reply) => reply,
+            Err(e) => {
+                handler.on_io_error(e);
+                return handler.take_result();
+            }
+        };
 
-        writer.write_all(".\r\n").await.unwrap();
-        handler
-            .on_data_end(next_reply(&mut replies).await.unwrap())
-            .await
-            .unwrap();
+        if handler.on_data_start(data_start_reply).await == Err(()) {
+            return handler.take_result();
+        };
 
-        handler.get_result()
+        if let Err(e) = writer.write_all_bytes(&handler.get_message()).await {
+            self.handler.on_io_error(e.into());
+            return self.handler.take_result();
+        }
+
+        if let Err(e) = writer.write_all(".\r\n").await {
+            self.handler.on_io_error(e.into());
+            return self.handler.take_result();
+        }
+
+        let data_end_reply = match Self::next_reply(&mut replies).await {
+            Ok(reply) => reply,
+            Err(e) => {
+                handler.on_io_error(e);
+                return handler.take_result();
+            }
+        };
+
+        let _ = handler.on_data_end(data_end_reply).await;
+        handler.take_result()
     }
 
-    pub async fn upgrade_tls(self) -> Result<Self, Delivery> {
+    pub async fn upgrade_tls(self) -> Result<Self, H::Result> {
         let Self {
             mut reader,
             mut writer,
-            handler,
+            mut handler,
         } = self;
 
-        writer.write_all("STARTTLS\r\n").await?;
+        if let Err(e) = writer.write_all(Verb::StartTls.as_ref()).await {
+            handler.on_io_error(e.into());
+            return Err(handler.take_result());
+        }
 
         let starttls = {
-            let replies = reply_stream(&mut reader);
+            let replies = reader.as_reply_stream();
             tokio::pin!(replies);
 
-            next_reply(&mut replies).await?
+            match Self::next_reply(&mut replies).await {
+                Ok(reply) => reply,
+                Err(e) => {
+                    handler.on_io_error(e);
+                    return Err(handler.take_result());
+                }
+            }
         };
 
         if starttls.code().value() != 220 {
-            return Err(Delivery::Tls {
-                with_source: Some(format!(
-                    "The StartTls command was not successful: {starttls}"
-                )),
-            });
+            return Err(handler.take_result());
         }
+
         let tcp_stream = {
             let (reader, writer) = (reader.into_inner(), writer.into_inner());
             let (reader, writer) = (Box::into_raw(reader), Box::into_raw(writer));
@@ -169,7 +224,12 @@ impl<H: SenderHandler + Sync + Send> Sender<H> {
             peer_addr = ?tcp_stream.peer_addr(),
             "connecting to the remote server"
         );
-        let tls_stream = handler.get_tls_connector().connect(sni, tcp_stream).await?;
+        let tls_stream = match handler.get_tls_connector().connect(sni, tcp_stream).await {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(handler.on_tls_upgrade_error(e));
+            }
+        };
 
         let (reader, writer) = tokio::io::split(tls_stream);
 
@@ -186,171 +246,207 @@ impl<H: SenderHandler + Sync + Send> Sender<H> {
             handler,
         })
     }
-}
 
-/// Build a stream of response from the distant server.
-fn reply_stream<R>(
-    this: &mut Reader<R>,
-) -> impl tokio_stream::Stream<Item = Result<Reply, Delivery>> + '_
-where
-    R: tokio::io::AsyncRead + Unpin + Send,
-{
-    this.as_reply_stream().map_err(|e| Delivery::Connection {
-        with_source: Some(e.to_string()),
-    })
-}
-
-/// Read the next reply sent by the distant server.
-async fn next_reply<S>(reply_stream: &mut S) -> Result<Reply, Delivery>
-where
-    S: tokio_stream::Stream<Item = Result<Reply, Delivery>> + Unpin + Send,
-{
-    tokio_stream::StreamExt::try_next(reply_stream)
-        .await?
-        .ok_or_else(|| Delivery::Connection {
-            with_source: Some(std::io::Error::from(std::io::ErrorKind::UnexpectedEof).to_string()),
-        })
-}
-
-fn build_mail_from_to_command(
-    MailFromProps {
-        reverse_path,
-        envelop_id,
-        ret,
-        ..
-    }: &MailFromProps,
-    has_dsn: bool,
-) -> String {
-    format!(
-        "MAIL FROM:<{}>{}\r\n",
-        reverse_path
-            .as_ref()
-            .map_or_else(String::new, ToString::to_string),
-        if has_dsn {
-            format!(
-                " RET={} {}",
-                match ret {
-                    Some(DsnReturn::Full) => "FULL",
-                    None | Some(DsnReturn::Headers) => "HDRS",
-                },
-                envelop_id
-                    .as_ref()
-                    .map_or_else(String::new, |envid| format!("ENVID={envid}"))
-            )
-        } else {
-            String::new()
+    async fn next_reply<S>(reply_stream: &mut S) -> Result<Reply, vsmtp_protocol::Error>
+    where
+        S: tokio_stream::Stream<Item = Result<Reply, vsmtp_protocol::Error>> + Unpin + Send,
+    {
+        match tokio_stream::StreamExt::try_next(reply_stream).await {
+            Ok(Some(reply)) => Ok(reply),
+            Ok(None) => Err(vsmtp_protocol::Error::from(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "unexpected eof",
+            ))),
+            Err(error) => Err(error),
         }
-    )
-}
+    }
 
-fn build_rcpt_to_command(
-    Recipient {
-        forward_path,
-        original_forward_path,
-        notify_on,
-    }: &Recipient,
-    has_dsn: bool,
-) -> String {
-    format!(
-        "RCPT TO:<{}>{}\r\n",
-        forward_path.0,
-        if has_dsn {
-            format!(
-                " {} NOTIFY={}",
-                original_forward_path
-                    .as_ref()
-                    .map_or_else(String::new, |orcpt| format!(
-                        "ORCPT={};{}",
-                        orcpt.addr_type, orcpt.mailbox
-                    )),
-                match notify_on {
-                    NotifyOn::Some {
-                        success,
-                        failure,
-                        delay,
-                    } => [("SUCCESS", success), ("FAILURE", failure), ("DELAY", delay)]
-                        .into_iter()
-                        .filter_map(|(value, activated)| activated.then_some(value))
-                        .collect::<Vec<_>>()
-                        .join(","),
-                    NotifyOn::Never => "NEVER".to_owned(),
+    fn build_mail_from_to_command(
+        MailFromProps {
+            reverse_path,
+            envelop_id,
+            ret,
+            ..
+        }: &MailFromProps,
+        has_dsn: bool,
+    ) -> String {
+        format!(
+            "MAIL FROM:<{}>{}\r\n",
+            reverse_path
+                .as_ref()
+                .map_or_else(String::new, ToString::to_string),
+            if has_dsn {
+                format!(
+                    " RET={} {}",
+                    match ret {
+                        Some(DsnReturn::Full) => "FULL",
+                        None | Some(DsnReturn::Headers) => "HDRS",
+                    },
+                    envelop_id
+                        .as_ref()
+                        .map_or_else(String::new, |envid| format!("ENVID={envid}"))
+                )
+            } else {
+                String::new()
+            }
+        )
+    }
+
+    fn build_rcpt_to_command(
+        Recipient {
+            forward_path,
+            original_forward_path,
+            notify_on,
+        }: &Recipient,
+        has_dsn: bool,
+    ) -> String {
+        format!(
+            "RCPT TO:<{}>{}\r\n",
+            forward_path.0,
+            if has_dsn {
+                format!(
+                    " {} NOTIFY={}",
+                    original_forward_path
+                        .as_ref()
+                        .map_or_else(String::new, |orcpt| format!(
+                            "ORCPT={};{}",
+                            orcpt.addr_type, orcpt.mailbox
+                        )),
+                    match notify_on {
+                        NotifyOn::Some {
+                            success,
+                            failure,
+                            delay,
+                        } => [("SUCCESS", success), ("FAILURE", failure), ("DELAY", delay)]
+                            .into_iter()
+                            .filter_map(|(value, activated)| activated.then_some(value))
+                            .collect::<Vec<_>>()
+                            .join(","),
+                        NotifyOn::Never => "NEVER".to_owned(),
+                    }
+                )
+            } else {
+                String::new()
+            }
+        )
+    }
+
+    async fn send_envelop_pipelining<S, W>(
+        handler: &mut H,
+        replies: &mut S,
+        sink: &mut Writer<W>,
+    ) -> Result<(), ()>
+    where
+        H: SenderHandler + Sync + Send,
+        S: tokio_stream::Stream<Item = Result<Reply, vsmtp_protocol::Error>> + Unpin + Send,
+        W: tokio::io::AsyncWrite + Unpin + Send + Sync,
+    {
+        let has_dsn = handler.has_dsn();
+
+        let from = handler.get_mail_from();
+        let rcpt = handler.get_rcpt_to();
+
+        let cmd = [
+            Self::build_mail_from_to_command(&from, has_dsn),
+            rcpt.iter()
+                .map(|i| Self::build_rcpt_to_command(i, has_dsn))
+                .collect::<String>(),
+        ]
+        .concat();
+
+        if let Err(e) = sink.write_all(&cmd).await {
+            handler.on_io_error(e.into());
+            return Err(());
+        }
+
+        let mail_from_reply = match Self::next_reply(replies).await {
+            Ok(reply) => reply,
+            Err(e) => {
+                handler.on_io_error(e);
+                return Err(());
+            }
+        };
+
+        handler.on_mail_from(mail_from_reply).await?;
+
+        let mut at_least_one_rcpt_is_valid = false;
+        for i in 0..rcpt.len() {
+            let rcpt_reply = match Self::next_reply(replies).await {
+                Ok(reply) => reply,
+                Err(e) => {
+                    handler.on_io_error(e);
+                    return Err(());
                 }
-            )
-        } else {
-            String::new()
+            };
+
+            at_least_one_rcpt_is_valid |= handler
+                .on_rcpt_to(rcpt.get(i).unwrap(), rcpt_reply)
+                .await
+                .is_ok();
         }
-    )
-}
 
-async fn send_envelop_pipelining<H, S, W>(
-    handler: &mut H,
-    replies: &mut S,
-    sink: &mut Writer<W>,
-) -> Result<(), DeliveryAttempt>
-where
-    H: SenderHandler + Sync + Send,
-    S: tokio_stream::Stream<Item = Result<Reply, Delivery>> + Unpin + Send,
-    W: tokio::io::AsyncWrite + Unpin + Send + Sync,
-{
-    let has_dsn = handler.has_dsn();
+        if at_least_one_rcpt_is_valid {
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
 
-    let from = handler.get_mail_from();
-    let rcpt = handler.get_rcpt_to();
+    async fn send_envelop_without_pipelining<S, W>(
+        handler: &mut H,
+        replies: &mut S,
+        sink: &mut Writer<W>,
+    ) -> Result<(), ()>
+    where
+        H: SenderHandler + Sync + Send,
+        S: tokio_stream::Stream<Item = Result<Reply, vsmtp_protocol::Error>> + Unpin + Send,
+        W: tokio::io::AsyncWrite + Unpin + Send + Sync,
+    {
+        let has_dsn = handler.has_dsn();
 
-    let cmd = [
-        build_mail_from_to_command(&from, has_dsn),
-        rcpt.iter()
-            .map(|i| build_rcpt_to_command(i, has_dsn))
-            .collect::<String>(),
-    ]
-    .concat();
-
-    sink.write_all(&cmd).await.unwrap();
-
-    handler
-        .on_mail_from(next_reply(replies).await.unwrap())
-        .await
-        .unwrap();
-    for i in 0..rcpt.len() {
-        let rcpt_reply = next_reply(replies).await.unwrap();
-        handler
-            .on_rcpt_to(rcpt.get(i).unwrap(), rcpt_reply)
+        let from = handler.get_mail_from();
+        if let Err(e) = sink
+            .write_all(&Self::build_mail_from_to_command(&from, has_dsn))
             .await
-            .unwrap();
+        {
+            handler.on_io_error(e.into());
+            return Err(());
+        }
+
+        let mail_from_reply = match Self::next_reply(replies).await {
+            Ok(reply) => reply,
+            Err(e) => {
+                handler.on_io_error(e);
+                return Err(());
+            }
+        };
+
+        handler.on_mail_from(mail_from_reply).await?;
+
+        let rcpt = handler.get_rcpt_to();
+        let mut at_least_one_rcpt_is_valid = false;
+        for i in rcpt {
+            let command = Self::build_rcpt_to_command(&i, has_dsn);
+            if let Err(e) = sink.write_all(&command).await {
+                handler.on_io_error(e.into());
+                return Err(());
+            }
+
+            let rcpt_reply = match Self::next_reply(replies).await {
+                Ok(reply) => reply,
+                Err(e) => {
+                    handler.on_io_error(e);
+                    return Err(());
+                }
+            };
+
+            at_least_one_rcpt_is_valid |= handler.on_rcpt_to(&i, rcpt_reply).await.is_ok();
+        }
+
+        if at_least_one_rcpt_is_valid {
+            Ok(())
+        } else {
+            Err(())
+        }
     }
-
-    Ok(())
-}
-
-async fn send_envelop_without_pipelining<H, S, W>(
-    handler: &mut H,
-    replies: &mut S,
-    sink: &mut Writer<W>,
-) -> Result<(), DeliveryAttempt>
-where
-    H: SenderHandler + Sync + Send,
-    S: tokio_stream::Stream<Item = Result<Reply, Delivery>> + Unpin + Send,
-    W: tokio::io::AsyncWrite + Unpin + Send + Sync,
-{
-    let has_dsn = handler.has_dsn();
-
-    let from = handler.get_mail_from();
-    sink.write_all(&build_mail_from_to_command(&from, has_dsn))
-        .await
-        .unwrap();
-
-    handler
-        .on_mail_from(next_reply(replies).await.unwrap())
-        .await
-        .unwrap();
-
-    let rcpt = handler.get_rcpt_to();
-    for i in rcpt {
-        let command = build_rcpt_to_command(&i, has_dsn);
-        sink.write_all(&command).await.unwrap();
-        let rcpt_reply = next_reply(replies).await.unwrap();
-        handler.on_rcpt_to(&i, rcpt_reply).await.unwrap();
-    }
-
-    Ok(())
 }

@@ -737,6 +737,12 @@ pub mod code {
         )
         .expect("valid code")
     }
+
+    /// # rhai-autodocs:index:16
+    #[cfg(debug_assertion)]
+    pub const fn panic() {
+        panic!()
+    }
 }
 
 #[cfg(test)]
